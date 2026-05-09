@@ -424,8 +424,8 @@ function shiftDay(ymd, n) {
 
 function formatTimeBerlin(dateStr) {
   if (!dateStr) return { time: '—', tz: '' };
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return { time: 'All Day', tz: '' };
+  const d = parseApiTime(dateStr);
+  if (!d) return { time: 'All Day', tz: '' };
   const time = d.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit', timeZone: TZ, hour12: false });
   const tz = getTZLabel();
   return { time, tz };
@@ -437,11 +437,19 @@ function formatDateBerlin(dateStr) {
   return d.toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric', timeZone: TZ });
 }
 
+// Finnhub returns "YYYY-MM-DD HH:MM:SS" without timezone → always UTC
+function parseApiTime(raw) {
+  if (!raw) return null;
+  const iso = raw.includes('T') ? raw : raw.replace(' ', 'T') + 'Z';
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? null : d;
+}
+
 // ── Relative time ─────────────────────────────────────────────
 function getRelativeTime(dateStr) {
   if (!dateStr) return null;
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return null;
+  const d = parseApiTime(dateStr);
+  if (!d) return null;
   const diffMs = d - new Date();
   const diffMin = Math.round(diffMs / 60000);
 
@@ -461,12 +469,14 @@ function getRelativeTime(dateStr) {
 
 function isNowEvent(dateStr) {
   if (!dateStr) return false;
-  return Math.abs(new Date(dateStr) - new Date()) < 120000;
+  const d = parseApiTime(dateStr);
+  return d ? Math.abs(d - new Date()) < 120000 : false;
 }
 
 function isPast(dateStr) {
   if (!dateStr) return false;
-  return new Date(dateStr) < new Date();
+  const d = parseApiTime(dateStr);
+  return d ? d < new Date() : false;
 }
 
 // ── Impact / currency helpers ─────────────────────────────────
@@ -545,7 +555,7 @@ function renderTable(events) {
   const grouped = {};
   events.forEach(ev => {
     const raw = ev.time || ev.date || '';
-    const key = raw ? toYMD(new Date(raw)) : 'unknown';
+    const key = raw ? (parseApiTime(raw) ? toYMD(parseApiTime(raw)) : 'unknown') : 'unknown';
     if (!grouped[key]) grouped[key] = [];
     grouped[key].push(ev);
   });
@@ -560,14 +570,14 @@ function renderTable(events) {
     tbody.appendChild(sep);
 
     const dayEvents = [...grouped[dateKey]].sort((a,b) =>
-      new Date(a.time||a.date||0) - new Date(b.time||b.date||0));
+      (parseApiTime(a.time||a.date) || 0) - (parseApiTime(b.time||b.date) || 0));
 
     const isToday = dateKey === todayKey;
     let nowInserted = false;
 
     dayEvents.forEach((ev, idx) => {
       const evTime = ev.time || ev.date;
-      const evDate = evTime ? new Date(evTime) : null;
+      const evDate = evTime ? parseApiTime(evTime) : null;
       const past = evDate ? evDate < new Date() : false;
       const nowEv = isNowEvent(evTime);
 
