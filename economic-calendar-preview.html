@@ -113,7 +113,7 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 .filter-label { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.07em; white-space:nowrap; }
 .impact-filters,.currency-filters { display:flex; flex-wrap:wrap; gap:5px; }
 .impact-chip,.currency-chip { display:flex; align-items:center; gap:5px; padding:4px 10px; border-radius:20px; font-size:12px; font-weight:600; cursor:pointer; transition:all .15s; border:1.5px solid transparent; user-select:none; }
-.impact-chip input,.currency-chip input { display:none; }
+.impact-chip,.currency-chip { cursor:pointer; }
 .impact-chip.high   { border-color:var(--high);   color:var(--high);   }
 .impact-chip.medium { border-color:var(--medium); color:var(--medium); }
 .impact-chip.low    { border-color:var(--low);    color:var(--low);    }
@@ -291,23 +291,23 @@ thead th.col-actual,thead th.col-forecast,thead th.col-previous { text-align:rig
       <div class="filter-group">
         <span class="filter-label">Impact</span>
         <div class="impact-filters">
-          <label class="impact-chip high active"   data-impact="3"><input type="checkbox" checked/> High</label>
-          <label class="impact-chip medium active" data-impact="2"><input type="checkbox" checked/> Medium</label>
-          <label class="impact-chip low active"    data-impact="1"><input type="checkbox" checked/> Low</label>
+          <div class="impact-chip high active"   data-impact="3">High</div>
+          <div class="impact-chip medium active" data-impact="2">Medium</div>
+          <div class="impact-chip low active"    data-impact="1">Low</div>
         </div>
       </div>
       <div class="filter-group">
         <span class="filter-label">Currency</span>
         <div class="currency-filters">
-          <label class="currency-chip active"><input type="checkbox" value="USD" checked/> USD</label>
-          <label class="currency-chip active"><input type="checkbox" value="EUR" checked/> EUR</label>
-          <label class="currency-chip active"><input type="checkbox" value="GBP" checked/> GBP</label>
-          <label class="currency-chip active"><input type="checkbox" value="JPY" checked/> JPY</label>
-          <label class="currency-chip active"><input type="checkbox" value="CHF" checked/> CHF</label>
-          <label class="currency-chip active"><input type="checkbox" value="CAD" checked/> CAD</label>
-          <label class="currency-chip active"><input type="checkbox" value="AUD" checked/> AUD</label>
-          <label class="currency-chip active"><input type="checkbox" value="NZD" checked/> NZD</label>
-          <label class="currency-chip gold active"><input type="checkbox" value="XAU" checked/> GOLD</label>
+          <div class="currency-chip active" data-currency="USD">USD</div>
+          <div class="currency-chip active" data-currency="EUR">EUR</div>
+          <div class="currency-chip active" data-currency="GBP">GBP</div>
+          <div class="currency-chip active" data-currency="JPY">JPY</div>
+          <div class="currency-chip active" data-currency="CHF">CHF</div>
+          <div class="currency-chip active" data-currency="CAD">CAD</div>
+          <div class="currency-chip active" data-currency="AUD">AUD</div>
+          <div class="currency-chip active" data-currency="NZD">NZD</div>
+          <div class="currency-chip gold active" data-currency="XAU">GOLD</div>
         </div>
       </div>
       <div class="filter-group filter-group--right">
@@ -762,15 +762,13 @@ document.getElementById('refreshBtn').addEventListener('click', () => {
 document.querySelectorAll('.impact-chip').forEach(chip => chip.addEventListener('click', () => {
   const impact = parseInt(chip.dataset.impact);
   chip.classList.toggle('active');
-  chip.querySelector('input').checked = chip.classList.contains('active');
   chip.classList.contains('active') ? activeFilters.impacts.add(impact) : activeFilters.impacts.delete(impact);
   applyFilters();
 }));
 
 document.querySelectorAll('.currency-chip').forEach(chip => chip.addEventListener('click', () => {
-  const cur = chip.querySelector('input').value;
+  const cur = chip.dataset.currency;
   chip.classList.toggle('active');
-  chip.querySelector('input').checked = chip.classList.contains('active');
   chip.classList.contains('active') ? activeFilters.currencies.add(cur) : activeFilters.currencies.delete(cur);
   applyFilters();
 }));
