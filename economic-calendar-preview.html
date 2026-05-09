@@ -660,6 +660,16 @@ async function fetchCalendar(from, to) {
     applyFilters();
     const t = new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit',timeZone:TZ});
     document.getElementById('lastUpdated').textContent = `Updated ${t} ${getTZLabel()}`;
+
+    // Debug: show first event raw data
+    const dbg = document.getElementById('dbgText');
+    if (dbg && allEvents.length > 0) {
+      const e0 = allEvents[0];
+      const raw0 = e0.time || e0.date || '';
+      const parsed0 = raw0 ? new Date(raw0) : null;
+      const groupKey0 = raw0 ? toYMD(new Date(raw0)) : '?';
+      dbg.textContent += `  ||  API 1st event: time="${raw0}" → parsed=${parsed0?.toISOString()} → groupKey="${groupKey0}" → label="${formatDateBerlin(groupKey0)}"`;
+    }
   } catch(err) {
     loading.style.display = 'none';
     errorState.style.display = 'flex';
