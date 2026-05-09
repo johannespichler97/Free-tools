@@ -373,7 +373,13 @@ const CURRENCY_META = {
   CHF:{flag:'ch',name:'Switzerland'}, CAD:{flag:'ca',name:'Canada'},
   AUD:{flag:'au',name:'Australia'}, NZD:{flag:'nz',name:'New Zealand'},
   CNY:{flag:'cn',name:'China'}, SEK:{flag:'se',name:'Sweden'},
-  NOK:{flag:'no',name:'Norway'}, XAU:{flag:null,name:'Gold'},
+  NOK:{flag:'no',name:'Norway'}, DKK:{flag:'dk',name:'Denmark'},
+  MXN:{flag:'mx',name:'Mexico'}, BRL:{flag:'br',name:'Brazil'},
+  INR:{flag:'in',name:'India'}, KRW:{flag:'kr',name:'South Korea'},
+  SGD:{flag:'sg',name:'Singapore'}, HKD:{flag:'hk',name:'Hong Kong'},
+  ZAR:{flag:'za',name:'South Africa'}, TRY:{flag:'tr',name:'Turkey'},
+  PLN:{flag:'pl',name:'Poland'}, CZK:{flag:'cz',name:'Czech Republic'},
+  XAU:{flag:null,name:'Gold'},
 };
 
 const GOLD_KEYWORDS = ['inflation','cpi','pce','fed','federal reserve','interest rate','fomc','nfp','non-farm','unemployment','gdp','treasury','dollar','consumer price','ppi','retail sales','ism'];
@@ -464,10 +470,16 @@ function getImpact(ev) {
 function detectCurrency(ev) {
   if (ev.currency) return ev.currency.toUpperCase();
   if (ev.country) {
-    const m = {'united states':'USD','us':'USD','europe':'EUR','euro area':'EUR','eurozone':'EUR',
-      'germany':'EUR','france':'EUR','italy':'EUR','spain':'EUR','united kingdom':'GBP',
-      'uk':'GBP','japan':'JPY','switzerland':'CHF','canada':'CAD','australia':'AUD','new zealand':'NZD','china':'CNY'};
-    return m[ev.country.toLowerCase()] || 'USD';
+    const m = {
+      // ISO 2-letter country codes → currency
+      'US':'USD','EU':'EUR','DE':'EUR','FR':'EUR','IT':'EUR','ES':'EUR','NL':'EUR',
+      'AT':'EUR','BE':'EUR','PT':'EUR','FI':'EUR','IE':'EUR','GR':'EUR','SK':'EUR',
+      'GB':'GBP','JP':'JPY','CH':'CHF','CA':'CAD','AU':'AUD','NZ':'NZD','CN':'CNY',
+      'SE':'SEK','NO':'NOK','DK':'DKK','MX':'MXN','BR':'BRL','IN':'INR','KR':'KRW',
+      'SG':'SGD','HK':'HKD','TW':'TWD','ZA':'ZAR','TR':'TRY','RU':'RUB','PL':'PLN',
+      'HU':'HUF','CZ':'CZK','RO':'RON','TH':'THB','ID':'IDR','MY':'MYR','PH':'PHP',
+    };
+    return m[ev.country.toUpperCase()] || ev.country.toUpperCase();
   }
   return 'USD';
 }
