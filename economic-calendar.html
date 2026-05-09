@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Economic Calendar | Market Analytics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="economic-calendar.css" />
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-inner">
+      <a href="/" class="logo">
+        <span class="logo-icon">&#9650;</span>
+        <span class="logo-text">Market<strong>Analytics</strong></span>
+      </a>
+      <nav class="nav">
+        <a href="#" class="nav-link">Markets</a>
+        <a href="#" class="nav-link active">Economic Calendar</a>
+        <a href="#" class="nav-link">Forex</a>
+        <a href="#" class="nav-link">Gold</a>
+      </nav>
+      <div class="header-actions">
+        <span class="live-badge">&#9679; LIVE</span>
+        <button class="btn-primary">Open Account</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-inner">
+      <h1>Economic Calendar</h1>
+      <p>Track market-moving events for Forex &amp; Gold. Real-time data with impact analysis.</p>
+    </div>
+  </section>
+
+  <!-- CONTROLS -->
+  <div class="controls-bar">
+    <div class="controls-inner">
+
+      <!-- Date Tabs -->
+      <div class="date-tabs">
+        <button class="tab-btn" data-range="yesterday">Yesterday</button>
+        <button class="tab-btn active" data-range="today">Today</button>
+        <button class="tab-btn" data-range="tomorrow">Tomorrow</button>
+        <button class="tab-btn" data-range="this_week">This Week</button>
+        <button class="tab-btn" data-range="next_week">Next Week</button>
+      </div>
+
+      <!-- Custom Date Range -->
+      <div class="date-range">
+        <input type="date" id="dateFrom" class="date-input" />
+        <span class="date-sep">—</span>
+        <input type="date" id="dateTo" class="date-input" />
+        <button class="btn-apply" id="applyDate">Apply</button>
+      </div>
+
+    </div>
+
+    <!-- Filter Row -->
+    <div class="filter-row">
+      <div class="filter-group">
+        <label class="filter-label">Impact</label>
+        <div class="impact-filters">
+          <label class="impact-chip high active" data-impact="3">
+            <input type="checkbox" checked /> High
+          </label>
+          <label class="impact-chip medium active" data-impact="2">
+            <input type="checkbox" checked /> Medium
+          </label>
+          <label class="impact-chip low active" data-impact="1">
+            <input type="checkbox" checked /> Low
+          </label>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label">Currency</label>
+        <div class="currency-filters">
+          <label class="currency-chip active"><input type="checkbox" value="USD" checked /> USD</label>
+          <label class="currency-chip active"><input type="checkbox" value="EUR" checked /> EUR</label>
+          <label class="currency-chip active"><input type="checkbox" value="GBP" checked /> GBP</label>
+          <label class="currency-chip active"><input type="checkbox" value="JPY" checked /> JPY</label>
+          <label class="currency-chip active"><input type="checkbox" value="CHF" checked /> CHF</label>
+          <label class="currency-chip active"><input type="checkbox" value="CAD" checked /> CAD</label>
+          <label class="currency-chip active"><input type="checkbox" value="AUD" checked /> AUD</label>
+          <label class="currency-chip active"><input type="checkbox" value="NZD" checked /> NZD</label>
+          <label class="currency-chip gold active"><input type="checkbox" value="XAU" checked /> GOLD</label>
+        </div>
+      </div>
+
+      <div class="filter-group filter-group--right">
+        <button class="btn-refresh" id="refreshBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          Refresh
+        </button>
+        <span class="last-updated" id="lastUpdated"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN CALENDAR TABLE -->
+  <main class="main">
+    <div class="table-container">
+
+      <!-- Loading Spinner -->
+      <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <span>Loading economic events…</span>
+      </div>
+
+      <!-- Error State -->
+      <div class="error-state" id="errorState" style="display:none;">
+        <div class="error-icon">&#9888;</div>
+        <h3>Could not load data</h3>
+        <p id="errorMsg">Please check your API key or try again later.</p>
+        <button class="btn-primary" onclick="fetchCalendar()">Try Again</button>
+      </div>
+
+      <!-- Empty State -->
+      <div class="empty-state" id="emptyState" style="display:none;">
+        <div class="empty-icon">&#128197;</div>
+        <h3>No events found</h3>
+        <p>No economic events match your current filters.</p>
+      </div>
+
+      <!-- Calendar Table -->
+      <table class="calendar-table" id="calendarTable" style="display:none;">
+        <thead>
+          <tr>
+            <th class="col-time">Time</th>
+            <th class="col-currency">Currency</th>
+            <th class="col-impact">Impact</th>
+            <th class="col-event">Event</th>
+            <th class="col-actual">Actual</th>
+            <th class="col-forecast">Forecast</th>
+            <th class="col-previous">Previous</th>
+          </tr>
+        </thead>
+        <tbody id="calendarBody">
+        </tbody>
+      </table>
+
+    </div>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <p class="footer-disclaimer">
+        <strong>Risk Warning:</strong> Trading in forex and commodities involves significant risk and may not be suitable for all investors.
+        Economic data provided by <a href="https://finnhub.io" target="_blank" rel="noopener">Finnhub</a>.
+      </p>
+      <p class="footer-copy">&copy; 2026 Market Analytics. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script src="economic-calendar.js"></script>
+</body>
+</html>
