@@ -391,25 +391,25 @@ let activeFilters = {
 };
 
 // ── Timezone helpers ──────────────────────────────────────────
-function nowInBerlin() {
-  return new Date(new Date().toLocaleString('en-US', { timeZone: TZ }));
-}
-
 function getTZLabel() {
-  const fmt = new Intl.DateTimeFormat('en', { timeZone: TZ, timeZoneName: 'short' });
-  const parts = fmt.formatToParts(new Date());
-  const tzPart = parts.find(p => p.type === 'timeZoneName');
-  return tzPart ? tzPart.value : 'CET';
+  const parts = new Intl.DateTimeFormat('en', { timeZone: TZ, timeZoneName: 'short' }).formatToParts(new Date());
+  return parts.find(p => p.type === 'timeZoneName')?.value || 'CET';
 }
 
 function getTZOffset() {
-  const tz = getTZLabel();
-  return tz === 'CEST' ? 'UTC+2' : 'UTC+1';
+  return getTZLabel() === 'CEST' ? 'UTC+2' : 'UTC+1';
 }
 
+// Reliable YYYY-MM-DD in Berlin timezone (en-CA gives ISO date format)
 function toYMD(date) {
-  // YYYY-MM-DD in Berlin time using sv locale trick
-  return date.toLocaleDateString('sv', { timeZone: TZ });
+  return new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(date);
+}
+
+// Add/subtract days from a YYYY-MM-DD string, staying in Berlin time
+function shiftDay(ymd, n) {
+  const d = new Date(ymd + 'T12:00:00');  // noon avoids DST boundary issues
+  d.setDate(d.getDate() + n);
+  return toYMD(d);
 }
 
 function formatTimeBerlin(dateStr) {
@@ -664,22 +664,17 @@ function applyFilters() {
 }
 
 function getDateRange(range) {
+  const today = toYMD(new Date());  // today in Berlin time
+  const dow = new Date(today + 'T12:00:00').getDay(); // 0=Sun, 1=Mon …
+  const daysSinceMon = dow === 0 ? 6 : dow - 1;
+  const thisMonday = shiftDay(today, -daysSinceMon);
+
   const ranges = {
-    yesterday: () => { const d=new Date(); d.setDate(d.getDate()-1); return {from:toYMD(d),to:toYMD(d)}; },
-    today:     () => { const d=new Date(); return {from:toYMD(d),to:toYMD(d)}; },
-    tomorrow:  () => { const d=new Date(); d.setDate(d.getDate()+1); return {from:toYMD(d),to:toYMD(d)}; },
-    this_week: () => {
-      const d=new Date(), day=d.getDay();
-      const mon=new Date(d); mon.setDate(d.getDate()-(day===0?6:day-1));
-      const fri=new Date(mon); fri.setDate(mon.getDate()+4);
-      return {from:toYMD(mon),to:toYMD(fri)};
-    },
-    next_week: () => {
-      const d=new Date(), day=d.getDay();
-      const nm=new Date(d); nm.setDate(d.getDate()+(day===0?1:8-day));
-      const nf=new Date(nm); nf.setDate(nm.getDate()+4);
-      return {from:toYMD(nm),to:toYMD(nf)};
-    },
+    yesterday: () => ({ from: shiftDay(today, -1), to: shiftDay(today, -1) }),
+    today:     () => ({ from: today, to: today }),
+    tomorrow:  () => ({ from: shiftDay(today,  1), to: shiftDay(today,  1) }),
+    this_week: () => ({ from: thisMonday,           to: shiftDay(thisMonday, 4) }),
+    next_week: () => ({ from: shiftDay(thisMonday, 7), to: shiftDay(thisMonday, 11) }),
   };
   return ranges[range] ? ranges[range]() : ranges.today();
 }
