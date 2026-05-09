@@ -208,9 +208,12 @@ thead th.col-actual,thead th.col-forecast,thead th.col-previous { text-align:rig
 .tz-label    { font-size:10px; color:var(--text-muted); display:block; margin-top:1px; }
 
 /* Currency cell */
-.cell-currency { display:flex; align-items:center; gap:7px; }
+.cell-currency { display:flex; align-items:center; gap:6px; flex-wrap:nowrap; }
 .currency-flag { width:22px; height:15px; border-radius:3px; object-fit:cover; box-shadow:0 1px 3px rgba(0,0,0,.4); }
 .currency-code { font-size:13px; font-weight:700; color:var(--text-primary); }
+.flag-arrow { font-size:10px; color:var(--text-muted); margin:0 1px; }
+.flag-pair { display:flex; align-items:center; gap:4px; }
+.flag-pair-sep { display:flex; align-items:center; gap:6px; }
 
 /* Impact badge */
 .impact-badge { display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:20px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; white-space:nowrap; }
@@ -512,6 +515,63 @@ function flagUrl(currency) {
   return meta?.flag ? `https://flagcdn.com/w40/${meta.flag}.png` : null;
 }
 
+// ISO country code → { name, flag } for the originating country
+const COUNTRY_META = {
+  'US':{ name:'United States',    flag:'us' },
+  'EU':{ name:'Eurozone',         flag:'eu' },
+  'DE':{ name:'Germany',          flag:'de' },
+  'FR':{ name:'France',           flag:'fr' },
+  'IT':{ name:'Italy',            flag:'it' },
+  'ES':{ name:'Spain',            flag:'es' },
+  'NL':{ name:'Netherlands',      flag:'nl' },
+  'AT':{ name:'Austria',          flag:'at' },
+  'BE':{ name:'Belgium',          flag:'be' },
+  'PT':{ name:'Portugal',         flag:'pt' },
+  'FI':{ name:'Finland',          flag:'fi' },
+  'IE':{ name:'Ireland',          flag:'ie' },
+  'GR':{ name:'Greece',           flag:'gr' },
+  'SK':{ name:'Slovakia',         flag:'sk' },
+  'GB':{ name:'United Kingdom',   flag:'gb' },
+  'JP':{ name:'Japan',            flag:'jp' },
+  'CH':{ name:'Switzerland',      flag:'ch' },
+  'CA':{ name:'Canada',           flag:'ca' },
+  'AU':{ name:'Australia',        flag:'au' },
+  'NZ':{ name:'New Zealand',      flag:'nz' },
+  'CN':{ name:'China',            flag:'cn' },
+  'SE':{ name:'Sweden',           flag:'se' },
+  'NO':{ name:'Norway',           flag:'no' },
+  'DK':{ name:'Denmark',          flag:'dk' },
+  'MX':{ name:'Mexico',           flag:'mx' },
+  'BR':{ name:'Brazil',           flag:'br' },
+  'IN':{ name:'India',            flag:'in' },
+  'KR':{ name:'South Korea',      flag:'kr' },
+  'SG':{ name:'Singapore',        flag:'sg' },
+  'HK':{ name:'Hong Kong',        flag:'hk' },
+  'ZA':{ name:'South Africa',     flag:'za' },
+  'TR':{ name:'Turkey',           flag:'tr' },
+  'PL':{ name:'Poland',           flag:'pl' },
+  'CZ':{ name:'Czech Republic',   flag:'cz' },
+  'RU':{ name:'Russia',           flag:'ru' },
+  'HU':{ name:'Hungary',          flag:'hu' },
+  'RO':{ name:'Romania',          flag:'ro' },
+  'TH':{ name:'Thailand',         flag:'th' },
+  'ID':{ name:'Indonesia',        flag:'id' },
+  'MY':{ name:'Malaysia',         flag:'my' },
+  'PH':{ name:'Philippines',      flag:'ph' },
+  'TW':{ name:'Taiwan',           flag:'tw' },
+  'SA':{ name:'Saudi Arabia',     flag:'sa' },
+  'AE':{ name:'UAE',              flag:'ae' },
+};
+
+function countryFlagUrl(countryCode) {
+  const meta = COUNTRY_META[countryCode?.toUpperCase()];
+  return meta ? `https://flagcdn.com/w40/${meta.flag}.png` : null;
+}
+
+function countryName(countryCode) {
+  return COUNTRY_META[countryCode?.toUpperCase()]?.name || countryCode || '';
+}
+
 // ── Value formatting ──────────────────────────────────────────
 function formatValue(val, unit) {
   if (val===null||val===undefined||val==='') return '<span class="val-empty">—</span>';
@@ -596,14 +656,36 @@ function renderTable(events) {
       const currency = detectCurrency(ev);
       const { time: timeStr, tz: tzStr } = formatTimeBerlin(evTime);
       const rel    = getRelativeTime(evTime);
-      const flag   = flagUrl(currency);
       const dots   = [1,2,3].map(i=>`<span class="impact-dot${i<=impact?' filled':''}"></span>`).join('');
       const isGoldTag = currency==='USD' && GOLD_KEYWORDS.some(k=>(ev.event||'').toLowerCase().includes(k));
       const goldTag = (activeFilters.currencies.has('XAU')&&isGoldTag)
         ? '<span class="gold-tag">GOLD</span>' : '';
-      const flagHtml = flag
-        ? `<img class="currency-flag" src="${flag}" alt="${currency}" loading="lazy"/>`
-        : `<span style="font-size:15px">🪙</span>`;
+
+      // Two-flag logic: country of origin + affected currency
+      const countryCode = ev.country?.toUpperCase() || '';
+      const countryFlagSrc = countryFlagUrl(countryCode);
+      const currencyFlagSrc = flagUrl(currency);
+
+      // Same flag when country flag === currency flag (e.g. US→USD, GB→GBP)
+      const sameFlag = countryFlagSrc && currencyFlagSrc &&
+        COUNTRY_META[countryCode]?.flag === CURRENCY_META[currency]?.flag;
+
+      let flagHtml;
+      if (sameFlag || (!countryFlagSrc && currencyFlagSrc)) {
+        // One flag only
+        flagHtml = currencyFlagSrc
+          ? `<img class="currency-flag" src="${currencyFlagSrc}" alt="${currency}" loading="lazy"/><span class="currency-code">${currency}</span>`
+          : `<span style="font-size:15px">🪙</span><span class="currency-code">${currency}</span>`;
+      } else if (countryFlagSrc && currencyFlagSrc) {
+        // Two flags: [country flag] → [currency flag + code]
+        flagHtml = `<img class="currency-flag" src="${countryFlagSrc}" alt="${countryCode}" loading="lazy" title="${countryName(countryCode)}"/><span class="flag-arrow">→</span><img class="currency-flag" src="${currencyFlagSrc}" alt="${currency}" loading="lazy" title="${currency}"/><span class="currency-code">${currency}</span>`;
+      } else {
+        flagHtml = currencyFlagSrc
+          ? `<img class="currency-flag" src="${currencyFlagSrc}" alt="${currency}" loading="lazy"/><span class="currency-code">${currency}</span>`
+          : `<span style="font-size:15px">🪙</span><span class="currency-code">${currency}</span>`;
+      }
+
+      const evCountryName = countryCode ? countryName(countryCode) : (CURRENCY_META[currency]?.name || currency);
 
       const relHtml = rel
         ? `<div class="time-relative ${rel.cls}">${rel.label}</div>`
@@ -617,11 +699,11 @@ function renderTable(events) {
           <div class="time-main">${timeStr}</div>
           ${tzHtml}${relHtml}
         </td>
-        <td><div class="cell-currency">${flagHtml}<span class="currency-code">${currency}</span></div></td>
+        <td><div class="cell-currency">${flagHtml}</div></td>
         <td><span class="impact-badge ${cls}"><span class="impact-dots">${dots}</span>${lbl}</span></td>
         <td>
           <div class="event-name">${ev.event||'N/A'}${goldTag}</div>
-          <div class="event-country">${CURRENCY_META[currency]?.name||currency}</div>
+          <div class="event-country">${evCountryName}</div>
         </td>
         <td class="cell-actual">${formatActual(ev.actual,ev.estimate,ev.unit)}</td>
         <td class="cell-forecast">${formatValue(ev.estimate,ev.unit)}</td>
