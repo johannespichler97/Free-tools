@@ -114,15 +114,27 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 .impact-filters,.currency-filters { display:flex; flex-wrap:wrap; gap:5px; }
 .impact-chip,.currency-chip { display:flex; align-items:center; gap:5px; padding:4px 10px; border-radius:20px; font-size:12px; font-weight:600; cursor:pointer; transition:all .15s; border:1.5px solid transparent; user-select:none; }
 .impact-chip,.currency-chip { cursor:pointer; }
-.impact-chip.high   { border-color:var(--high);   color:var(--high);   }
-.impact-chip.medium { border-color:var(--medium); color:var(--medium); }
-.impact-chip.low    { border-color:var(--low);    color:var(--low);    }
-.impact-chip.high.active   { background:var(--high-bg); }
-.impact-chip.medium.active { background:var(--medium-bg); }
-.impact-chip.low.active    { background:var(--low-bg); }
-.currency-chip { border-color:var(--border); color:var(--text-secondary); background:var(--bg-tertiary); }
-.currency-chip.active { border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
-.currency-chip.gold.active { border-color:var(--gold); color:var(--gold); background:var(--gold-bg); }
+
+/* Inactive state – clearly dimmed */
+.impact-chip {
+  border-color: var(--border);
+  color: var(--text-muted);
+  background: var(--bg-tertiary);
+  opacity: 0.45;
+}
+.impact-chip.active   { opacity: 1; }
+.impact-chip.high.active   { border-color:var(--high);   color:var(--high);   background:var(--high-bg); }
+.impact-chip.medium.active { border-color:var(--medium); color:var(--medium); background:var(--medium-bg); }
+.impact-chip.low.active    { border-color:var(--low);    color:var(--low);    background:var(--low-bg); }
+
+.currency-chip {
+  border-color: var(--border);
+  color: var(--text-muted);
+  background: var(--bg-tertiary);
+  opacity: 0.4;
+}
+.currency-chip.active      { opacity:1; border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
+.currency-chip.gold.active { opacity:1; border-color:var(--gold);   color:var(--gold);   background:var(--gold-bg); }
 
 .btn-refresh { display:flex; align-items:center; gap:6px; background:var(--bg-tertiary); border:1px solid var(--border); color:var(--text-secondary); padding:6px 12px; border-radius:var(--radius-sm); font-size:13px; font-weight:500; cursor:pointer; transition:all .15s; font-family:var(--font); }
 .btn-refresh:hover { border-color:var(--accent); color:var(--accent); }
@@ -320,15 +332,6 @@ thead th.col-actual,thead th.col-forecast,thead th.col-previous { text-align:rig
     </div>
   </div>
 
-  <!-- DEBUG PANEL – remove after fix -->
-  <div id="debugPanel" style="max-width:1400px;margin:12px auto;padding:0 24px;display:flex;flex-direction:column;gap:6px;">
-    <div style="background:#1c1c1c;border:1px solid #f0b429;border-radius:8px;padding:10px 14px;font-family:monospace;font-size:11px;color:#f0b429;">
-      <strong>DEBUG 1 – Dates:</strong> <span id="dbgText">calculating…</span>
-    </div>
-    <div style="background:#1c1c1c;border:1px solid #58a6ff;border-radius:8px;padding:10px 14px;font-family:monospace;font-size:11px;color:#58a6ff;">
-      <strong>DEBUG 2 – API Response:</strong> <span id="dbgText2">waiting for API…</span>
-    </div>
-  </div>
 
   <main class="main">
     <div class="table-container">
@@ -673,21 +676,6 @@ async function fetchCalendar(from, to) {
     const t = new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit',timeZone:TZ});
     document.getElementById('lastUpdated').textContent = `Updated ${t} ${getTZLabel()}`;
 
-    // Debug: show API response info
-    const dbg2 = document.getElementById('dbgText2');
-    if (dbg2) {
-      if (allEvents.length === 0) {
-        dbg2.textContent = 'API returned 0 events';
-      } else {
-        const e0 = allEvents[0];
-        const raw0 = e0.time || e0.date || '';
-        const parsedOld = raw0 ? new Date(raw0) : null;
-        const parsedNew = raw0 ? parseApiTime(raw0) : null;
-        const groupKeyOld = raw0 ? toYMD(new Date(raw0)) : '?';
-        const groupKeyNew = raw0 ? toYMD(parseApiTime(raw0)) : '?';
-        dbg2.textContent = `v6 | events:${allEvents.length} | raw:"${raw0}" | old→${parsedOld?.toISOString()}→key:${groupKeyOld} | NEW→${parsedNew?.toISOString()}→key:${groupKeyNew} | rendered label: "${formatDateBerlin(groupKeyNew)}"`;
-      }
-    }
   } catch(err) {
     loading.style.display = 'none';
     errorState.style.display = 'flex';
@@ -788,20 +776,7 @@ setInterval(applyFilters, 30000);
   document.getElementById('dateFrom').value = r.from;
   document.getElementById('dateTo').value   = r.to;
 
-  // Debug output
-  const dbg = document.getElementById('dbgText');
-  if (dbg) {
-    const rawNow = new Date();
-    dbg.textContent = [
-      `Browser UTC: ${rawNow.toISOString()}`,
-      `toYMD(now): ${toYMD(rawNow)}`,
-      `today-range: ${r.from} → ${r.to}`,
-      `yesterday: ${getDateRange('yesterday').from}`,
-      `tomorrow: ${getDateRange('tomorrow').from}`,
-    ].join('  |  ');
-  }
-
-  fetchCalendar(r.from, r.to);
+fetchCalendar(r.from, r.to);
 })();
 </script>
 </body>
