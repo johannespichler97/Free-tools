@@ -320,6 +320,14 @@ thead th.col-actual,thead th.col-forecast,thead th.col-previous { text-align:rig
     </div>
   </div>
 
+  <!-- DEBUG PANEL – remove after fix -->
+  <div id="debugPanel" style="max-width:1400px;margin:12px auto;padding:0 24px;">
+    <div style="background:#1c1c1c;border:1px solid #f0b429;border-radius:8px;padding:12px 16px;font-family:monospace;font-size:12px;color:#f0b429;">
+      <strong>DEBUG (wird danach entfernt):</strong>
+      <span id="dbgText">calculating…</span>
+    </div>
+  </div>
+
   <main class="main">
     <div class="table-container">
       <div class="loading" id="loading"><div class="spinner"></div><span>Loading economic events…</span></div>
@@ -753,6 +761,20 @@ setInterval(applyFilters, 30000);
   const r = getDateRange('today');
   document.getElementById('dateFrom').value = r.from;
   document.getElementById('dateTo').value   = r.to;
+
+  // Debug output
+  const dbg = document.getElementById('dbgText');
+  if (dbg) {
+    const rawNow = new Date();
+    dbg.textContent = [
+      `Browser UTC: ${rawNow.toISOString()}`,
+      `toYMD(now): ${toYMD(rawNow)}`,
+      `today-range: ${r.from} → ${r.to}`,
+      `yesterday: ${getDateRange('yesterday').from}`,
+      `tomorrow: ${getDateRange('tomorrow').from}`,
+    ].join('  |  ');
+  }
+
   fetchCalendar(r.from, r.to);
 })();
 </script>
