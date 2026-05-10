@@ -6,7 +6,7 @@
   <title>Position Size Calculator | Solantis</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
   <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -16,6 +16,7 @@
   --bg-tertiary:   #0e3a54;
   --bg-hover:      #123f5c;
   --border:        #1a4d6e;
+  --border-light:  #123d58;
   --text-primary:  #E6E9EB;
   --text-secondary:#8ab8d0;
   --text-muted:    #4d7a96;
@@ -23,15 +24,23 @@
   --accent-2:      #51d7ce;
   --accent-dim:    rgba(47,163,224,0.12);
   --positive:      #3fb950;
+  --negative:      #f85149;
+  --gold:          #f0b429;
   --font:          'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono:     'JetBrains Mono', monospace;
   --radius-sm:     6px;
+  --radius-md:     10px;
   --radius-lg:     14px;
 }
 
-body { font-family: var(--font); background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; }
+html { scroll-behavior: smooth; }
+body { font-family: var(--font); background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; font-size: 14px; line-height: 1.5; }
 
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+@keyframes pulse  { 0%,100%{opacity:1} 50%{opacity:0.4} }
+@keyframes spin   { to{transform:rotate(360deg)} }
+@keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
 
+/* ── HEADER ── */
 .header { position:sticky; top:0; z-index:100; background:rgba(6,36,52,0.97); backdrop-filter:blur(12px); border-bottom:1px solid var(--border); }
 .header-inner { max-width:1200px; margin:0 auto; padding:0 24px; height:60px; display:flex; align-items:center; gap:32px; }
 .logo { display:flex; align-items:center; gap:8px; text-decoration:none; color:var(--text-primary); font-size:16px; font-weight:700; white-space:nowrap; }
@@ -43,21 +52,106 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 .header-actions { display:flex; align-items:center; gap:12px; }
 .live-badge { font-size:11px; font-weight:600; color:var(--positive); letter-spacing:.05em; display:flex; align-items:center; gap:5px; }
 .live-dot { animation:pulse 2s infinite; }
-.btn-primary { background:linear-gradient(135deg,#51d7ce,#2FA3E0); color:#062434; border:none; padding:7px 18px; border-radius:20px; font-size:13px; font-weight:700; cursor:pointer; font-family:var(--font); }
+.btn-primary { background:linear-gradient(135deg,#51d7ce,#2FA3E0); color:#062434; border:none; padding:7px 18px; border-radius:20px; font-size:13px; font-weight:700; cursor:pointer; font-family:var(--font); transition:opacity .15s; }
+.btn-primary:hover { opacity:.88; }
 
-.placeholder { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:calc(100vh - 60px); gap:16px; color:var(--text-muted); }
-.placeholder-icon { font-size:48px; opacity:.4; }
-.placeholder h2 { font-size:22px; font-weight:600; color:var(--text-secondary); }
-.placeholder p { font-size:14px; }
+/* ── HERO ── */
+.hero { background:linear-gradient(135deg,#062434 0%,#0a2e44 60%,#0d3550 100%); border-bottom:1px solid var(--border); padding:28px 24px; }
+.hero-inner { max-width:1200px; margin:0 auto; }
+.hero h1 { font-size:26px; font-weight:700; }
+.hero h1::after { content:''; display:block; width:40px; height:3px; background:linear-gradient(90deg,#51d7ce,#2FA3E0); border-radius:2px; margin-top:10px; }
+.hero p { color:var(--text-secondary); font-size:15px; margin-top:10px; }
 
-@media(max-width:640px) { .header-inner { padding:0 16px; } }
+/* ── MAIN ── */
+.main { max-width:1200px; margin:0 auto; padding:24px 24px 60px; }
+
+/* ── CALCULATOR LAYOUT ── */
+.calc-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; align-items:start; }
+@media(max-width:860px) { .calc-grid { grid-template-columns:1fr; } }
+
+.calc-card { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); padding:24px; }
+
+.card-title { font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--text-muted); margin-bottom:20px; }
+
+/* ── INPUTS ── */
+.input-group { margin-bottom:18px; }
+.input-group:last-child { margin-bottom:0; }
+.input-label { display:block; font-size:12px; font-weight:600; color:var(--text-secondary); margin-bottom:7px; text-transform:uppercase; letter-spacing:.05em; }
+
+.input-field { width:100%; background:var(--bg-tertiary); border:1.5px solid var(--border); color:var(--text-primary); padding:10px 14px; border-radius:var(--radius-md); font-size:14px; font-family:var(--font); outline:none; transition:border-color .15s; }
+.input-field:focus { border-color:var(--accent); }
+.input-field::placeholder { color:var(--text-muted); }
+
+select.input-field { cursor:pointer; appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234d7a96' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 12px center; padding-right:36px; color-scheme:dark; }
+select.input-field option { background:var(--bg-tertiary); }
+
+.input-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+
+/* Toggle buttons */
+.toggle-group { display:flex; gap:4px; margin-bottom:10px; }
+.toggle-btn { flex:1; padding:7px 10px; border-radius:var(--radius-sm); border:1.5px solid var(--border); background:var(--bg-tertiary); color:var(--text-muted); font-size:12px; font-weight:600; cursor:pointer; font-family:var(--font); transition:all .15s; }
+.toggle-btn.active { border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
+
+/* Input with suffix */
+.input-suffix-wrap { position:relative; }
+.input-suffix-wrap .input-field { padding-right:56px; }
+.input-suffix { position:absolute; right:14px; top:50%; transform:translateY(-50%); font-size:13px; font-weight:600; color:var(--text-muted); pointer-events:none; }
+
+/* Calculate button */
+.btn-calc { width:100%; padding:13px; border-radius:var(--radius-md); border:none; background:linear-gradient(135deg,#51d7ce,#2FA3E0); color:#062434; font-size:15px; font-weight:700; cursor:pointer; font-family:var(--font); margin-top:22px; transition:opacity .15s; letter-spacing:.02em; }
+.btn-calc:hover { opacity:.88; }
+.btn-calc:disabled { opacity:.5; cursor:not-allowed; }
+
+/* ── RESULT PANEL ── */
+.live-price-box { background:var(--bg-tertiary); border:1px solid var(--border); border-radius:var(--radius-md); padding:16px 20px; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.lp-left { display:flex; flex-direction:column; gap:3px; }
+.lp-pair { font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.07em; }
+.lp-price { font-family:var(--font-mono); font-size:26px; font-weight:600; color:var(--text-primary); letter-spacing:.02em; }
+.lp-change { font-size:11px; font-weight:600; }
+.lp-change.up { color:var(--positive); }
+.lp-change.down { color:var(--negative); }
+.lp-right { display:flex; flex-direction:column; align-items:flex-end; gap:4px; }
+.lp-updated { font-size:10px; color:var(--text-muted); }
+.lp-loading { display:flex; align-items:center; gap:8px; color:var(--text-muted); font-size:13px; }
+.spinner-sm { width:16px; height:16px; border:2px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .7s linear infinite; }
+
+/* Result main */
+.result-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 20px; color:var(--text-muted); text-align:center; gap:10px; }
+.result-empty-icon { font-size:36px; opacity:.4; }
+.result-empty p { font-size:13px; }
+
+.result-box { animation:fadeIn .3s ease; }
+.result-lot { background:linear-gradient(135deg, rgba(81,215,206,0.08), rgba(47,163,224,0.08)); border:1px solid rgba(47,163,224,0.3); border-radius:var(--radius-md); padding:24px; text-align:center; margin-bottom:14px; }
+.result-lot-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:var(--accent); margin-bottom:8px; }
+.result-lot-value { font-family:var(--font-mono); font-size:48px; font-weight:600; background:linear-gradient(135deg,#51d7ce,#2FA3E0); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; line-height:1; }
+.result-lot-unit { font-size:14px; font-weight:600; color:var(--text-secondary); margin-top:4px; }
+
+.result-details { display:flex; flex-direction:column; gap:8px; }
+.result-detail { display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:var(--bg-tertiary); border-radius:var(--radius-sm); }
+.result-detail-label { font-size:12px; color:var(--text-muted); font-weight:500; }
+.result-detail-value { font-size:13px; font-weight:700; color:var(--text-primary); font-family:var(--font-mono); }
+
+/* Warning */
+.calc-warning { background:rgba(248,81,73,0.1); border:1px solid rgba(248,81,73,0.3); border-radius:var(--radius-sm); padding:10px 14px; font-size:12px; color:#f85149; margin-top:12px; display:none; }
+
+/* Pip info */
+.pip-info { font-size:11px; color:var(--text-muted); margin-top:6px; }
+
+/* Footer */
+.footer { background:var(--bg-secondary); border-top:1px solid var(--border); padding:24px; margin-top:0; }
+.footer-inner { max-width:1200px; margin:0 auto; text-align:center; }
+.footer-disclaimer { font-size:12px; color:var(--text-muted); line-height:1.6; }
+.footer-disclaimer a { color:var(--accent); text-decoration:none; }
+.footer-copy { font-size:12px; color:var(--text-muted); margin-top:6px; }
+
+@media(max-width:640px) { .header-inner { padding:0 16px; } .main { padding:16px 16px 40px; } }
   </style>
 </head>
 <body>
 
   <header class="header">
     <div class="header-inner">
-      <a href="/" class="logo">
+      <a href="economic-calendar.html" class="logo">
         <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -85,11 +179,428 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
     </div>
   </header>
 
-  <div class="placeholder">
-    <div class="placeholder-icon">&#9881;</div>
-    <h2>Position Size Calculator</h2>
-    <p>Coming soon…</p>
-  </div>
+  <section class="hero">
+    <div class="hero-inner">
+      <h1>Position Size Calculator</h1>
+      <p>Enter your trade parameters to calculate the optimal lot size based on live market prices.</p>
+    </div>
+  </section>
 
+  <main class="main">
+    <div class="calc-grid">
+
+      <!-- LEFT: Inputs -->
+      <div class="calc-card">
+        <div class="card-title">Trade Parameters</div>
+
+        <!-- Pair -->
+        <div class="input-group">
+          <label class="input-label">Currency Pair / Instrument</label>
+          <select class="input-field" id="pairSelect">
+            <optgroup label="AUD Pairs">
+              <option value="AUDCAD">AUDCAD</option>
+              <option value="AUDCHF">AUDCHF</option>
+              <option value="AUDJPY">AUDJPY</option>
+              <option value="AUDNZD">AUDNZD</option>
+              <option value="AUDUSD">AUDUSD</option>
+            </optgroup>
+            <optgroup label="CAD Pairs">
+              <option value="CADCHF">CADCHF</option>
+              <option value="CADJPY">CADJPY</option>
+            </optgroup>
+            <optgroup label="CHF Pairs">
+              <option value="CHFJPY">CHFJPY</option>
+            </optgroup>
+            <optgroup label="EUR Pairs">
+              <option value="EURAUD">EURAUD</option>
+              <option value="EURCAD">EURCAD</option>
+              <option value="EURCHF">EURCHF</option>
+              <option value="EURGBP">EURGBP</option>
+              <option value="EURJPY">EURJPY</option>
+              <option value="EURNZD">EURNZD</option>
+              <option value="EURUSD" selected>EURUSD</option>
+            </optgroup>
+            <optgroup label="GBP Pairs">
+              <option value="GBPAUD">GBPAUD</option>
+              <option value="GBPCAD">GBPCAD</option>
+              <option value="GBPCHF">GBPCHF</option>
+              <option value="GBPJPY">GBPJPY</option>
+              <option value="GBPNZD">GBPNZD</option>
+              <option value="GBPUSD">GBPUSD</option>
+            </optgroup>
+            <optgroup label="NZD Pairs">
+              <option value="NZDCAD">NZDCAD</option>
+              <option value="NZDCHF">NZDCHF</option>
+              <option value="NZDJPY">NZDJPY</option>
+              <option value="NZDUSD">NZDUSD</option>
+            </optgroup>
+            <optgroup label="USD Pairs">
+              <option value="USDCAD">USDCAD</option>
+              <option value="USDCHF">USDCHF</option>
+              <option value="USDJPY">USDJPY</option>
+            </optgroup>
+            <optgroup label="Metals">
+              <option value="XAGUSD">XAGUSD (Silver)</option>
+              <option value="XAUUSD">XAUUSD (Gold)</option>
+            </optgroup>
+          </select>
+        </div>
+
+        <!-- Account Currency -->
+        <div class="input-group">
+          <label class="input-label">Account Currency</label>
+          <div class="toggle-group">
+            <button class="toggle-btn active" data-cur="USD">USD</button>
+            <button class="toggle-btn" data-cur="EUR">EUR</button>
+            <button class="toggle-btn" data-cur="USC">USC <span style="font-size:10px;opacity:.7">(¢)</span></button>
+          </div>
+        </div>
+
+        <!-- Account Size -->
+        <div class="input-group">
+          <label class="input-label">Account Size</label>
+          <div class="input-suffix-wrap">
+            <input type="number" class="input-field" id="accountSize" placeholder="10 000" min="0" step="100" />
+            <span class="input-suffix" id="accCurSuffix">USD</span>
+          </div>
+        </div>
+
+        <!-- Risk -->
+        <div class="input-group">
+          <label class="input-label">Risk</label>
+          <div class="toggle-group">
+            <button class="toggle-btn active" data-risk="pct">Percent (%)</button>
+            <button class="toggle-btn" data-risk="amount">Fixed Amount</button>
+          </div>
+          <div class="input-suffix-wrap">
+            <input type="number" class="input-field" id="riskValue" placeholder="1" min="0" step="0.1" />
+            <span class="input-suffix" id="riskSuffix">%</span>
+          </div>
+        </div>
+
+        <!-- Stop Loss -->
+        <div class="input-group">
+          <label class="input-label">Stop Loss</label>
+          <div class="input-suffix-wrap">
+            <input type="number" class="input-field" id="stopLoss" placeholder="20" min="0" step="1" />
+            <span class="input-suffix">pips</span>
+          </div>
+          <div class="pip-info" id="pipInfo">1 pip = 0.0001 for EURUSD</div>
+        </div>
+
+        <div class="calc-warning" id="calcWarning"></div>
+
+        <button class="btn-calc" id="calcBtn">Calculate Lot Size</button>
+      </div>
+
+      <!-- RIGHT: Results -->
+      <div>
+        <!-- Live Price -->
+        <div class="calc-card" style="margin-bottom:16px;">
+          <div class="card-title">Live Market Price</div>
+          <div class="live-price-box">
+            <div class="lp-left">
+              <div class="lp-pair" id="lpPair">EURUSD</div>
+              <div class="lp-price" id="lpPrice">
+                <span class="lp-loading"><span class="spinner-sm"></span> Loading…</span>
+              </div>
+              <div class="lp-change" id="lpChange"></div>
+            </div>
+            <div class="lp-right">
+              <div class="lp-updated" id="lpUpdated"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Result -->
+        <div class="calc-card">
+          <div class="card-title">Result</div>
+          <div id="resultArea">
+            <div class="result-empty">
+              <div class="result-empty-icon">&#9881;</div>
+              <p>Fill in your parameters and click<br><strong>Calculate Lot Size</strong></p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+      <p class="footer-disclaimer">
+        <strong>Risk Warning:</strong> Trading in forex and commodities involves significant risk.
+        Lot size calculations are based on live data from <a href="https://finnhub.io" target="_blank" rel="noopener">Finnhub</a>.
+        Always verify results with your broker.
+      </p>
+      <p class="footer-copy">&copy; 2026 Market Analytics. All rights reserved.</p>
+    </div>
+  </footer>
+
+<script>
+const API_KEY = 'd4fevfpr01qkcvvhv6h0d4fevfpr01qkcvvhv6hg';
+const API_BASE = 'https://finnhub.io/api/v1';
+
+let accCurrency = 'USD';
+let riskType    = 'pct';
+let priceCache  = {};
+
+// Contract sizes and pip sizes per instrument
+const CONTRACT = { XAUUSD: 100, XAGUSD: 5000 };
+const PIP_SIZE  = { XAUUSD: 0.01, XAGUSD: 0.001 };
+
+function getContractSize(pair) { return CONTRACT[pair] || 100000; }
+function getPipSize(pair) {
+  if (PIP_SIZE[pair]) return PIP_SIZE[pair];
+  return pair.endsWith('JPY') ? 0.01 : 0.0001;
+}
+
+function toFinnhubSymbol(pair) {
+  if (pair === 'XAUUSD') return 'OANDA:XAU_USD';
+  if (pair === 'XAGUSD') return 'OANDA:XAG_USD';
+  return `OANDA:${pair.slice(0,3)}_${pair.slice(3)}`;
+}
+
+async function fetchQuote(pair) {
+  if (priceCache[pair] && Date.now() - priceCache[pair].ts < 30000) {
+    return priceCache[pair];
+  }
+  const sym = toFinnhubSymbol(pair);
+  const res = await fetch(`${API_BASE}/quote?symbol=${sym}&token=${API_KEY}`);
+  if (!res.ok) throw new Error(`API error ${res.status}`);
+  const d = await res.json();
+  if (!d.c) throw new Error('No price data');
+  const result = { c: d.c, pc: d.pc, ts: Date.now() };
+  priceCache[pair] = result;
+  return result;
+}
+
+// Get the USD value of 1 unit of a given currency
+async function toUSD(currency) {
+  if (currency === 'USD') return 1;
+  const pair = `${currency}USD`;
+  try {
+    const q = await fetchQuote(pair);
+    return q.c;
+  } catch {
+    // Try inverse
+    const inv = `USD${currency}`;
+    const q = await fetchQuote(inv);
+    return 1 / q.c;
+  }
+}
+
+function updateLivePrice(pair, data) {
+  document.getElementById('lpPair').textContent = pair;
+  const decimals = pair.includes('JPY') ? 3 : (pair === 'XAUUSD' || pair === 'XAGUSD') ? 2 : 5;
+  document.getElementById('lpPrice').textContent = data.c.toFixed(decimals);
+  const diff = data.c - data.pc;
+  const pct  = ((diff / data.pc) * 100).toFixed(2);
+  const el   = document.getElementById('lpChange');
+  el.textContent = `${diff >= 0 ? '+' : ''}${diff.toFixed(decimals)} (${pct}%)`;
+  el.className = 'lp-change ' + (diff >= 0 ? 'up' : 'down');
+  document.getElementById('lpUpdated').textContent = 'Updated ' + new Date().toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+}
+
+function updatePipInfo(pair) {
+  const ps = getPipSize(pair);
+  const cs = getContractSize(pair);
+  let info = '';
+  if (pair === 'XAUUSD') info = '1 pip = $0.01 · 100 oz per lot · ~$1 pip value/lot';
+  else if (pair === 'XAGUSD') info = '1 pip = $0.001 · 5,000 oz per lot · ~$5 pip value/lot';
+  else if (pair.endsWith('JPY')) info = `1 pip = 0.01 · ${cs.toLocaleString()} units per lot`;
+  else info = `1 pip = 0.0001 · ${cs.toLocaleString()} units per lot`;
+  document.getElementById('pipInfo').textContent = info;
+}
+
+async function loadLivePrice(pair) {
+  document.getElementById('lpPair').textContent = pair;
+  document.getElementById('lpPrice').innerHTML = '<span class="lp-loading"><span class="spinner-sm"></span> Loading…</span>';
+  document.getElementById('lpChange').textContent = '';
+  document.getElementById('lpUpdated').textContent = '';
+  try {
+    const data = await fetchQuote(pair);
+    updateLivePrice(pair, data);
+  } catch(e) {
+    document.getElementById('lpPrice').textContent = 'Unavailable';
+  }
+}
+
+function showWarning(msg) {
+  const el = document.getElementById('calcWarning');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+function clearWarning() {
+  document.getElementById('calcWarning').style.display = 'none';
+}
+
+function formatCur(amount, cur) {
+  if (cur === 'USC') return `${(amount * 100).toFixed(0)}¢`;
+  return new Intl.NumberFormat('en-US', { style:'currency', currency: cur === 'USC' ? 'USD' : cur, maximumFractionDigits: 2 }).format(amount);
+}
+
+async function calculate() {
+  clearWarning();
+  const pair      = document.getElementById('pairSelect').value;
+  const accSize   = parseFloat(document.getElementById('accountSize').value);
+  const riskVal   = parseFloat(document.getElementById('riskValue').value);
+  const slPips    = parseFloat(document.getElementById('stopLoss').value);
+
+  if (isNaN(accSize) || accSize <= 0) { showWarning('Please enter a valid account size.'); return; }
+  if (isNaN(riskVal) || riskVal <= 0) { showWarning('Please enter a valid risk value.'); return; }
+  if (isNaN(slPips)  || slPips  <= 0) { showWarning('Please enter a valid stop loss in pips.'); return; }
+  if (riskType === 'pct' && riskVal > 100) { showWarning('Risk percentage cannot exceed 100%.'); return; }
+
+  const btn = document.getElementById('calcBtn');
+  btn.disabled = true;
+  btn.textContent = 'Calculating…';
+
+  try {
+    // Risk amount in account currency
+    let riskAmt = riskType === 'pct' ? accSize * (riskVal / 100) : riskVal;
+
+    // Convert risk to USD
+    let riskUSD;
+    if (accCurrency === 'USD') {
+      riskUSD = riskAmt;
+    } else if (accCurrency === 'USC') {
+      riskUSD = riskAmt / 100;
+    } else {
+      const rate = await toUSD(accCurrency);
+      riskUSD = riskAmt * rate;
+    }
+
+    // Fetch current pair price
+    const quote = await fetchQuote(pair);
+    updateLivePrice(pair, quote);
+
+    // Pip value in USD per standard lot
+    const pipSz   = getPipSize(pair);
+    const ctrSize = getContractSize(pair);
+    const quoteCur = pair.slice(-3); // last 3 chars = quote currency
+
+    let pipValueUSD;
+    if (quoteCur === 'USD') {
+      pipValueUSD = pipSz * ctrSize;
+    } else {
+      const quoteToUSD = await toUSD(quoteCur);
+      pipValueUSD = pipSz * ctrSize * quoteToUSD;
+    }
+
+    // Lot size
+    const lotSize = riskUSD / (slPips * pipValueUSD);
+
+    if (!isFinite(lotSize) || lotSize <= 0) {
+      showWarning('Could not calculate a valid lot size. Please check your inputs.');
+      return;
+    }
+
+    // Position value in USD
+    const posValueUSD = lotSize * ctrSize * quote.c;
+
+    // Convert pip value and position value to account currency for display
+    let accRate = 1;
+    if (accCurrency === 'EUR') {
+      const eurusd = await fetchQuote('EURUSD');
+      accRate = 1 / eurusd.c;
+    } else if (accCurrency === 'USC') {
+      accRate = 100;
+    }
+
+    const pipValDisplay = pipValueUSD * lotSize / accRate;
+    const posValDisplay = posValueUSD / (accCurrency === 'USC' ? 0.01 : accRate === 1 ? 1 : 1 / accRate);
+
+    // Format lot size nicely
+    let lotDisplay;
+    if (lotSize >= 1) lotDisplay = lotSize.toFixed(2);
+    else if (lotSize >= 0.01) lotDisplay = lotSize.toFixed(2);
+    else lotDisplay = lotSize.toFixed(4);
+
+    const displayCur = accCurrency === 'USC' ? 'USD' : accCurrency;
+
+    document.getElementById('resultArea').innerHTML = `
+      <div class="result-box">
+        <div class="result-lot">
+          <div class="result-lot-label">Recommended Lot Size</div>
+          <div class="result-lot-value">${lotDisplay}</div>
+          <div class="result-lot-unit">Standard Lots</div>
+        </div>
+        <div class="result-details">
+          <div class="result-detail">
+            <span class="result-detail-label">Risk Amount</span>
+            <span class="result-detail-value">${formatCur(riskAmt, accCurrency)}</span>
+          </div>
+          <div class="result-detail">
+            <span class="result-detail-label">Risk Amount (USD)</span>
+            <span class="result-detail-value">${formatCur(riskUSD, 'USD')}</span>
+          </div>
+          <div class="result-detail">
+            <span class="result-detail-label">Pip Value / Lot</span>
+            <span class="result-detail-value">${formatCur(pipValueUSD, 'USD')}</span>
+          </div>
+          <div class="result-detail">
+            <span class="result-detail-label">Total Pip Value</span>
+            <span class="result-detail-value">${formatCur(pipValueUSD * lotSize, 'USD')}</span>
+          </div>
+          <div class="result-detail">
+            <span class="result-detail-label">Live Price (${pair})</span>
+            <span class="result-detail-value">${quote.c.toFixed(getPipSize(pair) < 0.001 ? 5 : pair.includes('JPY') ? 3 : 2)}</span>
+          </div>
+        </div>
+      </div>`;
+  } catch(e) {
+    showWarning('Failed to fetch live prices. Please try again. (' + e.message + ')');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Calculate Lot Size';
+  }
+}
+
+// ── Event listeners ──────────────────────────────────────────
+
+// Pair change → update live price
+document.getElementById('pairSelect').addEventListener('change', function() {
+  loadLivePrice(this.value);
+  updatePipInfo(this.value);
+  document.getElementById('resultArea').innerHTML = `<div class="result-empty"><div class="result-empty-icon">&#9881;</div><p>Fill in your parameters and click<br><strong>Calculate Lot Size</strong></p></div>`;
+  clearWarning();
+});
+
+// Account currency toggle
+document.querySelectorAll('[data-cur]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-cur]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    accCurrency = btn.dataset.cur;
+    document.getElementById('accCurSuffix').textContent = accCurrency;
+    document.getElementById('riskSuffix').textContent = riskType === 'pct' ? '%' : accCurrency;
+  });
+});
+
+// Risk type toggle
+document.querySelectorAll('[data-risk]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-risk]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    riskType = btn.dataset.risk;
+    document.getElementById('riskSuffix').textContent = riskType === 'pct' ? '%' : accCurrency;
+    document.getElementById('riskValue').placeholder = riskType === 'pct' ? '1' : '100';
+  });
+});
+
+// Calculate button
+document.getElementById('calcBtn').addEventListener('click', calculate);
+
+// Enter key triggers calculate
+document.querySelectorAll('input').forEach(inp => {
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') calculate(); });
+});
+
+// ── Init ─────────────────────────────────────────────────────
+loadLivePrice('EURUSD');
+updatePipInfo('EURUSD');
+</script>
 </body>
 </html>
