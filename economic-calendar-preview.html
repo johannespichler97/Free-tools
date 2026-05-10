@@ -11,29 +11,30 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg-primary:    #0d1117;
-  --bg-secondary:  #161b22;
-  --bg-tertiary:   #1c2128;
-  --bg-hover:      #2d333b;
-  --border:        #30363d;
-  --border-light:  #21262d;
-  --text-primary:  #e6edf3;
-  --text-secondary:#8b949e;
-  --text-muted:    #484f58;
-  --accent:        #f0b429;
-  --accent-hover:  #e6a800;
-  --accent-dim:    rgba(240,180,41,0.12);
+  --bg-primary:    #062434;
+  --bg-secondary:  #0a2e44;
+  --bg-tertiary:   #0e3a54;
+  --bg-hover:      #123f5c;
+  --border:        #1a4d6e;
+  --border-light:  #123d58;
+  --text-primary:  #E6E9EB;
+  --text-secondary:#8ab8d0;
+  --text-muted:    #4d7a96;
+  --accent:        #2FA3E0;
+  --accent-2:      #51d7ce;
+  --accent-hover:  #51d7ce;
+  --accent-dim:    rgba(47,163,224,0.12);
   --high:          #f85149;
   --high-bg:       rgba(248,81,73,0.12);
-  --medium:        #f0b429;
-  --medium-bg:     rgba(240,180,41,0.12);
+  --medium:        #e3b341;
+  --medium-bg:     rgba(227,179,65,0.12);
   --low:           #3fb950;
   --low-bg:        rgba(63,185,80,0.12);
   --positive:      #3fb950;
   --negative:      #f85149;
-  --gold:          #ffd700;
-  --gold-bg:       rgba(255,215,0,0.1);
-  --now-color:     #f85149;
+  --gold:          #f0b429;
+  --gold-bg:       rgba(240,180,41,0.12);
+  --now-color:     #51d7ce;
   --font:          'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono:     'JetBrains Mono', monospace;
   --radius-sm:     6px;
@@ -45,10 +46,10 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 
 @keyframes pulse    { 0%,100%{opacity:1}  50%{opacity:0.4} }
 @keyframes spin     { to{transform:rotate(360deg)} }
-@keyframes nowPulse { 0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(248,81,73,0.4)} 50%{opacity:.8;box-shadow:0 0 0 6px rgba(248,81,73,0)} }
+@keyframes nowPulse { 0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(81,215,206,0.5)} 50%{opacity:.8;box-shadow:0 0 0 6px rgba(81,215,206,0)} }
 
 /* ── HEADER ── */
-.header { position:sticky; top:0; z-index:100; background:rgba(13,17,23,0.96); backdrop-filter:blur(12px); border-bottom:1px solid var(--border); }
+.header { position:sticky; top:0; z-index:100; background:rgba(6,36,52,0.97); backdrop-filter:blur(12px); border-bottom:1px solid var(--border); }
 .header-inner { max-width:1200px; margin:0 auto; padding:0 24px; height:60px; display:flex; align-items:center; gap:32px; }
 .logo { display:flex; align-items:center; gap:8px; text-decoration:none; color:var(--text-primary); font-size:16px; white-space:nowrap; }
 .logo-icon { color:var(--accent); }
@@ -60,11 +61,11 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 .header-actions { display:flex; align-items:center; gap:12px; }
 .live-badge { font-size:11px; font-weight:600; color:var(--positive); letter-spacing:.05em; display:flex; align-items:center; gap:5px; }
 .live-dot { animation:pulse 2s infinite; }
-.btn-primary { background:var(--accent); color:#000; border:none; padding:7px 16px; border-radius:var(--radius-sm); font-size:13px; font-weight:600; cursor:pointer; transition:background .15s; font-family:var(--font); }
-.btn-primary:hover { background:var(--accent-hover); }
+.btn-primary { background:linear-gradient(135deg,#51d7ce,#2FA3E0); color:#062434; border:none; padding:7px 16px; border-radius:20px; font-size:13px; font-weight:700; cursor:pointer; transition:opacity .15s; font-family:var(--font); }
+.btn-primary:hover { opacity:.88; }
 
 /* ── HERO ── */
-.hero { background:linear-gradient(135deg,#0d1117 0%,#161b22 60%,#1a1f28 100%); border-bottom:1px solid var(--border); padding:28px 24px; }
+.hero { background:linear-gradient(135deg,#062434 0%,#0a2e44 60%,#0d3550 100%); border-bottom:1px solid var(--border); padding:28px 24px; }
 .hero-inner { max-width:1200px; margin:0 auto; display:flex; align-items:center; justify-content:center; gap:48px; flex-wrap:wrap; }
 .hero-content h1 { font-size:28px; font-weight:700; }
 .hero-content h1::after { content:''; display:block; width:40px; height:3px; background:var(--accent); border-radius:2px; margin-top:10px; }
@@ -79,7 +80,7 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 }
 .hero-clock::before {
   content:''; position:absolute; top:0; left:0; right:0; height:2px;
-  background:linear-gradient(90deg,var(--accent),var(--now-color));
+  background:linear-gradient(90deg,#51d7ce,#2FA3E0);
 }
 .clock-tz-badge {
   font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
@@ -106,7 +107,7 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 .date-input { background:var(--bg-tertiary); border:1px solid var(--border); color:var(--text-primary); padding:6px 10px; border-radius:var(--radius-sm); font-size:13px; font-family:var(--font); cursor:pointer; outline:none; color-scheme:dark; }
 .date-input:focus { border-color:var(--accent); }
 .date-sep { color:var(--text-muted); }
-.btn-apply { background:var(--accent); color:#000; border:none; padding:6px 14px; border-radius:var(--radius-sm); font-size:13px; font-weight:600; cursor:pointer; font-family:var(--font); }
+.btn-apply { background:linear-gradient(135deg,#51d7ce,#2FA3E0); color:#062434; border:none; padding:6px 14px; border-radius:20px; font-size:13px; font-weight:700; cursor:pointer; font-family:var(--font); }
 
 .filter-row { display:flex; align-items:center; flex-wrap:wrap; gap:16px; padding-top:10px; border-top:1px solid var(--border); }
 .filter-group { display:flex; align-items:center; gap:10px; }
@@ -173,7 +174,7 @@ thead th.col-actual,thead th.col-forecast,thead th.col-previous { text-align:rig
 }
 .now-line::after {
   content:''; position:absolute; left:70px; right:0; top:50%; height:1px;
-  background:linear-gradient(90deg, var(--now-color) 0%, rgba(248,81,73,0.1) 100%);
+  background:linear-gradient(90deg, var(--now-color) 0%, rgba(81,215,206,0.08) 100%);
 }
 .now-label {
   display:flex; align-items:center; gap:6px;
@@ -205,7 +206,7 @@ thead th.col-actual,thead th.col-forecast,thead th.col-previous { text-align:rig
 .rel-past    { color:var(--text-muted); background:rgba(255,255,255,.04); }
 .rel-soon    { color:var(--accent); background:var(--accent-dim); animation:pulse 2s infinite; }
 .rel-future  { color:var(--text-secondary); background:rgba(255,255,255,.04); }
-.rel-now     { color:var(--now-color); background:var(--high-bg); font-weight:700; }
+.rel-now     { color:var(--now-color); background:rgba(81,215,206,0.12); font-weight:700; }
 .tz-label    { font-size:10px; color:var(--text-muted); display:block; margin-top:1px; }
 
 /* Currency cell */
