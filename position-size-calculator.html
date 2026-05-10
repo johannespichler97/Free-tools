@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Position Size Calculator | Solantis</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-primary:    #062434;
+  --bg-secondary:  #0a2e44;
+  --bg-tertiary:   #0e3a54;
+  --bg-hover:      #123f5c;
+  --border:        #1a4d6e;
+  --text-primary:  #E6E9EB;
+  --text-secondary:#8ab8d0;
+  --text-muted:    #4d7a96;
+  --accent:        #2FA3E0;
+  --accent-2:      #51d7ce;
+  --accent-dim:    rgba(47,163,224,0.12);
+  --positive:      #3fb950;
+  --font:          'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --radius-sm:     6px;
+  --radius-lg:     14px;
+}
+
+body { font-family: var(--font); background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; }
+
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+.header { position:sticky; top:0; z-index:100; background:rgba(6,36,52,0.97); backdrop-filter:blur(12px); border-bottom:1px solid var(--border); }
+.header-inner { max-width:1200px; margin:0 auto; padding:0 24px; height:60px; display:flex; align-items:center; gap:32px; }
+.logo { display:flex; align-items:center; gap:8px; text-decoration:none; color:var(--text-primary); font-size:16px; font-weight:700; white-space:nowrap; }
+.logo-text strong { color:var(--accent); }
+.nav { display:flex; gap:4px; flex:1; }
+.nav-link { text-decoration:none; color:var(--text-secondary); padding:6px 12px; border-radius:var(--radius-sm); font-size:13px; font-weight:500; transition:all .15s; }
+.nav-link:hover { color:var(--text-primary); background:var(--bg-hover); }
+.nav-link.active { color:var(--accent); background:var(--accent-dim); }
+.header-actions { display:flex; align-items:center; gap:12px; }
+.live-badge { font-size:11px; font-weight:600; color:var(--positive); letter-spacing:.05em; display:flex; align-items:center; gap:5px; }
+.live-dot { animation:pulse 2s infinite; }
+.btn-primary { background:linear-gradient(135deg,#51d7ce,#2FA3E0); color:#062434; border:none; padding:7px 18px; border-radius:20px; font-size:13px; font-weight:700; cursor:pointer; font-family:var(--font); }
+
+.placeholder { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:calc(100vh - 60px); gap:16px; color:var(--text-muted); }
+.placeholder-icon { font-size:48px; opacity:.4; }
+.placeholder h2 { font-size:22px; font-weight:600; color:var(--text-secondary); }
+.placeholder p { font-size:14px; }
+
+@media(max-width:640px) { .header-inner { padding:0 16px; } }
+  </style>
+</head>
+<body>
+
+  <header class="header">
+    <div class="header-inner">
+      <a href="/" class="logo">
+        <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#51d7ce"/>
+              <stop offset="100%" stop-color="#2FA3E0"/>
+            </linearGradient>
+          </defs>
+          <circle cx="18" cy="18" r="16.5" stroke="url(#logoGrad)" stroke-width="2" fill="none"/>
+          <rect x="8" y="20" width="4" height="8" rx="1" fill="url(#logoGrad)"/>
+          <rect x="14" y="15" width="4" height="13" rx="1" fill="url(#logoGrad)"/>
+          <rect x="20" y="11" width="4" height="17" rx="1" fill="url(#logoGrad)"/>
+          <polyline points="22,9 27,9 27,14" stroke="url(#logoGrad)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <line x1="14" y1="21" x2="27" y2="9" stroke="url(#logoGrad)" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <span class="logo-text">Market<strong>Analytics</strong></span>
+      </a>
+      <nav class="nav">
+        <a href="position-size-calculator.html" class="nav-link active">Position Size Calculator</a>
+      </nav>
+      <div class="header-actions">
+        <span class="live-badge"><span class="live-dot">&#9679;</span> LIVE</span>
+        <button class="btn-primary">Open Account</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="placeholder">
+    <div class="placeholder-icon">&#9881;</div>
+    <h2>Position Size Calculator</h2>
+    <p>Coming soon…</p>
+  </div>
+
+</body>
+</html>
