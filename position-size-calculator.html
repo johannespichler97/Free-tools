@@ -437,8 +437,8 @@ function clearWarning() {
 }
 
 function formatCur(amount, cur) {
-  if (cur === 'USC') return `${(amount * 100).toFixed(0)}¢`;
-  return new Intl.NumberFormat('en-US', { style:'currency', currency: cur === 'USC' ? 'USD' : cur, maximumFractionDigits: 2 }).format(amount);
+  if (cur === 'USC') return `${amount.toFixed(0)}¢`;
+  return new Intl.NumberFormat('en-US', { style:'currency', currency: cur, maximumFractionDigits: 2 }).format(amount);
 }
 
 async function calculate() {
