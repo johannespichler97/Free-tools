@@ -792,8 +792,6 @@ function renderCandleChart(canvas, data, item) {
   const bW = Math.max(1.5, cW / n * 0.65);
   const bX = i => PL + (i + 0.5) * (cW / n);
 
-  // Signal candle: dtime when triggered (dtime > 0), otherwise ctime (second peak/trough).
-  // Pattern start: start_time or atime for the highlight range.
   const findNearest = ts => {
     if (!ts) return n - 1;
     let best = Infinity, idx = n - 1;
@@ -803,15 +801,36 @@ function renderCandleChart(canvas, data, item) {
     }
     return idx;
   };
-  const rp     = item.pattern;
-  const markerTs = (rp.dtime && rp.dtime > 0) ? rp.dtime : (rp.ctime || rp.atime || rp.sortTime);
-  const startTs  = rp.start_time || rp.atime;
-  const pidx     = findNearest(markerTs);
-  const aidx     = startTs ? findNearest(startTs) : 0;
-  console.log('[renderChart] markerTs:', markerTs, new Date(markerTs*1000).toISOString(),
-              '| pidx:', pidx, '| n:', n,
-              '| t[0]:', new Date(t[0]*1000).toISOString(),
-              '| t[n-1]:', new Date(t[n-1]*1000).toISOString());
+  const rp      = item.pattern;
+  const patType = (rp.patterntype || 'bullish').toLowerCase();
+  const tfSec2  = TF_SECONDS[item.tf] || 86400;
+  const startTs = rp.start_time || rp.atime;
+  const aidx    = startTs ? findNearest(startTs) : 0;
+
+  // For triggered patterns use dtime (neckline break). For incomplete patterns find the
+  // actual visual peak/trough by matching cprice against candle highs/lows between
+  // btime and ctime — Finnhub's ctime is the confirmation candle, one step after the peak.
+  let pidx;
+  if (rp.dtime && rp.dtime > 0) {
+    pidx = findNearest(rp.dtime);
+  } else if (rp.cprice && rp.ctime) {
+    const btime = rp.btime || 0;
+    const ctimeEnd = rp.ctime + tfSec2; // allow one candle past ctime
+    let best = Infinity, found = -1;
+    for (let i = 0; i < n; i++) {
+      if (t[i] < btime) continue;
+      if (t[i] > ctimeEnd) break;
+      const refPrice = patType === 'bullish' ? l[i] : h[i];
+      const d = Math.abs(refPrice - rp.cprice);
+      if (d < best) { best = d; found = i; }
+    }
+    pidx = found >= 0 ? found : findNearest(rp.ctime);
+  } else {
+    pidx = findNearest(rp.ctime || rp.atime || rp.sortTime);
+  }
+  console.log('[renderChart] pidx:', pidx, '| n:', n,
+              '| t[pidx]:', pidx >= 0 ? new Date(t[pidx]*1000).toISOString() : 'n/a',
+              '| cprice:', rp.cprice, '| ctime:', rp.ctime ? new Date(rp.ctime*1000).toISOString() : 'n/a');
 
   // Background
   ctx.fillStyle = '#062434';
