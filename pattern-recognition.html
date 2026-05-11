@@ -810,24 +810,28 @@ function renderCandleChart(canvas, data, item) {
   if (dtimeIsReal) {
     pidx = findNearest(dtime);                      // real candle time → use directly
   } else if (entry) {
-    // scan time → find signal candle via peak/trough → entry-level break
     if (patType === 'bearish') {
-      let peakIdx = aidx, peakH = -Infinity;
-      for (let i = aidx; i < n; i++) {
-        if (h[i] > peakH) { peakH = h[i]; peakIdx = i; }
+      // Find the last local high after atime (= second peak of the pattern)
+      let lastHighIdx = Math.min(aidx, n - 1);
+      for (let i = aidx + 1; i < n - 1; i++) {
+        if (h[i] > h[i-1] && h[i] > h[i+1]) lastHighIdx = i;
       }
-      pidx = peakIdx;                               // fallback = highest peak
-      for (let i = peakIdx; i < n; i++) {
-        if (c[i] < entry) { pidx = i; break; }      // first close below entry
+      // From the last peak, first close below entry = neckline break (triggered)
+      // If not triggered yet, marker stays at the last peak
+      pidx = lastHighIdx;
+      for (let i = lastHighIdx; i < n; i++) {
+        if (c[i] < entry) { pidx = i; break; }
       }
     } else {
-      let troughIdx = aidx, troughL = Infinity;
-      for (let i = aidx; i < n; i++) {
-        if (l[i] < troughL) { troughL = l[i]; troughIdx = i; }
+      // Find the last local low after atime (= second trough of the pattern)
+      let lastLowIdx = Math.min(aidx, n - 1);
+      for (let i = aidx + 1; i < n - 1; i++) {
+        if (l[i] < l[i-1] && l[i] < l[i+1]) lastLowIdx = i;
       }
-      pidx = troughIdx;
-      for (let i = troughIdx; i < n; i++) {
-        if (c[i] > entry) { pidx = i; break; }      // first close above entry
+      // From the last trough, first close above entry = neckline breakout (triggered)
+      pidx = lastLowIdx;
+      for (let i = lastLowIdx; i < n; i++) {
+        if (c[i] > entry) { pidx = i; break; }
       }
     }
   } else {
