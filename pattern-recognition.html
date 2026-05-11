@@ -802,6 +802,10 @@ function renderCandleChart(canvas, data, item) {
   const startTs  = rp.start_time || rp.atime;
   const pidx     = findNearest(markerTs);
   const aidx     = startTs ? findNearest(startTs) : 0;
+  console.log('[renderChart] markerTs:', markerTs, new Date(markerTs*1000).toISOString(),
+              '| pidx:', pidx, '| n:', n,
+              '| t[0]:', new Date(t[0]*1000).toISOString(),
+              '| t[n-1]:', new Date(t[n-1]*1000).toISOString());
 
   // Background
   ctx.fillStyle = '#062434';
