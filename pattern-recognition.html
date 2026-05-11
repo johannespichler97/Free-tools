@@ -771,14 +771,32 @@ function renderCandleChart(canvas, data, item) {
   const bW   = Math.max(1.5, cW / n * 0.65);
   const bX   = i => PL + (i + 0.5) * (cW / n);
 
-  // Find candle closest to sortTime
-  const pts = item.pattern.sortTime;
-  let pidx = -1;
+  // Find the entry-trigger candle:
+  // 1. Locate the candle nearest to sortTime as the upper bound.
+  // 2. From there scan BACKWARD for the last candle that crossed the entry level
+  //    in the pattern direction (bearish: high≥entry & close<entry;
+  //                              bullish: low≤entry & close>entry).
+  // 3. Fall back to the sortTime candle if no crossing is found.
+  const pts  = item.pattern.sortTime;
+  const type = (item.pattern.patterntype || 'bullish').toLowerCase();
+  let sortIdx = n - 1;
   if (pts) {
     let best = Infinity;
     for (let i = 0; i < n; i++) {
       const d = Math.abs(t[i] - pts);
-      if (d < best) { best = d; pidx = i; }
+      if (d < best) { best = d; sortIdx = i; }
+    }
+  }
+  let pidx = sortIdx;
+  if (entry) {
+    if (type === 'bearish') {
+      for (let i = sortIdx; i >= 0; i--) {
+        if (h[i] >= entry && c[i] < entry) { pidx = i; break; }
+      }
+    } else {
+      for (let i = sortIdx; i >= 0; i--) {
+        if (l[i] <= entry && c[i] > entry) { pidx = i; break; }
+      }
     }
   }
 
