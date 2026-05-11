@@ -783,8 +783,19 @@ function renderCandleChart(canvas, data, item) {
   const bW = Math.max(1.5, cW / n * 0.65);
   const bX = i => PL + (i + 0.5) * (cW / n);
 
-  // Find candle indices for pattern start (atime) and signal (dtime)
+  // Determine signal candle (pidx) and pattern start candle (aidx).
+  // Finnhub sometimes sets dtime = current scan time (not the real signal candle).
+  // We detect this: if dtime is within 10 min of now it's the scan time, not a real signal.
+  // In that case we locate the signal by finding the peak/trough after atime and then
+  // the first candle that closes through the entry level.
+  const dtime   = item.pattern.dtime || item.pattern.sortTime;
+  const atime   = item.pattern.atime;
+  const patType = (item.pattern.patterntype || 'bullish').toLowerCase();
+  const nowSec  = Math.floor(Date.now() / 1000);
+  const dtimeIsReal = dtime && (nowSec - dtime > 600);
+
   const findNearest = ts => {
+    if (!ts) return n - 1;
     let best = Infinity, idx = n - 1;
     for (let i = 0; i < n; i++) {
       const d = Math.abs(t[i] - ts);
@@ -792,10 +803,36 @@ function renderCandleChart(canvas, data, item) {
     }
     return idx;
   };
-  const dtime = item.pattern.dtime || item.pattern.sortTime;
-  const atime = item.pattern.atime;
-  const pidx  = dtime ? findNearest(dtime) : n - 1;          // signal candle
-  const aidx  = atime ? findNearest(atime) : pidx;            // pattern start
+
+  const aidx = findNearest(atime || dtime);
+  let pidx;
+
+  if (dtimeIsReal) {
+    pidx = findNearest(dtime);                      // real candle time → use directly
+  } else if (entry) {
+    // scan time → find signal candle via peak/trough → entry-level break
+    if (patType === 'bearish') {
+      let peakIdx = aidx, peakH = -Infinity;
+      for (let i = aidx; i < n; i++) {
+        if (h[i] > peakH) { peakH = h[i]; peakIdx = i; }
+      }
+      pidx = peakIdx;                               // fallback = highest peak
+      for (let i = peakIdx; i < n; i++) {
+        if (c[i] < entry) { pidx = i; break; }      // first close below entry
+      }
+    } else {
+      let troughIdx = aidx, troughL = Infinity;
+      for (let i = aidx; i < n; i++) {
+        if (l[i] < troughL) { troughL = l[i]; troughIdx = i; }
+      }
+      pidx = troughIdx;
+      for (let i = troughIdx; i < n; i++) {
+        if (c[i] > entry) { pidx = i; break; }      // first close above entry
+      }
+    }
+  } else {
+    pidx = findNearest(dtime);                      // no entry field → best effort
+  }
 
   // Background
   ctx.fillStyle = '#062434';
