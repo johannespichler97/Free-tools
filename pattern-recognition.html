@@ -540,7 +540,7 @@ function buildCard(item) {
             ${outdatedBadge}
           </div>
           <div class="card-name">${name}</div>
-          ${p.sortTime ? `<div class="card-time">${fmtTime(p.sortTime)}</div>` : ''}
+          ${(p.ctime||p.dtime||p.sortTime) ? `<div class="card-time">${fmtTime(p.ctime||p.dtime||p.sortTime)}</div>` : ''}
         </div>
       </div>
       <div class="card-levels">
@@ -706,16 +706,17 @@ async function openChartModal(item) {
   typeEl.textContent = type.charAt(0).toUpperCase() + type.slice(1);
   typeEl.className = `chart-modal-type ${type}`;
 
-  // Populate footer — use entry/profit1 when available, otherwise aprice/dprice
+  // Populate footer
   const fp = v => fmtPrice(v, item.sym);
   const p  = item.pattern;
-  const entryVal = p.entry  || p.dprice;
-  const tpVal    = p.profit1;
+  const entryVal   = p.entry || p.dprice;
+  const tpVal      = p.profit1;
+  const markerTime = (p.dtime && p.dtime > 0) ? p.dtime : p.ctime;   // triggered → dtime, else ctime (second peak)
+  const isTriggered = p.dtime && p.dtime > 0;
   document.getElementById('chartModalFooter').innerHTML = `
-    ${entryVal ? `<div class="chart-level"><div class="chart-level-lbl">Entry</div><div class="chart-level-val v-entry">${fp(entryVal)}</div></div>` : ''}
-    ${tpVal    ? `<div class="chart-level"><div class="chart-level-lbl">Take Profit</div><div class="chart-level-val v-tp">${fp(tpVal)}</div></div>` : ''}
-    ${p.atime  ? `<div class="chart-level"><div class="chart-level-lbl">Pattern Start</div><div class="chart-level-val v-time">${fmtTime(p.atime)}</div></div>` : ''}
-    ${p.dtime  ? `<div class="chart-level"><div class="chart-level-lbl">Signal</div><div class="chart-level-val v-time">${fmtTime(p.dtime)}</div></div>` : ''}
+    ${entryVal    ? `<div class="chart-level"><div class="chart-level-lbl">Entry</div><div class="chart-level-val v-entry">${fp(entryVal)}</div></div>` : ''}
+    ${tpVal       ? `<div class="chart-level"><div class="chart-level-lbl">Take Profit</div><div class="chart-level-val v-tp">${fp(tpVal)}</div></div>` : ''}
+    ${markerTime  ? `<div class="chart-level"><div class="chart-level-lbl">${isTriggered ? 'Triggered' : 'Pattern Formed'}</div><div class="chart-level-val v-time">${fmtTime(markerTime)}</div></div>` : ''}
     <span class="chart-hint">Pattern range highlighted on chart</span>`;
 
   modal.style.display = 'flex';
@@ -735,12 +736,12 @@ async function openChartModal(item) {
   ctx.textAlign = 'center';
   ctx.fillText('Loading chart data…', W / 2, H / 2);
 
-  // Fetch candles: 8 candles before pattern start (atime) to 15 candles after signal (dtime)
-  const tfSec  = TF_SECONDS[item.tf] || 86400;
-  const atime  = item.pattern.atime  || item.pattern.sortTime || Math.floor(Date.now() / 1000);
-  const dtime  = item.pattern.dtime  || item.pattern.sortTime || Math.floor(Date.now() / 1000);
-  const from   = atime - tfSec * 8;
-  const to     = dtime + tfSec * 15;
+  // Chart window: from pattern start − 5 candles to signal point + 10 candles
+  const tfSec      = TF_SECONDS[item.tf] || 86400;
+  const startTime  = p.start_time || p.atime || p.sortTime;
+  const markerTs   = (p.dtime && p.dtime > 0) ? p.dtime : (p.ctime || p.atime || p.sortTime);
+  const from       = (startTime || markerTs) - tfSec * 5;
+  const to         = markerTs + tfSec * 10;
   try {
     const url  = `${API_BASE}/forex/candle?symbol=${encodeURIComponent(item.sym)}&resolution=${item.tf}&from=${from}&to=${to}&token=${API_KEY}`;
     const res  = await fetch(url);
@@ -785,17 +786,8 @@ function renderCandleChart(canvas, data, item) {
   const bW = Math.max(1.5, cW / n * 0.65);
   const bX = i => PL + (i + 0.5) * (cW / n);
 
-  // Determine signal candle (pidx) and pattern start candle (aidx).
-  // Finnhub sometimes sets dtime = current scan time (not the real signal candle).
-  // We detect this: if dtime is within 10 min of now it's the scan time, not a real signal.
-  // In that case we locate the signal by finding the peak/trough after atime and then
-  // the first candle that closes through the entry level.
-  const dtime   = item.pattern.dtime || item.pattern.sortTime;
-  const atime   = item.pattern.atime;
-  const patType = (item.pattern.patterntype || 'bullish').toLowerCase();
-  const nowSec  = Math.floor(Date.now() / 1000);
-  const dtimeIsReal = dtime && (nowSec - dtime > 600);
-
+  // Signal candle: dtime when triggered (dtime > 0), otherwise ctime (second peak/trough).
+  // Pattern start: start_time or atime for the highlight range.
   const findNearest = ts => {
     if (!ts) return n - 1;
     let best = Infinity, idx = n - 1;
@@ -805,40 +797,11 @@ function renderCandleChart(canvas, data, item) {
     }
     return idx;
   };
-
-  const aidx = findNearest(atime || dtime);
-  let pidx;
-
-  if (dtimeIsReal) {
-    pidx = findNearest(dtime);                      // real candle time → use directly
-  } else if (entry) {
-    if (patType === 'bearish') {
-      // Find the last local high after atime (= second peak of the pattern)
-      let lastHighIdx = Math.min(aidx, n - 1);
-      for (let i = aidx + 1; i < n - 1; i++) {
-        if (h[i] > h[i-1] && h[i] > h[i+1]) lastHighIdx = i;
-      }
-      // From the last peak, first close below entry = neckline break (triggered)
-      // If not triggered yet, marker stays at the last peak
-      pidx = lastHighIdx;
-      for (let i = lastHighIdx; i < n; i++) {
-        if (c[i] < entry) { pidx = i; break; }
-      }
-    } else {
-      // Find the last local low after atime (= second trough of the pattern)
-      let lastLowIdx = Math.min(aidx, n - 1);
-      for (let i = aidx + 1; i < n - 1; i++) {
-        if (l[i] < l[i-1] && l[i] < l[i+1]) lastLowIdx = i;
-      }
-      // From the last trough, first close above entry = neckline breakout (triggered)
-      pidx = lastLowIdx;
-      for (let i = lastLowIdx; i < n; i++) {
-        if (c[i] > entry) { pidx = i; break; }
-      }
-    }
-  } else {
-    pidx = findNearest(dtime);                      // no entry field → best effort
-  }
+  const rp     = item.pattern;
+  const markerTs = (rp.dtime && rp.dtime > 0) ? rp.dtime : (rp.ctime || rp.atime || rp.sortTime);
+  const startTs  = rp.start_time || rp.atime;
+  const pidx     = findNearest(markerTs);
+  const aidx     = startTs ? findNearest(startTs) : 0;
 
   // Background
   ctx.fillStyle = '#062434';
