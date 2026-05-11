@@ -744,8 +744,10 @@ async function openChartModal(item) {
   const to         = markerTs + tfSec * 10;
   try {
     const url  = `${API_BASE}/forex/candle?symbol=${encodeURIComponent(item.sym)}&resolution=${item.tf}&from=${from}&to=${to}&token=${API_KEY}`;
+    console.log('[candle fetch] url:', url);
     const res  = await fetch(url);
     const data = res.ok ? await res.json() : null;
+    console.log('[candle fetch] status:', data?.s, '| candles:', data?.t?.length, '| from:', new Date(from*1000).toISOString(), '| to:', new Date(to*1000).toISOString());
     if (data && data.s === 'ok' && data.t && data.t.length > 0) {
       renderCandleChart(canvas, data, item);
     } else {
