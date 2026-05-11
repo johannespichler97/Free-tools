@@ -6,7 +6,7 @@
   <title>Pattern Recognition | Solantis</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
   <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -19,13 +19,27 @@
   --text-secondary:#8ab8d0;
   --text-muted:    #4d7a96;
   --accent:        #2FA3E0;
+  --accent-2:      #51d7ce;
   --accent-dim:    rgba(47,163,224,0.12);
   --positive:      #3fb950;
+  --positive-bg:   rgba(63,185,80,0.10);
+  --negative:      #f85149;
+  --negative-bg:   rgba(248,81,73,0.10);
   --font:          'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono:     'JetBrains Mono', monospace;
   --radius-sm:     6px;
+  --radius-md:     10px;
+  --radius-lg:     14px;
 }
-body { font-family: var(--font); background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; }
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+html { scroll-behavior: smooth; }
+body { font-family: var(--font); background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; font-size: 14px; line-height: 1.5; }
+
+@keyframes pulse   { 0%,100%{opacity:1} 50%{opacity:0.4} }
+@keyframes spin    { to{transform:rotate(360deg)} }
+@keyframes fadeIn  { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+@keyframes shimmer { 0%{background-position:-400px 0} 100%{background-position:400px 0} }
+
+/* ── HEADER ── */
 .header { position:sticky; top:0; z-index:100; background:rgba(6,36,52,0.97); backdrop-filter:blur(12px); border-bottom:1px solid var(--border); }
 .header-inner { max-width:1200px; margin:0 auto; padding:0 24px; height:60px; display:flex; align-items:center; gap:32px; }
 .logo { display:flex; align-items:center; gap:8px; text-decoration:none; color:var(--text-primary); font-size:16px; font-weight:700; white-space:nowrap; }
@@ -39,11 +53,102 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 .live-dot { animation:pulse 2s infinite; }
 .btn-primary { background:linear-gradient(135deg,#51d7ce,#2FA3E0); color:#062434; border:none; padding:7px 18px; border-radius:20px; font-size:13px; font-weight:700; cursor:pointer; font-family:var(--font); transition:opacity .15s; }
 .btn-primary:hover { opacity:.88; }
-.placeholder { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:calc(100vh - 60px); gap:16px; color:var(--text-muted); }
-.placeholder-icon { font-size:48px; opacity:.4; }
-.placeholder h2 { font-size:22px; font-weight:600; color:var(--text-secondary); }
-.placeholder p { font-size:14px; }
-@media(max-width:640px) { .header-inner { padding:0 16px; } }
+
+/* ── HERO ── */
+.hero { background:linear-gradient(135deg,#062434 0%,#0a2e44 60%,#0d3550 100%); border-bottom:1px solid var(--border); padding:28px 24px; }
+.hero-inner { max-width:1200px; margin:0 auto; }
+.hero h1 { font-size:26px; font-weight:700; }
+.hero h1::after { content:''; display:block; width:40px; height:3px; background:linear-gradient(90deg,#51d7ce,#2FA3E0); border-radius:2px; margin-top:10px; }
+.hero p { color:var(--text-secondary); font-size:15px; margin-top:10px; }
+
+/* ── CONTROLS ── */
+.controls-bar { background:var(--bg-primary); border-bottom:1px solid var(--border); padding:12px 24px; position:sticky; top:60px; z-index:90; }
+.controls-box { max-width:1200px; margin:0 auto; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); padding:14px 18px; display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+
+.ctrl-label { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.07em; white-space:nowrap; }
+
+.pair-select { background:var(--bg-tertiary); border:1.5px solid var(--border); color:var(--text-primary); padding:8px 36px 8px 12px; border-radius:var(--radius-md); font-size:13px; font-family:var(--font); outline:none; cursor:pointer; appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234d7a96' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; transition:border-color .15s; color-scheme:dark; min-width:180px; }
+.pair-select:focus { border-color:var(--accent); }
+.pair-select option { background:var(--bg-tertiary); }
+
+.tf-group { display:flex; gap:4px; }
+.tf-btn { background:var(--bg-tertiary); border:1.5px solid var(--border); color:var(--text-muted); padding:7px 14px; border-radius:var(--radius-sm); font-size:12px; font-weight:600; cursor:pointer; font-family:var(--font); transition:all .15s; white-space:nowrap; }
+.tf-btn:hover { border-color:var(--accent); color:var(--text-secondary); }
+.tf-btn.active { background:var(--accent-dim); border-color:var(--accent); color:var(--accent); }
+
+.btn-scan { background:linear-gradient(135deg,#51d7ce,#2FA3E0); color:#062434; border:none; padding:8px 20px; border-radius:20px; font-size:13px; font-weight:700; cursor:pointer; font-family:var(--font); transition:opacity .15s; margin-left:auto; display:flex; align-items:center; gap:7px; white-space:nowrap; }
+.btn-scan:hover { opacity:.88; }
+.btn-scan:disabled { opacity:.5; cursor:not-allowed; }
+.btn-scan svg { transition:transform .4s; }
+.btn-scan.loading svg { animation:spin .7s linear infinite; }
+
+/* ── MAIN ── */
+.main { max-width:1248px; margin:0 auto; padding:20px 24px 60px; }
+
+/* Status bar */
+.status-bar { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:8px; }
+.status-text { font-size:13px; color:var(--text-muted); }
+.status-count { font-size:13px; font-weight:600; color:var(--text-secondary); }
+
+/* Pattern grid */
+.pattern-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(340px, 1fr)); gap:16px; }
+
+/* ── PATTERN CARD ── */
+.pattern-card { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; animation:fadeIn .3s ease; transition:border-color .2s, transform .2s; }
+.pattern-card:hover { border-color:var(--accent); transform:translateY(-2px); }
+.pattern-card.bullish { border-top:3px solid var(--positive); }
+.pattern-card.bearish { border-top:3px solid var(--negative); }
+
+.card-header { padding:14px 16px 12px; display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+.card-type-badge { display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; padding:3px 9px; border-radius:20px; white-space:nowrap; }
+.card-type-badge.bullish { background:var(--positive-bg); color:var(--positive); }
+.card-type-badge.bearish { background:var(--negative-bg); color:var(--negative); }
+.card-type-badge svg { flex-shrink:0; }
+
+.card-name { font-size:15px; font-weight:700; color:var(--text-primary); margin-top:6px; line-height:1.3; }
+.card-time { font-size:11px; color:var(--text-muted); margin-top:3px; }
+.card-rr { text-align:right; flex-shrink:0; }
+.rr-label { font-size:10px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:.05em; }
+.rr-value { font-family:var(--font-mono); font-size:18px; font-weight:700; color:var(--accent-2); }
+
+/* Risk/Reward visual bar */
+.rr-bar-wrap { padding:0 16px 14px; }
+.rr-bar-track { position:relative; height:24px; border-radius:6px; overflow:hidden; display:flex; }
+.rr-segment-loss   { background:rgba(248,81,73,0.25); display:flex; align-items:center; justify-content:center; }
+.rr-segment-profit { background:rgba(63,185,80,0.20); display:flex; align-items:center; justify-content:center; }
+.rr-segment-profit2{ background:rgba(63,185,80,0.12); display:flex; align-items:center; justify-content:center; }
+.rr-bar-label { font-size:9px; font-weight:700; color:rgba(255,255,255,.5); text-transform:uppercase; letter-spacing:.04em; white-space:nowrap; overflow:hidden; padding:0 4px; }
+.rr-entry-line { position:absolute; top:0; bottom:0; width:2px; background:#E6E9EB; z-index:2; }
+
+/* Price levels */
+.card-levels { padding:0 16px 16px; display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:8px; }
+.level-box { background:var(--bg-tertiary); border-radius:var(--radius-sm); padding:8px 10px; text-align:center; }
+.level-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; margin-bottom:3px; }
+.level-label.entry   { color:var(--text-secondary); }
+.level-label.sl      { color:var(--negative); }
+.level-label.tp      { color:var(--positive); }
+.level-price { font-family:var(--font-mono); font-size:12px; font-weight:600; color:var(--text-primary); }
+
+/* ── STATES ── */
+.state-box { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:80px 24px; gap:16px; text-align:center; color:var(--text-muted); }
+.state-icon { font-size:48px; opacity:.35; }
+.state-title { font-size:18px; font-weight:600; color:var(--text-secondary); }
+.state-sub { font-size:13px; max-width:340px; }
+
+/* Loading skeleton */
+.skeleton-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:16px; }
+.skeleton-card { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); height:220px; overflow:hidden; position:relative; }
+.skeleton-card::after { content:''; position:absolute; inset:0; background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,.04) 50%,transparent 100%); background-size:400px 100%; animation:shimmer 1.4s infinite; }
+
+/* ── FOOTER ── */
+.footer { background:var(--bg-secondary); border-top:1px solid var(--border); padding:24px; }
+.footer-inner { max-width:1200px; margin:0 auto; text-align:center; }
+.footer-disclaimer { font-size:12px; color:var(--text-muted); line-height:1.6; }
+.footer-disclaimer a { color:var(--accent); text-decoration:none; }
+.footer-copy { font-size:12px; color:var(--text-muted); margin-top:6px; }
+
+@media(max-width:700px) { .pattern-grid,.skeleton-grid { grid-template-columns:1fr; } .card-levels { grid-template-columns:1fr 1fr; } .tf-group { flex-wrap:wrap; } }
+@media(max-width:640px) { .header-inner,.main { padding-left:16px; padding-right:16px; } .controls-bar { padding-left:16px; padding-right:16px; } }
   </style>
 </head>
 <body>
@@ -79,11 +184,312 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
     </div>
   </header>
 
-  <div class="placeholder">
-    <div class="placeholder-icon">&#128202;</div>
-    <h2>Pattern Recognition</h2>
-    <p>Coming soon…</p>
+  <section class="hero">
+    <div class="hero-inner">
+      <h1>Pattern Recognition</h1>
+      <p>Automatically detect chart patterns on Forex pairs and Metals using live market data.</p>
+    </div>
+  </section>
+
+  <!-- Controls -->
+  <div class="controls-bar">
+    <div class="controls-box">
+      <span class="ctrl-label">Instrument</span>
+      <select class="pair-select" id="pairSelect">
+        <optgroup label="AUD Pairs">
+          <option value="OANDA:AUD_CAD">AUDCAD</option>
+          <option value="OANDA:AUD_CHF">AUDCHF</option>
+          <option value="OANDA:AUD_JPY">AUDJPY</option>
+          <option value="OANDA:AUD_NZD">AUDNZD</option>
+          <option value="OANDA:AUD_USD">AUDUSD</option>
+        </optgroup>
+        <optgroup label="CAD Pairs">
+          <option value="OANDA:CAD_CHF">CADCHF</option>
+          <option value="OANDA:CAD_JPY">CADJPY</option>
+        </optgroup>
+        <optgroup label="CHF Pairs">
+          <option value="OANDA:CHF_JPY">CHFJPY</option>
+        </optgroup>
+        <optgroup label="EUR Pairs">
+          <option value="OANDA:EUR_AUD">EURAUD</option>
+          <option value="OANDA:EUR_CAD">EURCAD</option>
+          <option value="OANDA:EUR_CHF">EURCHF</option>
+          <option value="OANDA:EUR_GBP">EURGBP</option>
+          <option value="OANDA:EUR_JPY">EURJPY</option>
+          <option value="OANDA:EUR_NZD">EURNZD</option>
+          <option value="OANDA:EUR_USD" selected>EURUSD</option>
+        </optgroup>
+        <optgroup label="GBP Pairs">
+          <option value="OANDA:GBP_AUD">GBPAUD</option>
+          <option value="OANDA:GBP_CAD">GBPCAD</option>
+          <option value="OANDA:GBP_CHF">GBPCHF</option>
+          <option value="OANDA:GBP_JPY">GBPJPY</option>
+          <option value="OANDA:GBP_NZD">GBPNZD</option>
+          <option value="OANDA:GBP_USD">GBPUSD</option>
+        </optgroup>
+        <optgroup label="NZD Pairs">
+          <option value="OANDA:NZD_CAD">NZDCAD</option>
+          <option value="OANDA:NZD_CHF">NZDCHF</option>
+          <option value="OANDA:NZD_JPY">NZDJPY</option>
+          <option value="OANDA:NZD_USD">NZDUSD</option>
+        </optgroup>
+        <optgroup label="USD Pairs">
+          <option value="OANDA:USD_CAD">USDCAD</option>
+          <option value="OANDA:USD_CHF">USDCHF</option>
+          <option value="OANDA:USD_JPY">USDJPY</option>
+        </optgroup>
+        <optgroup label="Metals">
+          <option value="OANDA:XAG_USD">XAGUSD (Silver)</option>
+          <option value="OANDA:XAU_USD">XAUUSD (Gold)</option>
+        </optgroup>
+      </select>
+
+      <span class="ctrl-label">Timeframe</span>
+      <div class="tf-group">
+        <button class="tf-btn" data-res="15">15m</button>
+        <button class="tf-btn" data-res="60">1H</button>
+        <button class="tf-btn active" data-res="D">Daily</button>
+        <button class="tf-btn" data-res="W">Weekly</button>
+      </div>
+
+      <button class="btn-scan" id="scanBtn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Scan Patterns
+      </button>
+    </div>
   </div>
 
+  <main class="main">
+    <div class="status-bar" id="statusBar" style="display:none;">
+      <span class="status-text" id="statusText"></span>
+      <span class="status-count" id="statusCount"></span>
+    </div>
+    <div id="resultsArea">
+      <div class="state-box">
+        <div class="state-icon">&#128202;</div>
+        <div class="state-title">Ready to scan</div>
+        <p class="state-sub">Select an instrument and timeframe, then click <strong>Scan Patterns</strong> to detect chart patterns.</p>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+      <p class="footer-disclaimer">
+        <strong>Risk Warning:</strong> Chart patterns are not guaranteed signals. Always use proper risk management.
+        Pattern data provided by <a href="https://finnhub.io" target="_blank" rel="noopener">Finnhub</a>.
+      </p>
+      <p class="footer-copy">&copy; 2026 Market Analytics. All rights reserved.</p>
+    </div>
+  </footer>
+
+<script>
+const API_KEY  = 'd4fevfpr01qkcvvhv6h0d4fevfpr01qkcvvhv6hg';
+const API_BASE = 'https://finnhub.io/api/v1';
+
+let currentResolution = 'D';
+
+// Pattern name prettifier
+function prettyName(name) {
+  return name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+// Pattern type icons
+function typeIcon(type) {
+  if (type === 'bullish') return `<svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4l8 16H4z"/></svg>`;
+  return `<svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 20L4 4h16z"/></svg>`;
+}
+
+// Format price based on pair
+function fmtPrice(val, sym) {
+  if (!val || val === 0) return '—';
+  if (sym.includes('JPY') || sym.includes('XAU') || sym.includes('XAG')) return val.toFixed(2);
+  return val.toFixed(5);
+}
+
+// Format timestamp
+function fmtTime(ts) {
+  if (!ts) return '';
+  const d = new Date(ts * 1000);
+  return d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', year:'numeric' });
+}
+
+// Calculate R/R ratio
+function calcRR(entry, sl, tp1) {
+  if (!entry || !sl || !tp1) return null;
+  const risk   = Math.abs(entry - sl);
+  const reward = Math.abs(tp1 - entry);
+  if (risk === 0) return null;
+  return (reward / risk).toFixed(1);
+}
+
+// Build the visual risk/reward bar
+function buildRRBar(pattern, sym) {
+  const { entry, losspoint: sl, profit1: tp1, profit2: tp2, patterntype: type } = pattern;
+  if (!entry || !sl) return '';
+
+  const isBull = type === 'bullish';
+  const low    = Math.min(sl, entry, tp1 || entry, tp2 || entry);
+  const high   = Math.max(sl, entry, tp1 || entry, tp2 || entry);
+  const range  = high - low || 1;
+
+  const slPct     = ((Math.abs(sl - entry)) / range * 100).toFixed(1);
+  const tp1Pct    = tp1 ? ((Math.abs(tp1 - entry)) / range * 100).toFixed(1) : '0';
+  const tp2Extra  = (tp1 && tp2) ? ((Math.abs(tp2 - tp1)) / range * 100).toFixed(1) : '0';
+
+  const entryLeft = ((entry - low) / range * 100).toFixed(1);
+
+  return `
+    <div class="rr-bar-wrap">
+      <div class="rr-bar-track">
+        <div class="rr-segment-loss"   style="width:${slPct}%">  <span class="rr-bar-label">SL</span></div>
+        <div class="rr-segment-profit" style="width:${tp1Pct}%"> <span class="rr-bar-label">TP1</span></div>
+        ${parseFloat(tp2Extra) > 0 ? `<div class="rr-segment-profit2" style="width:${tp2Extra}%"><span class="rr-bar-label">TP2</span></div>` : ''}
+        <div class="rr-entry-line" style="left:${entryLeft}%"></div>
+      </div>
+    </div>`;
+}
+
+// Build a single pattern card
+function buildCard(pattern, sym) {
+  const type   = (pattern.patterntype || 'bullish').toLowerCase();
+  const name   = prettyName(pattern.patternname || pattern.apattern || 'Unknown Pattern');
+  const rr     = calcRR(pattern.entry, pattern.losspoint, pattern.profit1);
+  const time   = fmtTime(pattern.sortTime || pattern.atime);
+  const p      = (v) => fmtPrice(v, sym);
+
+  return `
+    <div class="pattern-card ${type}">
+      <div class="card-header">
+        <div>
+          <div class="card-type-badge ${type}">${typeIcon(type)} ${type}</div>
+          <div class="card-name">${name}</div>
+          ${time ? `<div class="card-time">Detected: ${time}</div>` : ''}
+        </div>
+        ${rr ? `<div class="card-rr"><div class="rr-label">R/R</div><div class="rr-value">1:${rr}</div></div>` : ''}
+      </div>
+      ${buildRRBar(pattern, sym)}
+      <div class="card-levels">
+        <div class="level-box">
+          <div class="level-label entry">Entry</div>
+          <div class="level-price">${p(pattern.entry)}</div>
+        </div>
+        <div class="level-box">
+          <div class="level-label sl">Stop Loss</div>
+          <div class="level-price">${p(pattern.losspoint)}</div>
+        </div>
+        <div class="level-box">
+          <div class="level-label tp">TP 1</div>
+          <div class="level-price">${p(pattern.profit1)}</div>
+        </div>
+        <div class="level-box">
+          <div class="level-label tp">TP 2</div>
+          <div class="level-price">${p(pattern.profit2)}</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+// Show loading skeletons
+function showLoading() {
+  document.getElementById('statusBar').style.display = 'none';
+  document.getElementById('resultsArea').innerHTML = `
+    <div class="skeleton-grid">
+      ${Array(6).fill('<div class="skeleton-card"></div>').join('')}
+    </div>`;
+  const btn = document.getElementById('scanBtn');
+  btn.disabled = true;
+  btn.classList.add('loading');
+  btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 11-6.22-8.56"/></svg> Scanning…`;
+}
+
+function resetBtn() {
+  const btn = document.getElementById('scanBtn');
+  btn.disabled = false;
+  btn.classList.remove('loading');
+  btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Scan Patterns`;
+}
+
+// Main scan function
+async function scan() {
+  const sym = document.getElementById('pairSelect').value;
+  const res = currentResolution;
+  const displayName = document.getElementById('pairSelect').selectedOptions[0].text;
+
+  showLoading();
+
+  try {
+    const url = `${API_BASE}/scan/pattern?symbol=${encodeURIComponent(sym)}&resolution=${res}&token=${API_KEY}`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`API error ${response.status}`);
+    const data = await response.json();
+
+    const patterns = data.points || [];
+
+    const statusBar = document.getElementById('statusBar');
+    statusBar.style.display = 'flex';
+
+    const tfLabel = document.querySelector('.tf-btn.active')?.textContent || res;
+    document.getElementById('statusText').textContent = `${displayName} · ${tfLabel} · Last scan: ${new Date().toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit' })}`;
+
+    if (patterns.length === 0) {
+      document.getElementById('statusCount').textContent = '';
+      document.getElementById('resultsArea').innerHTML = `
+        <div class="state-box">
+          <div class="state-icon">&#128269;</div>
+          <div class="state-title">No patterns detected</div>
+          <p class="state-sub">No chart patterns were found for <strong>${displayName}</strong> on the <strong>${tfLabel}</strong> timeframe. Try a different timeframe or instrument.</p>
+        </div>`;
+      return;
+    }
+
+    // Sort: bullish first, then by time descending
+    patterns.sort((a, b) => (b.sortTime || 0) - (a.sortTime || 0));
+
+    const bullish = patterns.filter(p => (p.patterntype || '').toLowerCase() === 'bullish');
+    const bearish = patterns.filter(p => (p.patterntype || '').toLowerCase() === 'bearish');
+
+    document.getElementById('statusCount').textContent =
+      `${patterns.length} pattern${patterns.length !== 1 ? 's' : ''} found · ${bullish.length} bullish · ${bearish.length} bearish`;
+
+    document.getElementById('resultsArea').innerHTML = `
+      <div class="pattern-grid">
+        ${patterns.map(p => buildCard(p, sym)).join('')}
+      </div>`;
+
+  } catch (err) {
+    document.getElementById('statusBar').style.display = 'none';
+    document.getElementById('resultsArea').innerHTML = `
+      <div class="state-box">
+        <div class="state-icon">&#9888;</div>
+        <div class="state-title">Could not load patterns</div>
+        <p class="state-sub">${err.message || 'Network error. Please try again.'}</p>
+      </div>`;
+  } finally {
+    resetBtn();
+  }
+}
+
+// ── Event listeners ──────────────────────────────────────────
+
+document.querySelectorAll('.tf-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentResolution = btn.dataset.res;
+  });
+});
+
+document.getElementById('scanBtn').addEventListener('click', scan);
+document.getElementById('pairSelect').addEventListener('change', () => {
+  document.getElementById('resultsArea').innerHTML = `
+    <div class="state-box">
+      <div class="state-icon">&#128202;</div>
+      <div class="state-title">Ready to scan</div>
+      <p class="state-sub">Click <strong>Scan Patterns</strong> to detect chart patterns.</p>
+    </div>`;
+  document.getElementById('statusBar').style.display = 'none';
+});
+</script>
 </body>
 </html>
