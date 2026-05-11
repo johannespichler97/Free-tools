@@ -36,8 +36,9 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 
 @keyframes pulse   { 0%,100%{opacity:1} 50%{opacity:0.4} }
 @keyframes spin    { to{transform:rotate(360deg)} }
-@keyframes fadeIn  { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+@keyframes fadeIn  { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
 @keyframes shimmer { 0%{background-position:-400px 0} 100%{background-position:400px 0} }
+@keyframes progress { from{width:0} }
 
 /* ── HEADER ── */
 .header { position:sticky; top:0; z-index:100; background:rgba(6,36,52,0.97); backdrop-filter:blur(12px); border-bottom:1px solid var(--border); }
@@ -62,82 +63,123 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 .hero p { color:var(--text-secondary); font-size:15px; margin-top:10px; }
 
 /* ── CONTROLS ── */
-.controls-bar { background:var(--bg-primary); border-bottom:1px solid var(--border); padding:12px 24px; position:sticky; top:60px; z-index:90; }
-.controls-box { max-width:1200px; margin:0 auto; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); padding:14px 18px; display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+.controls-bar { background:var(--bg-primary); border-bottom:1px solid var(--border); padding:12px 24px; }
+.controls-box { max-width:1248px; margin:0 auto; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); padding:16px 18px; display:flex; flex-direction:column; gap:14px; }
 
-.ctrl-label { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.07em; white-space:nowrap; }
+.ctrl-row { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.ctrl-label { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.07em; white-space:nowrap; min-width:80px; }
+.ctrl-divider { border:none; border-top:1px solid var(--border); margin:0; }
 
-.pair-select { background:var(--bg-tertiary); border:1.5px solid var(--border); color:var(--text-primary); padding:8px 36px 8px 12px; border-radius:var(--radius-md); font-size:13px; font-family:var(--font); outline:none; cursor:pointer; appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234d7a96' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; transition:border-color .15s; color-scheme:dark; min-width:180px; }
-.pair-select:focus { border-color:var(--accent); }
-.pair-select option { background:var(--bg-tertiary); }
+/* Asset chips */
+.asset-chips { display:flex; flex-wrap:wrap; gap:5px; flex:1; }
+.asset-chip { padding:4px 10px; border-radius:20px; font-size:12px; font-weight:600; cursor:pointer; transition:all .15s; border:1.5px solid var(--border); color:var(--text-muted); background:var(--bg-tertiary); user-select:none; white-space:nowrap; opacity:.55; }
+.asset-chip:hover { opacity:.85; border-color:var(--text-muted); }
+.asset-chip.active { opacity:1; border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
+.asset-chip.metal.active { border-color:var(--accent-2); color:var(--accent-2); background:rgba(81,215,206,0.10); }
 
-.tf-group { display:flex; gap:4px; }
-.tf-btn { background:var(--bg-tertiary); border:1.5px solid var(--border); color:var(--text-muted); padding:7px 14px; border-radius:var(--radius-sm); font-size:12px; font-weight:600; cursor:pointer; font-family:var(--font); transition:all .15s; white-space:nowrap; }
-.tf-btn:hover { border-color:var(--accent); color:var(--text-secondary); }
-.tf-btn.active { background:var(--accent-dim); border-color:var(--accent); color:var(--accent); }
+/* Timeframe chips */
+.tf-chips { display:flex; gap:5px; flex-wrap:wrap; }
+.tf-chip { padding:5px 14px; border-radius:20px; font-size:12px; font-weight:700; cursor:pointer; transition:all .15s; border:1.5px solid var(--border); color:var(--text-muted); background:var(--bg-tertiary); user-select:none; opacity:.55; }
+.tf-chip:hover { opacity:.85; }
+.tf-chip.active { opacity:1; border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
 
-.btn-scan { background:linear-gradient(135deg,#51d7ce,#2FA3E0); color:#062434; border:none; padding:8px 20px; border-radius:20px; font-size:13px; font-weight:700; cursor:pointer; font-family:var(--font); transition:opacity .15s; margin-left:auto; display:flex; align-items:center; gap:7px; white-space:nowrap; }
+/* Select all / clear */
+.chip-actions { display:flex; gap:6px; }
+.chip-action-btn { padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; cursor:pointer; border:1px solid var(--border); background:transparent; color:var(--text-muted); font-family:var(--font); transition:all .15s; }
+.chip-action-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+/* Scan button + counter */
+.scan-row { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+.scan-counter { font-size:12px; color:var(--text-muted); }
+.scan-counter strong { color:var(--accent); }
+.btn-scan { background:linear-gradient(135deg,#51d7ce,#2FA3E0); color:#062434; border:none; padding:10px 28px; border-radius:20px; font-size:14px; font-weight:700; cursor:pointer; font-family:var(--font); transition:opacity .15s; display:flex; align-items:center; gap:8px; }
 .btn-scan:hover { opacity:.88; }
-.btn-scan:disabled { opacity:.5; cursor:not-allowed; }
-.btn-scan svg { transition:transform .4s; }
-.btn-scan.loading svg { animation:spin .7s linear infinite; }
+.btn-scan:disabled { opacity:.45; cursor:not-allowed; }
+
+/* ── PROGRESS BAR ── */
+.progress-wrap { max-width:1248px; margin:8px auto 0; padding:0 24px; display:none; }
+.progress-track { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); padding:14px 18px; }
+.progress-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+.progress-label { font-size:13px; color:var(--text-secondary); }
+.progress-pct { font-size:13px; font-weight:700; color:var(--accent); font-family:var(--font-mono); }
+.progress-bar { height:6px; background:var(--bg-tertiary); border-radius:3px; overflow:hidden; }
+.progress-fill { height:100%; background:linear-gradient(90deg,#51d7ce,#2FA3E0); border-radius:3px; transition:width .3s ease; width:0%; }
+.progress-current { font-size:11px; color:var(--text-muted); margin-top:7px; }
 
 /* ── MAIN ── */
 .main { max-width:1248px; margin:0 auto; padding:20px 24px 60px; }
 
-/* Status bar */
-.status-bar { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:8px; }
-.status-text { font-size:13px; color:var(--text-muted); }
-.status-count { font-size:13px; font-weight:600; color:var(--text-secondary); }
+/* Summary bar */
+.summary-bar { display:flex; align-items:center; gap:12px; margin-bottom:18px; flex-wrap:wrap; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); padding:12px 18px; }
+.summary-stat { display:flex; flex-direction:column; align-items:center; gap:2px; padding:0 14px; border-right:1px solid var(--border); }
+.summary-stat:last-child { border-right:none; }
+.summary-stat-val { font-family:var(--font-mono); font-size:22px; font-weight:700; }
+.summary-stat-val.all   { color:var(--accent-2); }
+.summary-stat-val.bull  { color:var(--positive); }
+.summary-stat-val.bear  { color:var(--negative); }
+.summary-stat-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--text-muted); }
+.summary-filters { display:flex; gap:6px; margin-left:auto; }
+.filter-tab { padding:5px 12px; border-radius:20px; font-size:12px; font-weight:600; cursor:pointer; border:1.5px solid var(--border); background:transparent; color:var(--text-muted); font-family:var(--font); transition:all .15s; }
+.filter-tab:hover { border-color:var(--accent); color:var(--accent); }
+.filter-tab.active { border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
+.filter-tab.bull.active { border-color:var(--positive); color:var(--positive); background:var(--positive-bg); }
+.filter-tab.bear.active { border-color:var(--negative); color:var(--negative); background:var(--negative-bg); }
+
+/* Sort row */
+.sort-row { display:flex; align-items:center; gap:8px; margin-bottom:14px; font-size:12px; color:var(--text-muted); }
+.sort-btn { padding:4px 10px; border-radius:20px; border:1px solid var(--border); background:transparent; color:var(--text-muted); font-size:11px; font-weight:600; cursor:pointer; font-family:var(--font); transition:all .15s; }
+.sort-btn.active { border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
 
 /* Pattern grid */
-.pattern-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(340px, 1fr)); gap:16px; }
+.pattern-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:14px; }
 
 /* ── PATTERN CARD ── */
-.pattern-card { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; animation:fadeIn .3s ease; transition:border-color .2s, transform .2s; }
-.pattern-card:hover { border-color:var(--accent); transform:translateY(-2px); }
+.pattern-card { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; animation:fadeIn .25s ease; transition:border-color .2s, transform .15s; }
+.pattern-card:hover { border-color:rgba(47,163,224,.5); transform:translateY(-2px); }
 .pattern-card.bullish { border-top:3px solid var(--positive); }
 .pattern-card.bearish { border-top:3px solid var(--negative); }
+.pattern-card.hidden  { display:none; }
 
-.card-header { padding:14px 16px 12px; display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
-.card-type-badge { display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; padding:3px 9px; border-radius:20px; white-space:nowrap; }
+.card-header { padding:12px 14px 10px; display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
+.card-meta { display:flex; gap:5px; align-items:center; margin-bottom:5px; flex-wrap:wrap; }
+.card-pair-badge { font-size:11px; font-weight:700; background:var(--bg-tertiary); border:1px solid var(--border); color:var(--text-secondary); padding:2px 7px; border-radius:4px; font-family:var(--font-mono); }
+.card-tf-badge { font-size:10px; font-weight:700; background:var(--accent-dim); border:1px solid rgba(47,163,224,.25); color:var(--accent); padding:2px 7px; border-radius:4px; }
+.card-type-badge { display:inline-flex; align-items:center; gap:4px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; padding:2px 8px; border-radius:20px; }
 .card-type-badge.bullish { background:var(--positive-bg); color:var(--positive); }
 .card-type-badge.bearish { background:var(--negative-bg); color:var(--negative); }
-.card-type-badge svg { flex-shrink:0; }
-
-.card-name { font-size:15px; font-weight:700; color:var(--text-primary); margin-top:6px; line-height:1.3; }
-.card-time { font-size:11px; color:var(--text-muted); margin-top:3px; }
+.card-name { font-size:14px; font-weight:700; color:var(--text-primary); line-height:1.3; margin-top:3px; }
+.card-time { font-size:11px; color:var(--text-muted); margin-top:2px; }
 .card-rr { text-align:right; flex-shrink:0; }
-.rr-label { font-size:10px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:.05em; }
-.rr-value { font-family:var(--font-mono); font-size:18px; font-weight:700; color:var(--accent-2); }
+.rr-label { font-size:9px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:.05em; }
+.rr-value { font-family:var(--font-mono); font-size:17px; font-weight:700; color:var(--accent-2); }
 
-/* Risk/Reward visual bar */
-.rr-bar-wrap { padding:0 16px 14px; }
-.rr-bar-track { position:relative; height:24px; border-radius:6px; overflow:hidden; display:flex; }
-.rr-segment-loss   { background:rgba(248,81,73,0.25); display:flex; align-items:center; justify-content:center; }
-.rr-segment-profit { background:rgba(63,185,80,0.20); display:flex; align-items:center; justify-content:center; }
-.rr-segment-profit2{ background:rgba(63,185,80,0.12); display:flex; align-items:center; justify-content:center; }
-.rr-bar-label { font-size:9px; font-weight:700; color:rgba(255,255,255,.5); text-transform:uppercase; letter-spacing:.04em; white-space:nowrap; overflow:hidden; padding:0 4px; }
-.rr-entry-line { position:absolute; top:0; bottom:0; width:2px; background:#E6E9EB; z-index:2; }
+/* RR Bar */
+.rr-bar-wrap { padding:0 14px 12px; }
+.rr-bar-track { position:relative; height:22px; border-radius:5px; overflow:hidden; display:flex; }
+.rr-seg-loss    { background:rgba(248,81,73,0.22); display:flex; align-items:center; justify-content:center; min-width:24px; }
+.rr-seg-profit  { background:rgba(63,185,80,0.18); display:flex; align-items:center; justify-content:center; min-width:24px; }
+.rr-seg-profit2 { background:rgba(63,185,80,0.10); display:flex; align-items:center; justify-content:center; min-width:16px; }
+.rr-seg-label { font-size:9px; font-weight:700; color:rgba(255,255,255,.45); text-transform:uppercase; letter-spacing:.04em; white-space:nowrap; overflow:hidden; padding:0 3px; }
+.rr-entry-line { position:absolute; top:0; bottom:0; width:2px; background:rgba(230,233,235,.7); z-index:2; }
 
 /* Price levels */
-.card-levels { padding:0 16px 16px; display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:8px; }
-.level-box { background:var(--bg-tertiary); border-radius:var(--radius-sm); padding:8px 10px; text-align:center; }
-.level-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; margin-bottom:3px; }
-.level-label.entry   { color:var(--text-secondary); }
-.level-label.sl      { color:var(--negative); }
-.level-label.tp      { color:var(--positive); }
-.level-price { font-family:var(--font-mono); font-size:12px; font-weight:600; color:var(--text-primary); }
+.card-levels { padding:0 14px 14px; display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:6px; }
+.level-box { background:var(--bg-tertiary); border-radius:var(--radius-sm); padding:7px 8px; text-align:center; }
+.level-lbl { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; margin-bottom:2px; }
+.level-lbl.entry { color:var(--text-muted); }
+.level-lbl.sl    { color:var(--negative); }
+.level-lbl.tp    { color:var(--positive); }
+.level-price { font-family:var(--font-mono); font-size:11px; font-weight:600; color:var(--text-primary); }
 
 /* ── STATES ── */
-.state-box { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:80px 24px; gap:16px; text-align:center; color:var(--text-muted); }
-.state-icon { font-size:48px; opacity:.35; }
-.state-title { font-size:18px; font-weight:600; color:var(--text-secondary); }
-.state-sub { font-size:13px; max-width:340px; }
+.state-box { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:80px 24px; gap:14px; text-align:center; color:var(--text-muted); }
+.state-icon  { font-size:44px; opacity:.3; }
+.state-title { font-size:17px; font-weight:600; color:var(--text-secondary); }
+.state-sub   { font-size:13px; max-width:360px; line-height:1.6; }
 
-/* Loading skeleton */
-.skeleton-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:16px; }
-.skeleton-card { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); height:220px; overflow:hidden; position:relative; }
+/* Skeleton */
+.skeleton-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:14px; }
+.skeleton-card { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); height:200px; overflow:hidden; position:relative; }
 .skeleton-card::after { content:''; position:absolute; inset:0; background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,.04) 50%,transparent 100%); background-size:400px 100%; animation:shimmer 1.4s infinite; }
 
 /* ── FOOTER ── */
@@ -147,8 +189,8 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 .footer-disclaimer a { color:var(--accent); text-decoration:none; }
 .footer-copy { font-size:12px; color:var(--text-muted); margin-top:6px; }
 
-@media(max-width:700px) { .pattern-grid,.skeleton-grid { grid-template-columns:1fr; } .card-levels { grid-template-columns:1fr 1fr; } .tf-group { flex-wrap:wrap; } }
-@media(max-width:640px) { .header-inner,.main { padding-left:16px; padding-right:16px; } .controls-bar { padding-left:16px; padding-right:16px; } }
+@media(max-width:700px) { .pattern-grid,.skeleton-grid { grid-template-columns:1fr; } .card-levels { grid-template-columns:1fr 1fr; } }
+@media(max-width:640px) { .header-inner,.main,.controls-bar { padding-left:16px; padding-right:16px; } }
   </style>
 </head>
 <body>
@@ -157,18 +199,13 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
     <div class="header-inner">
       <a href="economic-calendar.html" class="logo">
         <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#51d7ce"/>
-              <stop offset="100%" stop-color="#2FA3E0"/>
-            </linearGradient>
-          </defs>
-          <circle cx="18" cy="18" r="16.5" stroke="url(#logoGrad)" stroke-width="2" fill="none"/>
-          <rect x="8" y="20" width="4" height="8" rx="1" fill="url(#logoGrad)"/>
-          <rect x="14" y="15" width="4" height="13" rx="1" fill="url(#logoGrad)"/>
-          <rect x="20" y="11" width="4" height="17" rx="1" fill="url(#logoGrad)"/>
-          <polyline points="22,9 27,9 27,14" stroke="url(#logoGrad)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-          <line x1="14" y1="21" x2="27" y2="9" stroke="url(#logoGrad)" stroke-width="2" stroke-linecap="round"/>
+          <defs><linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#51d7ce"/><stop offset="100%" stop-color="#2FA3E0"/></linearGradient></defs>
+          <circle cx="18" cy="18" r="16.5" stroke="url(#lg)" stroke-width="2" fill="none"/>
+          <rect x="8" y="20" width="4" height="8" rx="1" fill="url(#lg)"/>
+          <rect x="14" y="15" width="4" height="13" rx="1" fill="url(#lg)"/>
+          <rect x="20" y="11" width="4" height="17" rx="1" fill="url(#lg)"/>
+          <polyline points="22,9 27,9 27,14" stroke="url(#lg)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <line x1="14" y1="21" x2="27" y2="9" stroke="url(#lg)" stroke-width="2" stroke-linecap="round"/>
         </svg>
         <span class="logo-text">Market<strong>Analytics</strong></span>
       </a>
@@ -187,88 +224,139 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
   <section class="hero">
     <div class="hero-inner">
       <h1>Pattern Recognition</h1>
-      <p>Automatically detect chart patterns on Forex pairs and Metals using live market data.</p>
+      <p>Select multiple instruments and timeframes for a broad market analysis in one click.</p>
     </div>
   </section>
 
   <!-- Controls -->
   <div class="controls-bar">
     <div class="controls-box">
-      <span class="ctrl-label">Instrument</span>
-      <select class="pair-select" id="pairSelect">
-        <optgroup label="AUD Pairs">
-          <option value="OANDA:AUD_CAD">AUDCAD</option>
-          <option value="OANDA:AUD_CHF">AUDCHF</option>
-          <option value="OANDA:AUD_JPY">AUDJPY</option>
-          <option value="OANDA:AUD_NZD">AUDNZD</option>
-          <option value="OANDA:AUD_USD">AUDUSD</option>
-        </optgroup>
-        <optgroup label="CAD Pairs">
-          <option value="OANDA:CAD_CHF">CADCHF</option>
-          <option value="OANDA:CAD_JPY">CADJPY</option>
-        </optgroup>
-        <optgroup label="CHF Pairs">
-          <option value="OANDA:CHF_JPY">CHFJPY</option>
-        </optgroup>
-        <optgroup label="EUR Pairs">
-          <option value="OANDA:EUR_AUD">EURAUD</option>
-          <option value="OANDA:EUR_CAD">EURCAD</option>
-          <option value="OANDA:EUR_CHF">EURCHF</option>
-          <option value="OANDA:EUR_GBP">EURGBP</option>
-          <option value="OANDA:EUR_JPY">EURJPY</option>
-          <option value="OANDA:EUR_NZD">EURNZD</option>
-          <option value="OANDA:EUR_USD" selected>EURUSD</option>
-        </optgroup>
-        <optgroup label="GBP Pairs">
-          <option value="OANDA:GBP_AUD">GBPAUD</option>
-          <option value="OANDA:GBP_CAD">GBPCAD</option>
-          <option value="OANDA:GBP_CHF">GBPCHF</option>
-          <option value="OANDA:GBP_JPY">GBPJPY</option>
-          <option value="OANDA:GBP_NZD">GBPNZD</option>
-          <option value="OANDA:GBP_USD">GBPUSD</option>
-        </optgroup>
-        <optgroup label="NZD Pairs">
-          <option value="OANDA:NZD_CAD">NZDCAD</option>
-          <option value="OANDA:NZD_CHF">NZDCHF</option>
-          <option value="OANDA:NZD_JPY">NZDJPY</option>
-          <option value="OANDA:NZD_USD">NZDUSD</option>
-        </optgroup>
-        <optgroup label="USD Pairs">
-          <option value="OANDA:USD_CAD">USDCAD</option>
-          <option value="OANDA:USD_CHF">USDCHF</option>
-          <option value="OANDA:USD_JPY">USDJPY</option>
-        </optgroup>
-        <optgroup label="Metals">
-          <option value="OANDA:XAG_USD">XAGUSD (Silver)</option>
-          <option value="OANDA:XAU_USD">XAUUSD (Gold)</option>
-        </optgroup>
-      </select>
 
-      <span class="ctrl-label">Timeframe</span>
-      <div class="tf-group">
-        <button class="tf-btn" data-res="15">15m</button>
-        <button class="tf-btn" data-res="60">1H</button>
-        <button class="tf-btn active" data-res="D">Daily</button>
-        <button class="tf-btn" data-res="W">Weekly</button>
+      <!-- Instruments -->
+      <div class="ctrl-row">
+        <span class="ctrl-label">Instruments</span>
+        <div class="chip-actions">
+          <button class="chip-action-btn" id="selectAllAssets">Select All</button>
+          <button class="chip-action-btn" id="clearAssets">Clear</button>
+        </div>
+      </div>
+      <div class="asset-chips" id="assetChips">
+        <!-- AUD -->
+        <span class="asset-chip active" data-sym="OANDA:AUD_CAD">AUDCAD</span>
+        <span class="asset-chip" data-sym="OANDA:AUD_CHF">AUDCHF</span>
+        <span class="asset-chip" data-sym="OANDA:AUD_JPY">AUDJPY</span>
+        <span class="asset-chip" data-sym="OANDA:AUD_NZD">AUDNZD</span>
+        <span class="asset-chip active" data-sym="OANDA:AUD_USD">AUDUSD</span>
+        <!-- CAD -->
+        <span class="asset-chip" data-sym="OANDA:CAD_CHF">CADCHF</span>
+        <span class="asset-chip" data-sym="OANDA:CAD_JPY">CADJPY</span>
+        <!-- CHF -->
+        <span class="asset-chip" data-sym="OANDA:CHF_JPY">CHFJPY</span>
+        <!-- EUR -->
+        <span class="asset-chip" data-sym="OANDA:EUR_AUD">EURAUD</span>
+        <span class="asset-chip" data-sym="OANDA:EUR_CAD">EURCAD</span>
+        <span class="asset-chip" data-sym="OANDA:EUR_CHF">EURCHF</span>
+        <span class="asset-chip" data-sym="OANDA:EUR_GBP">EURGBP</span>
+        <span class="asset-chip" data-sym="OANDA:EUR_JPY">EURJPY</span>
+        <span class="asset-chip" data-sym="OANDA:EUR_NZD">EURNZD</span>
+        <span class="asset-chip active" data-sym="OANDA:EUR_USD">EURUSD</span>
+        <!-- GBP -->
+        <span class="asset-chip" data-sym="OANDA:GBP_AUD">GBPAUD</span>
+        <span class="asset-chip" data-sym="OANDA:GBP_CAD">GBPCAD</span>
+        <span class="asset-chip" data-sym="OANDA:GBP_CHF">GBPCHF</span>
+        <span class="asset-chip" data-sym="OANDA:GBP_JPY">GBPJPY</span>
+        <span class="asset-chip" data-sym="OANDA:GBP_NZD">GBPNZD</span>
+        <span class="asset-chip active" data-sym="OANDA:GBP_USD">GBPUSD</span>
+        <!-- NZD -->
+        <span class="asset-chip" data-sym="OANDA:NZD_CAD">NZDCAD</span>
+        <span class="asset-chip" data-sym="OANDA:NZD_CHF">NZDCHF</span>
+        <span class="asset-chip" data-sym="OANDA:NZD_JPY">NZDJPY</span>
+        <span class="asset-chip" data-sym="OANDA:NZD_USD">NZDUSD</span>
+        <!-- USD -->
+        <span class="asset-chip" data-sym="OANDA:USD_CAD">USDCAD</span>
+        <span class="asset-chip" data-sym="OANDA:USD_CHF">USDCHF</span>
+        <span class="asset-chip active" data-sym="OANDA:USD_JPY">USDJPY</span>
+        <!-- Metals -->
+        <span class="asset-chip metal" data-sym="OANDA:XAG_USD">XAGUSD</span>
+        <span class="asset-chip metal active" data-sym="OANDA:XAU_USD">XAUUSD</span>
       </div>
 
-      <button class="btn-scan" id="scanBtn">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        Scan Patterns
-      </button>
+      <hr class="ctrl-divider" />
+
+      <!-- Timeframes -->
+      <div class="ctrl-row">
+        <span class="ctrl-label">Timeframes</span>
+        <div class="tf-chips">
+          <span class="tf-chip" data-res="15">15m</span>
+          <span class="tf-chip" data-res="60">1H</span>
+          <span class="tf-chip active" data-res="D">Daily</span>
+          <span class="tf-chip active" data-res="W">Weekly</span>
+        </div>
+      </div>
+
+      <hr class="ctrl-divider" />
+
+      <!-- Scan row -->
+      <div class="scan-row">
+        <span class="scan-counter" id="scanCounter"></span>
+        <button class="btn-scan" id="scanBtn">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          Scan Selected
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Progress -->
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-track">
+        <div class="progress-header">
+          <span class="progress-label" id="progressLabel">Scanning…</span>
+          <span class="progress-pct" id="progressPct">0%</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+        <div class="progress-current" id="progressCurrent"></div>
+      </div>
     </div>
   </div>
 
   <main class="main">
-    <div class="status-bar" id="statusBar" style="display:none;">
-      <span class="status-text" id="statusText"></span>
-      <span class="status-count" id="statusCount"></span>
+    <div id="summaryBar" style="display:none;" class="summary-bar">
+      <div class="summary-stat">
+        <span class="summary-stat-val all" id="sumTotal">0</span>
+        <span class="summary-stat-label">Patterns</span>
+      </div>
+      <div class="summary-stat">
+        <span class="summary-stat-val bull" id="sumBull">0</span>
+        <span class="summary-stat-label">Bullish</span>
+      </div>
+      <div class="summary-stat">
+        <span class="summary-stat-val bear" id="sumBear">0</span>
+        <span class="summary-stat-label">Bearish</span>
+      </div>
+      <div class="summary-stat">
+        <span class="summary-stat-val" style="color:var(--text-secondary)" id="sumScanned">0</span>
+        <span class="summary-stat-label">Scanned</span>
+      </div>
+      <div class="summary-filters">
+        <button class="filter-tab active" data-filter="all">All</button>
+        <button class="filter-tab bull" data-filter="bullish">&#9650; Bullish</button>
+        <button class="filter-tab bear" data-filter="bearish">&#9660; Bearish</button>
+      </div>
     </div>
+
+    <div class="sort-row" id="sortRow" style="display:none;">
+      <span>Sort by:</span>
+      <button class="sort-btn active" data-sort="rr">Best R/R</button>
+      <button class="sort-btn" data-sort="tf">Timeframe</button>
+      <button class="sort-btn" data-sort="time">Latest</button>
+    </div>
+
     <div id="resultsArea">
       <div class="state-box">
         <div class="state-icon">&#128202;</div>
         <div class="state-title">Ready to scan</div>
-        <p class="state-sub">Select an instrument and timeframe, then click <strong>Scan Patterns</strong> to detect chart patterns.</p>
+        <p class="state-sub">Select your instruments and timeframes above, then click <strong>Scan Selected</strong> to run a multi-asset analysis.</p>
       </div>
     </div>
   </main>
@@ -287,209 +375,285 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 const API_KEY  = 'd4fevfpr01qkcvvhv6h0d4fevfpr01qkcvvhv6hg';
 const API_BASE = 'https://finnhub.io/api/v1';
 
-let currentResolution = 'D';
+let allResults   = [];   // { pattern, sym, symLabel, tf, tfLabel }
+let activeFilter = 'all';
+let activeSort   = 'rr';
 
-// Pattern name prettifier
-function prettyName(name) {
-  return name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+const TF_LABELS = { '15':'15m', '60':'1H', 'D':'Daily', 'W':'Weekly' };
+const TF_ORDER  = { 'W':0, 'D':1, '60':2, '15':3 };
+
+// ── Helpers ────────────────────────────────────────────────────
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function symLabel(sym) {
+  return sym.replace('OANDA:', '').replace('_', '');
 }
 
-// Pattern type icons
-function typeIcon(type) {
-  if (type === 'bullish') return `<svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4l8 16H4z"/></svg>`;
-  return `<svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 20L4 4h16z"/></svg>`;
-}
+function isJPY(sym) { return sym.includes('JPY'); }
+function isMetal(sym) { return sym.includes('XAU') || sym.includes('XAG'); }
 
-// Format price based on pair
 function fmtPrice(val, sym) {
-  if (!val || val === 0) return '—';
-  if (sym.includes('JPY') || sym.includes('XAU') || sym.includes('XAG')) return val.toFixed(2);
+  if (!val) return '—';
+  if (isMetal(sym)) return val.toFixed(2);
+  if (isJPY(sym)) return val.toFixed(3);
   return val.toFixed(5);
 }
 
-// Format timestamp
 function fmtTime(ts) {
   if (!ts) return '';
-  const d = new Date(ts * 1000);
-  return d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', year:'numeric' });
+  return new Date(ts * 1000).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
 }
 
-// Calculate R/R ratio
 function calcRR(entry, sl, tp1) {
   if (!entry || !sl || !tp1) return null;
-  const risk   = Math.abs(entry - sl);
-  const reward = Math.abs(tp1 - entry);
+  const risk = Math.abs(entry - sl);
   if (risk === 0) return null;
-  return (reward / risk).toFixed(1);
+  return (Math.abs(tp1 - entry) / risk).toFixed(1);
 }
 
-// Build the visual risk/reward bar
-function buildRRBar(pattern, sym) {
-  const { entry, losspoint: sl, profit1: tp1, profit2: tp2, patterntype: type } = pattern;
-  if (!entry || !sl) return '';
-
-  const isBull = type === 'bullish';
-  const low    = Math.min(sl, entry, tp1 || entry, tp2 || entry);
-  const high   = Math.max(sl, entry, tp1 || entry, tp2 || entry);
-  const range  = high - low || 1;
-
-  const slPct     = ((Math.abs(sl - entry)) / range * 100).toFixed(1);
-  const tp1Pct    = tp1 ? ((Math.abs(tp1 - entry)) / range * 100).toFixed(1) : '0';
-  const tp2Extra  = (tp1 && tp2) ? ((Math.abs(tp2 - tp1)) / range * 100).toFixed(1) : '0';
-
-  const entryLeft = ((entry - low) / range * 100).toFixed(1);
-
-  return `
-    <div class="rr-bar-wrap">
-      <div class="rr-bar-track">
-        <div class="rr-segment-loss"   style="width:${slPct}%">  <span class="rr-bar-label">SL</span></div>
-        <div class="rr-segment-profit" style="width:${tp1Pct}%"> <span class="rr-bar-label">TP1</span></div>
-        ${parseFloat(tp2Extra) > 0 ? `<div class="rr-segment-profit2" style="width:${tp2Extra}%"><span class="rr-bar-label">TP2</span></div>` : ''}
-        <div class="rr-entry-line" style="left:${entryLeft}%"></div>
-      </div>
-    </div>`;
+function prettyName(n) {
+  return (n || 'Unknown Pattern').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
-// Build a single pattern card
-function buildCard(pattern, sym) {
-  const type   = (pattern.patterntype || 'bullish').toLowerCase();
-  const name   = prettyName(pattern.patternname || pattern.apattern || 'Unknown Pattern');
-  const rr     = calcRR(pattern.entry, pattern.losspoint, pattern.profit1);
-  const time   = fmtTime(pattern.sortTime || pattern.atime);
-  const p      = (v) => fmtPrice(v, sym);
-
-  return `
-    <div class="pattern-card ${type}">
-      <div class="card-header">
-        <div>
-          <div class="card-type-badge ${type}">${typeIcon(type)} ${type}</div>
-          <div class="card-name">${name}</div>
-          ${time ? `<div class="card-time">Detected: ${time}</div>` : ''}
-        </div>
-        ${rr ? `<div class="card-rr"><div class="rr-label">R/R</div><div class="rr-value">1:${rr}</div></div>` : ''}
-      </div>
-      ${buildRRBar(pattern, sym)}
-      <div class="card-levels">
-        <div class="level-box">
-          <div class="level-label entry">Entry</div>
-          <div class="level-price">${p(pattern.entry)}</div>
-        </div>
-        <div class="level-box">
-          <div class="level-label sl">Stop Loss</div>
-          <div class="level-price">${p(pattern.losspoint)}</div>
-        </div>
-        <div class="level-box">
-          <div class="level-label tp">TP 1</div>
-          <div class="level-price">${p(pattern.profit1)}</div>
-        </div>
-        <div class="level-box">
-          <div class="level-label tp">TP 2</div>
-          <div class="level-price">${p(pattern.profit2)}</div>
-        </div>
-      </div>
-    </div>`;
+function getSelectedAssets() {
+  return [...document.querySelectorAll('.asset-chip.active')].map(c => c.dataset.sym);
 }
 
-// Show loading skeletons
-function showLoading() {
-  document.getElementById('statusBar').style.display = 'none';
-  document.getElementById('resultsArea').innerHTML = `
-    <div class="skeleton-grid">
-      ${Array(6).fill('<div class="skeleton-card"></div>').join('')}
-    </div>`;
-  const btn = document.getElementById('scanBtn');
-  btn.disabled = true;
-  btn.classList.add('loading');
-  btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 11-6.22-8.56"/></svg> Scanning…`;
+function getSelectedTFs() {
+  return [...document.querySelectorAll('.tf-chip.active')].map(c => c.dataset.res);
 }
 
-function resetBtn() {
-  const btn = document.getElementById('scanBtn');
-  btn.disabled = false;
-  btn.classList.remove('loading');
-  btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Scan Patterns`;
-}
+// ── Counter update ─────────────────────────────────────────────
 
-// Main scan function
-async function scan() {
-  const sym = document.getElementById('pairSelect').value;
-  const res = currentResolution;
-  const displayName = document.getElementById('pairSelect').selectedOptions[0].text;
-
-  showLoading();
-
-  try {
-    const url = `${API_BASE}/scan/pattern?symbol=${encodeURIComponent(sym)}&resolution=${res}&token=${API_KEY}`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`API error ${response.status}`);
-    const data = await response.json();
-
-    const patterns = data.points || [];
-
-    const statusBar = document.getElementById('statusBar');
-    statusBar.style.display = 'flex';
-
-    const tfLabel = document.querySelector('.tf-btn.active')?.textContent || res;
-    document.getElementById('statusText').textContent = `${displayName} · ${tfLabel} · Last scan: ${new Date().toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit' })}`;
-
-    if (patterns.length === 0) {
-      document.getElementById('statusCount').textContent = '';
-      document.getElementById('resultsArea').innerHTML = `
-        <div class="state-box">
-          <div class="state-icon">&#128269;</div>
-          <div class="state-title">No patterns detected</div>
-          <p class="state-sub">No chart patterns were found for <strong>${displayName}</strong> on the <strong>${tfLabel}</strong> timeframe. Try a different timeframe or instrument.</p>
-        </div>`;
-      return;
-    }
-
-    // Sort: bullish first, then by time descending
-    patterns.sort((a, b) => (b.sortTime || 0) - (a.sortTime || 0));
-
-    const bullish = patterns.filter(p => (p.patterntype || '').toLowerCase() === 'bullish');
-    const bearish = patterns.filter(p => (p.patterntype || '').toLowerCase() === 'bearish');
-
-    document.getElementById('statusCount').textContent =
-      `${patterns.length} pattern${patterns.length !== 1 ? 's' : ''} found · ${bullish.length} bullish · ${bearish.length} bearish`;
-
-    document.getElementById('resultsArea').innerHTML = `
-      <div class="pattern-grid">
-        ${patterns.map(p => buildCard(p, sym)).join('')}
-      </div>`;
-
-  } catch (err) {
-    document.getElementById('statusBar').style.display = 'none';
-    document.getElementById('resultsArea').innerHTML = `
-      <div class="state-box">
-        <div class="state-icon">&#9888;</div>
-        <div class="state-title">Could not load patterns</div>
-        <p class="state-sub">${err.message || 'Network error. Please try again.'}</p>
-      </div>`;
-  } finally {
-    resetBtn();
+function updateCounter() {
+  const a = getSelectedAssets().length;
+  const t = getSelectedTFs().length;
+  const total = a * t;
+  const el = document.getElementById('scanCounter');
+  if (a === 0 || t === 0) {
+    el.innerHTML = '<span style="color:var(--negative)">Select at least 1 instrument and 1 timeframe</span>';
+  } else {
+    el.innerHTML = `<strong>${a}</strong> instrument${a!==1?'s':''} × <strong>${t}</strong> timeframe${t!==1?'s':''} = <strong>${total}</strong> scan${total!==1?'s':''}`;
   }
 }
 
-// ── Event listeners ──────────────────────────────────────────
+// ── R/R Bar ────────────────────────────────────────────────────
 
-document.querySelectorAll('.tf-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    currentResolution = btn.dataset.res;
+function buildRRBar(p, sym) {
+  const { entry, losspoint: sl, profit1: tp1, profit2: tp2 } = p;
+  if (!entry || !sl) return '';
+  const low   = Math.min(sl, entry, tp1||entry, tp2||entry);
+  const high  = Math.max(sl, entry, tp1||entry, tp2||entry);
+  const range = high - low || 1;
+  const slPct    = +((Math.abs(sl - entry)) / range * 100).toFixed(1);
+  const tp1Pct   = tp1 ? +((Math.abs(tp1 - entry)) / range * 100).toFixed(1) : 0;
+  const tp2Pct   = (tp1 && tp2) ? +((Math.abs(tp2 - tp1)) / range * 100).toFixed(1) : 0;
+  const entryPct = +((entry - low) / range * 100).toFixed(1);
+  return `
+    <div class="rr-bar-wrap">
+      <div class="rr-bar-track">
+        <div class="rr-seg-loss"    style="width:${Math.max(slPct,8)}%">  <span class="rr-seg-label">SL</span></div>
+        <div class="rr-seg-profit"  style="width:${Math.max(tp1Pct,8)}%"><span class="rr-seg-label">TP1</span></div>
+        ${tp2Pct > 0 ? `<div class="rr-seg-profit2" style="width:${Math.max(tp2Pct,6)}%"><span class="rr-seg-label">TP2</span></div>` : ''}
+        <div class="rr-entry-line" style="left:${entryPct}%"></div>
+      </div>
+    </div>`;
+}
+
+// ── Build card ─────────────────────────────────────────────────
+
+function buildCard(item) {
+  const { pattern: p, sym, symLabel: sl, tf, tfLabel } = item;
+  const type = (p.patterntype || 'bullish').toLowerCase();
+  const name = prettyName(p.patternname || p.apattern);
+  const rr   = calcRR(p.entry, p.losspoint, p.profit1);
+  const fp   = v => fmtPrice(v, sym);
+  const arrow = type === 'bullish'
+    ? `<svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4l8 16H4z"/></svg>`
+    : `<svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><path d="M12 20L4 4h16z"/></svg>`;
+
+  return `
+    <div class="pattern-card ${type}" data-type="${type}" data-rr="${rr||0}" data-tf="${TF_ORDER[tf]??9}" data-time="${p.sortTime||0}">
+      <div class="card-header">
+        <div style="flex:1">
+          <div class="card-meta">
+            <span class="card-pair-badge">${sl}</span>
+            <span class="card-tf-badge">${tfLabel}</span>
+            <span class="card-type-badge ${type}">${arrow} ${type}</span>
+          </div>
+          <div class="card-name">${name}</div>
+          ${p.sortTime ? `<div class="card-time">${fmtTime(p.sortTime)}</div>` : ''}
+        </div>
+        ${rr ? `<div class="card-rr"><div class="rr-label">R/R</div><div class="rr-value">1:${rr}</div></div>` : ''}
+      </div>
+      ${buildRRBar(p, sym)}
+      <div class="card-levels">
+        <div class="level-box"><div class="level-lbl entry">Entry</div><div class="level-price">${fp(p.entry)}</div></div>
+        <div class="level-box"><div class="level-lbl sl">Stop Loss</div><div class="level-price">${fp(p.losspoint)}</div></div>
+        <div class="level-box"><div class="level-lbl tp">TP 1</div><div class="level-price">${fp(p.profit1)}</div></div>
+        <div class="level-box"><div class="level-lbl tp">TP 2</div><div class="level-price">${fp(p.profit2)}</div></div>
+      </div>
+    </div>`;
+}
+
+// ── Render results ─────────────────────────────────────────────
+
+function renderResults() {
+  let items = [...allResults];
+
+  // Filter
+  if (activeFilter !== 'all') {
+    items = items.filter(i => i.pattern.patterntype?.toLowerCase() === activeFilter);
+  }
+
+  // Sort
+  if (activeSort === 'rr') {
+    items.sort((a,b) => parseFloat(calcRR(b.pattern.entry,b.pattern.losspoint,b.pattern.profit1)||0)
+                      - parseFloat(calcRR(a.pattern.entry,a.pattern.losspoint,a.pattern.profit1)||0));
+  } else if (activeSort === 'tf') {
+    items.sort((a,b) => (TF_ORDER[a.tf]??9) - (TF_ORDER[b.tf]??9));
+  } else if (activeSort === 'time') {
+    items.sort((a,b) => (b.pattern.sortTime||0) - (a.pattern.sortTime||0));
+  }
+
+  if (items.length === 0) {
+    document.getElementById('resultsArea').innerHTML = `
+      <div class="state-box">
+        <div class="state-icon">&#128269;</div>
+        <div class="state-title">No patterns found</div>
+        <p class="state-sub">No patterns detected for the selected instruments and timeframes. Try adding more assets or different timeframes.</p>
+      </div>`;
+    return;
+  }
+
+  document.getElementById('resultsArea').innerHTML =
+    `<div class="pattern-grid">${items.map(buildCard).join('')}</div>`;
+}
+
+// ── Main scan ─────────────────────────────────────────────────
+
+async function scan() {
+  const assets = getSelectedAssets();
+  const tfs    = getSelectedTFs();
+  if (assets.length === 0 || tfs.length === 0) {
+    updateCounter();
+    return;
+  }
+
+  // Build combinations
+  const combos = [];
+  for (const tf of tfs) for (const sym of assets) combos.push({ sym, tf });
+
+  // Show skeletons
+  document.getElementById('scanBtn').disabled = true;
+  document.getElementById('summaryBar').style.display = 'none';
+  document.getElementById('sortRow').style.display = 'none';
+  document.getElementById('progressWrap').style.display = 'block';
+  document.getElementById('resultsArea').innerHTML = `<div class="skeleton-grid">${Array(Math.min(combos.length*2,9)).fill('<div class="skeleton-card"></div>').join('')}</div>`;
+
+  allResults = [];
+  let done = 0;
+
+  for (const { sym, tf } of combos) {
+    const label = symLabel(sym);
+    const tfLbl = TF_LABELS[tf] || tf;
+
+    document.getElementById('progressLabel').textContent = `Scanning ${label} · ${tfLbl}…`;
+    document.getElementById('progressCurrent').textContent = `${done} of ${combos.length} completed`;
+    document.getElementById('progressPct').textContent = `${Math.round(done/combos.length*100)}%`;
+    document.getElementById('progressFill').style.width = `${Math.round(done/combos.length*100)}%`;
+
+    try {
+      const url = `${API_BASE}/scan/pattern?symbol=${encodeURIComponent(sym)}&resolution=${tf}&token=${API_KEY}`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        (data.points || []).forEach(p => allResults.push({ pattern:p, sym, symLabel:label, tf, tfLabel:tfLbl }));
+      }
+    } catch {}
+
+    done++;
+    // Throttle: small delay every 5 requests to stay within Finnhub rate limits
+    if (done % 5 === 0 && done < combos.length) await sleep(1100);
+    else await sleep(80);
+  }
+
+  // Final progress
+  document.getElementById('progressPct').textContent = '100%';
+  document.getElementById('progressFill').style.width = '100%';
+  document.getElementById('progressLabel').textContent = 'Scan complete';
+  document.getElementById('progressCurrent').textContent = `${combos.length} of ${combos.length} completed`;
+  await sleep(600);
+  document.getElementById('progressWrap').style.display = 'none';
+  document.getElementById('scanBtn').disabled = false;
+
+  // Update summary
+  const bull = allResults.filter(i => i.pattern.patterntype?.toLowerCase() === 'bullish').length;
+  const bear = allResults.filter(i => i.pattern.patterntype?.toLowerCase() === 'bearish').length;
+  document.getElementById('sumTotal').textContent   = allResults.length;
+  document.getElementById('sumBull').textContent    = bull;
+  document.getElementById('sumBear').textContent    = bear;
+  document.getElementById('sumScanned').textContent = combos.length;
+  document.getElementById('summaryBar').style.display = 'flex';
+  document.getElementById('sortRow').style.display = allResults.length > 0 ? 'flex' : 'none';
+
+  renderResults();
+}
+
+// ── Event listeners ────────────────────────────────────────────
+
+// Asset chips
+document.querySelectorAll('.asset-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    chip.classList.toggle('active');
+    updateCounter();
   });
 });
 
-document.getElementById('scanBtn').addEventListener('click', scan);
-document.getElementById('pairSelect').addEventListener('change', () => {
-  document.getElementById('resultsArea').innerHTML = `
-    <div class="state-box">
-      <div class="state-icon">&#128202;</div>
-      <div class="state-title">Ready to scan</div>
-      <p class="state-sub">Click <strong>Scan Patterns</strong> to detect chart patterns.</p>
-    </div>`;
-  document.getElementById('statusBar').style.display = 'none';
+// Timeframe chips
+document.querySelectorAll('.tf-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    chip.classList.toggle('active');
+    updateCounter();
+  });
 });
+
+// Select all / clear
+document.getElementById('selectAllAssets').addEventListener('click', () => {
+  document.querySelectorAll('.asset-chip').forEach(c => c.classList.add('active'));
+  updateCounter();
+});
+document.getElementById('clearAssets').addEventListener('click', () => {
+  document.querySelectorAll('.asset-chip').forEach(c => c.classList.remove('active'));
+  updateCounter();
+});
+
+// Filter tabs
+document.querySelectorAll('[data-filter]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-filter]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeFilter = btn.dataset.filter;
+    renderResults();
+  });
+});
+
+// Sort buttons
+document.querySelectorAll('[data-sort]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-sort]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeSort = btn.dataset.sort;
+    renderResults();
+  });
+});
+
+// Scan button
+document.getElementById('scanBtn').addEventListener('click', scan);
+
+// Init counter
+updateCounter();
 </script>
 </body>
 </html>
