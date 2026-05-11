@@ -772,11 +772,10 @@ function renderCandleChart(canvas, data, item) {
   const bX   = i => PL + (i + 0.5) * (cW / n);
 
   // Find the entry-trigger candle:
-  // 1. Locate the candle nearest to sortTime as the upper bound.
-  // 2. From there scan BACKWARD for the last candle that crossed the entry level
-  //    in the pattern direction (bearish: high≥entry & close<entry;
-  //                              bullish: low≤entry & close>entry).
-  // 3. Fall back to the sortTime candle if no crossing is found.
+  // For bearish (e.g. Double Top): find the highest peak in a 40-candle lookback,
+  // then scan FORWARD from that peak for the first candle that closes BELOW entry.
+  // For bullish: find the lowest trough, then scan forward for the first close ABOVE entry.
+  // This correctly identifies the neckline-break candle rather than any arbitrary candle.
   const pts  = item.pattern.sortTime;
   const type = (item.pattern.patterntype || 'bullish').toLowerCase();
   let sortIdx = n - 1;
@@ -789,13 +788,23 @@ function renderCandleChart(canvas, data, item) {
   }
   let pidx = sortIdx;
   if (entry) {
+    const lookback   = Math.min(40, sortIdx);
+    const searchFrom = sortIdx - lookback;
     if (type === 'bearish') {
-      for (let i = sortIdx; i >= 0; i--) {
-        if (h[i] >= entry && c[i] < entry) { pidx = i; break; }
+      let peakIdx = searchFrom, peakH = -Infinity;
+      for (let i = searchFrom; i <= sortIdx; i++) {
+        if (h[i] > peakH) { peakH = h[i]; peakIdx = i; }
+      }
+      for (let i = peakIdx; i <= sortIdx; i++) {
+        if (c[i] < entry) { pidx = i; break; }
       }
     } else {
-      for (let i = sortIdx; i >= 0; i--) {
-        if (l[i] <= entry && c[i] > entry) { pidx = i; break; }
+      let troughIdx = searchFrom, troughL = Infinity;
+      for (let i = searchFrom; i <= sortIdx; i++) {
+        if (l[i] < troughL) { troughL = l[i]; troughIdx = i; }
+      }
+      for (let i = troughIdx; i <= sortIdx; i++) {
+        if (c[i] > entry) { pidx = i; break; }
       }
     }
   }
