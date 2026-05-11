@@ -692,6 +692,8 @@ async function scan() {
 // ── Chart modal ────────────────────────────────────────────────
 
 async function openChartModal(item) {
+  console.log(`[Pattern raw] ${item.symLabel} ${item.tfLabel}:`, JSON.stringify(item.pattern, null, 2));
+
   const modal   = document.getElementById('chartModal');
   const canvas  = document.getElementById('chartCanvas');
   const ctx     = canvas.getContext('2d');
