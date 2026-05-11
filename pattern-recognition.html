@@ -694,6 +694,8 @@ async function scan() {
 async function openChartModal(item) {
   console.log(`[Pattern raw] ${item.symLabel} ${item.tfLabel}:`, JSON.stringify(item.pattern, null, 2));
 
+  try {
+
   const modal   = document.getElementById('chartModal');
   const canvas  = document.getElementById('chartCanvas');
   const ctx     = canvas.getContext('2d');
@@ -762,6 +764,8 @@ async function openChartModal(item) {
     ctx.fillStyle = '#f85149'; ctx.textAlign = 'center';
     ctx.fillText('Failed to load chart', W / 2, H / 2);
   }
+
+  } catch(e) { console.error('[openChartModal crash]:', e); }
 }
 
 function renderCandleChart(canvas, data, item) {
