@@ -653,6 +653,10 @@ async function scan() {
       const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
+        if (data.points && data.points.length > 0 && !window._patternFieldsLogged) {
+          console.log('[Finnhub pattern] Raw fields:', JSON.stringify(data.points[0], null, 2));
+          window._patternFieldsLogged = true;
+        }
         (data.points || []).forEach(p => allResults.push({ pattern:p, sym, symLabel:label, tf, tfLabel:tfLbl }));
       }
     } catch {}
@@ -725,10 +729,11 @@ async function openChartModal(item) {
   ctx.textAlign = 'center';
   ctx.fillText('Loading chart data…', W / 2, H / 2);
 
-  // Fetch candles
+  // Fetch candles centred around sortTime so the pattern formation is visible
   const tfSec = TF_SECONDS[item.tf] || 86400;
-  const to    = Math.floor(Date.now() / 1000);
-  const from  = to - tfSec * 80;
+  const pivot = item.pattern.sortTime || Math.floor(Date.now() / 1000);
+  const from  = pivot - tfSec * 50;   // 50 candles before signal
+  const to    = pivot + tfSec * 20;   // 20 candles after signal
   try {
     const url  = `${API_BASE}/forex/candle?symbol=${encodeURIComponent(item.sym)}&resolution=${item.tf}&from=${from}&to=${to}&token=${API_KEY}`;
     const res  = await fetch(url);
@@ -771,28 +776,15 @@ function renderCandleChart(canvas, data, item) {
   const bW   = Math.max(1.5, cW / n * 0.65);
   const bX   = i => PL + (i + 0.5) * (cW / n);
 
-  // Find the entry-trigger candle: the candle whose Low (bearish) or High (bullish)
-  // is closest to the entry price within a 40-candle lookback from sortTime.
-  const pts  = item.pattern.sortTime;
-  const type = (item.pattern.patterntype || 'bullish').toLowerCase();
-  let sortIdx = n - 1;
+  // Place the marker on the candle closest to sortTime.
+  // The chart is fetched centred on sortTime so this candle lands near the middle-right.
+  const pts = item.pattern.sortTime;
+  let pidx  = n - 1;
   if (pts) {
     let best = Infinity;
     for (let i = 0; i < n; i++) {
       const d = Math.abs(t[i] - pts);
-      if (d < best) { best = d; sortIdx = i; }
-    }
-  }
-  let pidx = sortIdx;
-  if (entry) {
-    const lookback   = Math.min(40, sortIdx);
-    const searchFrom = sortIdx - lookback;
-    let bestDiff = Infinity;
-    for (let i = searchFrom; i <= sortIdx; i++) {
-      const diff = type === 'bearish'
-        ? Math.abs(l[i] - entry)
-        : Math.abs(h[i] - entry);
-      if (diff < bestDiff) { bestDiff = diff; pidx = i; }
+      if (d < best) { best = d; pidx = i; }
     }
   }
 
