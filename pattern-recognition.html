@@ -743,7 +743,7 @@ async function openChartModal(item) {
   const startTime  = p.start_time || p.atime || p.sortTime;
   const markerTs   = (p.dtime && p.dtime > 0) ? p.dtime : (p.ctime || p.atime || p.sortTime);
   const from       = (startTime || markerTs) - tfSec * 5;
-  const to         = markerTs + tfSec * 10;
+  const to         = Math.floor(Date.now() / 1000) + tfSec; // always fetch up to now
   try {
     const url  = `${API_BASE}/forex/candle?symbol=${encodeURIComponent(item.sym)}&resolution=${item.tf}&from=${from}&to=${to}&token=${API_KEY}`;
     console.log('[candle fetch] url:', url);
