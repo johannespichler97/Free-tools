@@ -771,11 +771,8 @@ function renderCandleChart(canvas, data, item) {
   const bW   = Math.max(1.5, cW / n * 0.65);
   const bX   = i => PL + (i + 0.5) * (cW / n);
 
-  // Find the entry-trigger candle:
-  // For bearish (e.g. Double Top): find the highest peak in a 40-candle lookback,
-  // then scan FORWARD from that peak for the first candle that closes BELOW entry.
-  // For bullish: find the lowest trough, then scan forward for the first close ABOVE entry.
-  // This correctly identifies the neckline-break candle rather than any arbitrary candle.
+  // Find the entry-trigger candle: the candle whose Low (bearish) or High (bullish)
+  // is closest to the entry price within a 40-candle lookback from sortTime.
   const pts  = item.pattern.sortTime;
   const type = (item.pattern.patterntype || 'bullish').toLowerCase();
   let sortIdx = n - 1;
@@ -790,22 +787,12 @@ function renderCandleChart(canvas, data, item) {
   if (entry) {
     const lookback   = Math.min(40, sortIdx);
     const searchFrom = sortIdx - lookback;
-    if (type === 'bearish') {
-      let peakIdx = searchFrom, peakH = -Infinity;
-      for (let i = searchFrom; i <= sortIdx; i++) {
-        if (h[i] > peakH) { peakH = h[i]; peakIdx = i; }
-      }
-      for (let i = peakIdx; i <= sortIdx; i++) {
-        if (c[i] < entry) { pidx = i; break; }
-      }
-    } else {
-      let troughIdx = searchFrom, troughL = Infinity;
-      for (let i = searchFrom; i <= sortIdx; i++) {
-        if (l[i] < troughL) { troughL = l[i]; troughIdx = i; }
-      }
-      for (let i = troughIdx; i <= sortIdx; i++) {
-        if (c[i] > entry) { pidx = i; break; }
-      }
+    let bestDiff = Infinity;
+    for (let i = searchFrom; i <= sortIdx; i++) {
+      const diff = type === 'bearish'
+        ? Math.abs(l[i] - entry)
+        : Math.abs(h[i] - entry);
+      if (diff < bestDiff) { bestDiff = diff; pidx = i; }
     }
   }
 
