@@ -544,7 +544,7 @@ function buildCard(item) {
         </div>
       </div>
       <div class="card-levels">
-        <div class="level-box"><div class="level-lbl entry">Entry</div><div class="level-price">${fp(p.entry)}</div></div>
+        <div class="level-box"><div class="level-lbl entry">Entry</div><div class="level-price">${fp(p.entry || p.dprice)}</div></div>
         <div class="level-box"><div class="level-lbl tp">Take Profit</div><div class="level-price">${fp(p.profit1)}</div></div>
       </div>
     </div>`;
@@ -704,13 +704,17 @@ async function openChartModal(item) {
   typeEl.textContent = type.charAt(0).toUpperCase() + type.slice(1);
   typeEl.className = `chart-modal-type ${type}`;
 
-  // Populate footer
+  // Populate footer — use entry/profit1 when available, otherwise aprice/dprice
   const fp = v => fmtPrice(v, item.sym);
+  const p  = item.pattern;
+  const entryVal = p.entry  || p.dprice;
+  const tpVal    = p.profit1;
   document.getElementById('chartModalFooter').innerHTML = `
-    <div class="chart-level"><div class="chart-level-lbl">Entry</div><div class="chart-level-val v-entry">${fp(item.pattern.entry)}</div></div>
-    <div class="chart-level"><div class="chart-level-lbl">Take Profit</div><div class="chart-level-val v-tp">${fp(item.pattern.profit1)}</div></div>
-    ${item.pattern.sortTime ? `<div class="chart-level"><div class="chart-level-lbl">Signal Time</div><div class="chart-level-val v-time">${fmtTime(item.pattern.sortTime)}</div></div>` : ''}
-    <span class="chart-hint">Entry &amp; TP lines shown on chart</span>`;
+    ${entryVal ? `<div class="chart-level"><div class="chart-level-lbl">Entry</div><div class="chart-level-val v-entry">${fp(entryVal)}</div></div>` : ''}
+    ${tpVal    ? `<div class="chart-level"><div class="chart-level-lbl">Take Profit</div><div class="chart-level-val v-tp">${fp(tpVal)}</div></div>` : ''}
+    ${p.atime  ? `<div class="chart-level"><div class="chart-level-lbl">Pattern Start</div><div class="chart-level-val v-time">${fmtTime(p.atime)}</div></div>` : ''}
+    ${p.dtime  ? `<div class="chart-level"><div class="chart-level-lbl">Signal</div><div class="chart-level-val v-time">${fmtTime(p.dtime)}</div></div>` : ''}
+    <span class="chart-hint">Pattern range highlighted on chart</span>`;
 
   modal.style.display = 'flex';
 
@@ -729,11 +733,12 @@ async function openChartModal(item) {
   ctx.textAlign = 'center';
   ctx.fillText('Loading chart data…', W / 2, H / 2);
 
-  // Fetch candles centred around sortTime so the pattern formation is visible
-  const tfSec = TF_SECONDS[item.tf] || 86400;
-  const pivot = item.pattern.sortTime || Math.floor(Date.now() / 1000);
-  const from  = pivot - tfSec * 50;   // 50 candles before signal
-  const to    = pivot + tfSec * 20;   // 20 candles after signal
+  // Fetch candles: 8 candles before pattern start (atime) to 15 candles after signal (dtime)
+  const tfSec  = TF_SECONDS[item.tf] || 86400;
+  const atime  = item.pattern.atime  || item.pattern.sortTime || Math.floor(Date.now() / 1000);
+  const dtime  = item.pattern.dtime  || item.pattern.sortTime || Math.floor(Date.now() / 1000);
+  const from   = atime - tfSec * 8;
+  const to     = dtime + tfSec * 15;
   try {
     const url  = `${API_BASE}/forex/candle?symbol=${encodeURIComponent(item.sym)}&resolution=${item.tf}&from=${from}&to=${to}&token=${API_KEY}`;
     const res  = await fetch(url);
@@ -763,30 +768,34 @@ function renderCandleChart(canvas, data, item) {
   const PL = 72, PR = 12, PT = 22, PB = 34;
   const cW = W - PL - PR, cH = H - PT - PB;
 
-  // Price range including entry + TP
+  // Price levels — use entry/profit1 when available, fall back to dprice/aprice
+  const entry = item.pattern.entry  || item.pattern.dprice;
+  const tp1   = item.pattern.profit1;
+
   let maxP = Math.max(...h), minP = Math.min(...l);
-  const entry = item.pattern.entry, tp1 = item.pattern.profit1;
   if (entry) { maxP = Math.max(maxP, entry); minP = Math.min(minP, entry); }
   if (tp1)   { maxP = Math.max(maxP, tp1);   minP = Math.min(minP, tp1); }
   const pad = (maxP - minP) * 0.06;
   maxP += pad; minP -= pad;
   const range = maxP - minP || 1;
 
-  const pY   = p => PT + cH * (1 - (p - minP) / range);
-  const bW   = Math.max(1.5, cW / n * 0.65);
-  const bX   = i => PL + (i + 0.5) * (cW / n);
+  const pY = p => PT + cH * (1 - (p - minP) / range);
+  const bW = Math.max(1.5, cW / n * 0.65);
+  const bX = i => PL + (i + 0.5) * (cW / n);
 
-  // Place the marker on the candle closest to sortTime.
-  // The chart is fetched centred on sortTime so this candle lands near the middle-right.
-  const pts = item.pattern.sortTime;
-  let pidx  = n - 1;
-  if (pts) {
-    let best = Infinity;
+  // Find candle indices for pattern start (atime) and signal (dtime)
+  const findNearest = ts => {
+    let best = Infinity, idx = n - 1;
     for (let i = 0; i < n; i++) {
-      const d = Math.abs(t[i] - pts);
-      if (d < best) { best = d; pidx = i; }
+      const d = Math.abs(t[i] - ts);
+      if (d < best) { best = d; idx = i; }
     }
-  }
+    return idx;
+  };
+  const dtime = item.pattern.dtime || item.pattern.sortTime;
+  const atime = item.pattern.atime;
+  const pidx  = dtime ? findNearest(dtime) : n - 1;          // signal candle
+  const aidx  = atime ? findNearest(atime) : pidx;            // pattern start
 
   // Background
   ctx.fillStyle = '#062434';
@@ -831,10 +840,12 @@ function renderCandleChart(canvas, data, item) {
     ctx.fillText(`TP  ${fmtPrice(tp1, item.sym)}`, PL + 5, ty - 4);
   }
 
-  // Pattern candle highlight
-  if (pidx >= 0) {
+  // Highlight the full pattern range (atime → dtime)
+  {
+    const x1 = bX(aidx) - cW / n / 2;
+    const x2 = bX(pidx) + cW / n / 2;
     ctx.fillStyle = 'rgba(47,163,224,0.07)';
-    ctx.fillRect(bX(pidx) - cW / n / 2, PT, cW / n, cH);
+    ctx.fillRect(x1, PT, Math.max(cW / n, x2 - x1), cH);
   }
 
   // Candlesticks
