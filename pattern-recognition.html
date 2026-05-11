@@ -130,8 +130,7 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 .sort-btn { padding:4px 10px; border-radius:20px; border:1px solid var(--border); background:transparent; color:var(--text-muted); font-size:11px; font-weight:600; cursor:pointer; font-family:var(--font); transition:all .15s; }
 .sort-btn.active { border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
 
-/* Pattern grid */
-.pattern-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:14px; }
+/* Pattern grid — replaced by pair-group-grid */
 
 /* ── PATTERN CARD ── */
 .pattern-card { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; animation:fadeIn .25s ease; transition:border-color .2s, transform .15s; }
@@ -153,23 +152,27 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 .rr-label { font-size:9px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:.05em; }
 .rr-value { font-family:var(--font-mono); font-size:17px; font-weight:700; color:var(--accent-2); }
 
-/* RR Bar */
-.rr-bar-wrap { padding:0 14px 12px; }
-.rr-bar-track { position:relative; height:22px; border-radius:5px; overflow:hidden; display:flex; }
-.rr-seg-loss    { background:rgba(248,81,73,0.22); display:flex; align-items:center; justify-content:center; min-width:24px; }
-.rr-seg-profit  { background:rgba(63,185,80,0.18); display:flex; align-items:center; justify-content:center; min-width:24px; }
-.rr-seg-profit2 { background:rgba(63,185,80,0.10); display:flex; align-items:center; justify-content:center; min-width:16px; }
-.rr-seg-label { font-size:9px; font-weight:700; color:rgba(255,255,255,.45); text-transform:uppercase; letter-spacing:.04em; white-space:nowrap; overflow:hidden; padding:0 3px; }
-.rr-entry-line { position:absolute; top:0; bottom:0; width:2px; background:rgba(230,233,235,.7); z-index:2; }
+/* RR Bar — removed */
 
-/* Price levels */
-.card-levels { padding:0 14px 14px; display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:6px; }
-.level-box { background:var(--bg-tertiary); border-radius:var(--radius-sm); padding:7px 8px; text-align:center; }
-.level-lbl { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; margin-bottom:2px; }
+/* Price levels — entry + TP1 only */
+.card-levels { padding:0 14px 14px; display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.level-box { background:var(--bg-tertiary); border-radius:var(--radius-sm); padding:9px 12px; text-align:center; }
+.level-lbl { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; margin-bottom:3px; }
 .level-lbl.entry { color:var(--text-muted); }
-.level-lbl.sl    { color:var(--negative); }
 .level-lbl.tp    { color:var(--positive); }
-.level-price { font-family:var(--font-mono); font-size:11px; font-weight:600; color:var(--text-primary); }
+.level-price { font-family:var(--font-mono); font-size:13px; font-weight:600; color:var(--text-primary); }
+
+/* ── PAIR GROUPS ── */
+.pair-group { margin-bottom:28px; }
+.pair-group-header { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+.pair-group-name { font-family:var(--font-mono); font-size:16px; font-weight:700; color:var(--text-primary); }
+.pair-group-count { font-size:12px; color:var(--text-muted); }
+.pair-group-pills { display:flex; gap:5px; }
+.pair-pill { font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px; }
+.pair-pill.bull { background:var(--positive-bg); color:var(--positive); }
+.pair-pill.bear { background:var(--negative-bg); color:var(--negative); }
+.pair-group-line { flex:1; height:1px; background:var(--border); }
+.pair-group-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:12px; }
 
 /* ── STATES ── */
 .state-box { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:80px 24px; gap:14px; text-align:center; color:var(--text-muted); }
@@ -287,10 +290,14 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
       <div class="ctrl-row">
         <span class="ctrl-label">Timeframes</span>
         <div class="tf-chips">
+          <span class="tf-chip" data-res="5">5m</span>
           <span class="tf-chip" data-res="15">15m</span>
+          <span class="tf-chip" data-res="30">30m</span>
           <span class="tf-chip" data-res="60">1H</span>
+          <span class="tf-chip" data-res="240">4H</span>
           <span class="tf-chip active" data-res="D">Daily</span>
           <span class="tf-chip active" data-res="W">Weekly</span>
+          <span class="tf-chip" data-res="M">Monthly</span>
         </div>
       </div>
 
@@ -346,9 +353,9 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
     </div>
 
     <div class="sort-row" id="sortRow" style="display:none;">
-      <span>Sort by:</span>
-      <button class="sort-btn active" data-sort="rr">Best R/R</button>
-      <button class="sort-btn" data-sort="tf">Timeframe</button>
+      <span>Sort within groups by:</span>
+      <button class="sort-btn active" data-sort="default">Timeframe scanned</button>
+      <button class="sort-btn" data-sort="tf">Higher TF first</button>
       <button class="sort-btn" data-sort="time">Latest</button>
     </div>
 
@@ -379,8 +386,8 @@ let allResults   = [];   // { pattern, sym, symLabel, tf, tfLabel }
 let activeFilter = 'all';
 let activeSort   = 'rr';
 
-const TF_LABELS = { '15':'15m', '60':'1H', 'D':'Daily', 'W':'Weekly' };
-const TF_ORDER  = { 'W':0, 'D':1, '60':2, '15':3 };
+const TF_LABELS = { '5':'5m', '15':'15m', '30':'30m', '60':'1H', '240':'4H', 'D':'Daily', 'W':'Weekly', 'M':'Monthly' };
+const TF_ORDER  = { 'M':0, 'W':1, 'D':2, '240':3, '60':4, '30':5, '15':6, '5':7 };
 
 // ── Helpers ────────────────────────────────────────────────────
 
@@ -438,66 +445,40 @@ function updateCounter() {
   }
 }
 
-// ── R/R Bar ────────────────────────────────────────────────────
-
-function buildRRBar(p, sym) {
-  const { entry, losspoint: sl, profit1: tp1, profit2: tp2 } = p;
-  if (!entry || !sl) return '';
-  const low   = Math.min(sl, entry, tp1||entry, tp2||entry);
-  const high  = Math.max(sl, entry, tp1||entry, tp2||entry);
-  const range = high - low || 1;
-  const slPct    = +((Math.abs(sl - entry)) / range * 100).toFixed(1);
-  const tp1Pct   = tp1 ? +((Math.abs(tp1 - entry)) / range * 100).toFixed(1) : 0;
-  const tp2Pct   = (tp1 && tp2) ? +((Math.abs(tp2 - tp1)) / range * 100).toFixed(1) : 0;
-  const entryPct = +((entry - low) / range * 100).toFixed(1);
-  return `
-    <div class="rr-bar-wrap">
-      <div class="rr-bar-track">
-        <div class="rr-seg-loss"    style="width:${Math.max(slPct,8)}%">  <span class="rr-seg-label">SL</span></div>
-        <div class="rr-seg-profit"  style="width:${Math.max(tp1Pct,8)}%"><span class="rr-seg-label">TP1</span></div>
-        ${tp2Pct > 0 ? `<div class="rr-seg-profit2" style="width:${Math.max(tp2Pct,6)}%"><span class="rr-seg-label">TP2</span></div>` : ''}
-        <div class="rr-entry-line" style="left:${entryPct}%"></div>
-      </div>
-    </div>`;
+// ── R/R Bar — removed (SL/TP2 fields not populated by API) ────
 }
 
 // ── Build card ─────────────────────────────────────────────────
 
 function buildCard(item) {
   const { pattern: p, sym, symLabel: sl, tf, tfLabel } = item;
-  const type = (p.patterntype || 'bullish').toLowerCase();
-  const name = prettyName(p.patternname || p.apattern);
-  const rr   = calcRR(p.entry, p.losspoint, p.profit1);
-  const fp   = v => fmtPrice(v, sym);
+  const type  = (p.patterntype || 'bullish').toLowerCase();
+  const name  = prettyName(p.patternname || p.apattern);
+  const fp    = v => fmtPrice(v, sym);
   const arrow = type === 'bullish'
     ? `<svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4l8 16H4z"/></svg>`
     : `<svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><path d="M12 20L4 4h16z"/></svg>`;
 
   return `
-    <div class="pattern-card ${type}" data-type="${type}" data-rr="${rr||0}" data-tf="${TF_ORDER[tf]??9}" data-time="${p.sortTime||0}">
+    <div class="pattern-card ${type}" data-type="${type}" data-tf="${TF_ORDER[tf]??9}" data-time="${p.sortTime||0}">
       <div class="card-header">
         <div style="flex:1">
           <div class="card-meta">
-            <span class="card-pair-badge">${sl}</span>
             <span class="card-tf-badge">${tfLabel}</span>
             <span class="card-type-badge ${type}">${arrow} ${type}</span>
           </div>
           <div class="card-name">${name}</div>
           ${p.sortTime ? `<div class="card-time">${fmtTime(p.sortTime)}</div>` : ''}
         </div>
-        ${rr ? `<div class="card-rr"><div class="rr-label">R/R</div><div class="rr-value">1:${rr}</div></div>` : ''}
       </div>
-      ${buildRRBar(p, sym)}
       <div class="card-levels">
         <div class="level-box"><div class="level-lbl entry">Entry</div><div class="level-price">${fp(p.entry)}</div></div>
-        <div class="level-box"><div class="level-lbl sl">Stop Loss</div><div class="level-price">${fp(p.losspoint)}</div></div>
-        <div class="level-box"><div class="level-lbl tp">TP 1</div><div class="level-price">${fp(p.profit1)}</div></div>
-        <div class="level-box"><div class="level-lbl tp">TP 2</div><div class="level-price">${fp(p.profit2)}</div></div>
+        <div class="level-box"><div class="level-lbl tp">Take Profit</div><div class="level-price">${fp(p.profit1)}</div></div>
       </div>
     </div>`;
 }
 
-// ── Render results ─────────────────────────────────────────────
+// ── Render results grouped by pair ────────────────────────────
 
 function renderResults() {
   let items = [...allResults];
@@ -505,16 +486,6 @@ function renderResults() {
   // Filter
   if (activeFilter !== 'all') {
     items = items.filter(i => i.pattern.patterntype?.toLowerCase() === activeFilter);
-  }
-
-  // Sort
-  if (activeSort === 'rr') {
-    items.sort((a,b) => parseFloat(calcRR(b.pattern.entry,b.pattern.losspoint,b.pattern.profit1)||0)
-                      - parseFloat(calcRR(a.pattern.entry,a.pattern.losspoint,a.pattern.profit1)||0));
-  } else if (activeSort === 'tf') {
-    items.sort((a,b) => (TF_ORDER[a.tf]??9) - (TF_ORDER[b.tf]??9));
-  } else if (activeSort === 'time') {
-    items.sort((a,b) => (b.pattern.sortTime||0) - (a.pattern.sortTime||0));
   }
 
   if (items.length === 0) {
@@ -527,8 +498,45 @@ function renderResults() {
     return;
   }
 
-  document.getElementById('resultsArea').innerHTML =
-    `<div class="pattern-grid">${items.map(buildCard).join('')}</div>`;
+  // Group by pair, preserving scan order
+  const groups = {};
+  const groupOrder = [];
+  items.forEach(item => {
+    if (!groups[item.symLabel]) { groups[item.symLabel] = []; groupOrder.push(item.symLabel); }
+    groups[item.symLabel].push(item);
+  });
+
+  // Sort within each group
+  groupOrder.forEach(pair => {
+    const g = groups[pair];
+    if (activeSort === 'tf') {
+      g.sort((a,b) => (TF_ORDER[a.tf]??9) - (TF_ORDER[b.tf]??9));
+    } else if (activeSort === 'time') {
+      g.sort((a,b) => (b.pattern.sortTime||0) - (a.pattern.sortTime||0));
+    }
+    // default: keep original order (by timeframe scanned)
+  });
+
+  const html = groupOrder.map(pair => {
+    const g = groups[pair];
+    const bull = g.filter(i => i.pattern.patterntype?.toLowerCase() === 'bullish').length;
+    const bear = g.filter(i => i.pattern.patterntype?.toLowerCase() === 'bearish').length;
+    return `
+      <div class="pair-group">
+        <div class="pair-group-header">
+          <span class="pair-group-name">${pair}</span>
+          <span class="pair-group-count">${g.length} pattern${g.length!==1?'s':''}</span>
+          <div class="pair-group-pills">
+            ${bull > 0 ? `<span class="pair-pill bull">▲ ${bull} bullish</span>` : ''}
+            ${bear > 0 ? `<span class="pair-pill bear">▼ ${bear} bearish</span>` : ''}
+          </div>
+          <div class="pair-group-line"></div>
+        </div>
+        <div class="pair-group-grid">${g.map(buildCard).join('')}</div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('resultsArea').innerHTML = html;
 }
 
 // ── Main scan ─────────────────────────────────────────────────
