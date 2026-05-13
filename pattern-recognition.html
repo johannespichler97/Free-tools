@@ -807,29 +807,32 @@ function renderCandleChart(canvas, data, item) {
   const startTs = rp.start_time || rp.atime;
   const aidx    = startTs ? findNearest(startTs) : 0;
 
-  // For triggered patterns use dtime (neckline break). For incomplete patterns find the
-  // actual visual peak/trough by matching cprice against candle highs/lows between
-  // btime and ctime — Finnhub's ctime is the confirmation candle, one step after the peak.
+  // For triggered patterns use dtime. For incomplete patterns find the visual second
+  // peak/trough: search in the second half of [start_time…ctime] for the candle with
+  // the highest high (bearish) or lowest low (bullish). This matches what the eye sees
+  // as the second hump/trough of the pattern rather than Finnhub's confirmation timestamp.
   let pidx;
   if (rp.dtime && rp.dtime > 0) {
     pidx = findNearest(rp.dtime);
-  } else if (rp.cprice && rp.ctime) {
-    const btime = rp.btime || 0;
-    const ctimeEnd = rp.ctime + tfSec2; // allow one candle past ctime
-    let best = Infinity, found = -1;
-    for (let i = 0; i < n; i++) {
-      if (t[i] < btime) continue;
-      if (t[i] > ctimeEnd) break;
-      const refPrice = patType === 'bullish' ? l[i] : h[i];
-      const d = Math.abs(refPrice - rp.cprice);
-      if (d < best) { best = d; found = i; }
-    }
-    pidx = found >= 0 ? found : findNearest(rp.ctime);
   } else {
-    pidx = findNearest(rp.ctime || rp.atime || rp.sortTime);
+    const patStart = rp.start_time || rp.atime || 0;
+    const patEnd   = rp.ctime || rp.sortTime;
+    const midTs    = patStart + (patEnd - patStart) * 0.5;
+    let best  = patType === 'bullish' ? Infinity : -Infinity;
+    let found = -1;
+    for (let i = 0; i < n; i++) {
+      if (t[i] < midTs) continue;
+      if (t[i] > patEnd + tfSec2) break;
+      const price = patType === 'bullish' ? l[i] : h[i];
+      if (patType === 'bullish' ? (price < best) : (price > best)) {
+        best = price; found = i;
+      }
+    }
+    pidx = found >= 0 ? found : findNearest(patEnd);
   }
   console.log('[renderChart] pidx:', pidx, '| n:', n,
               '| t[pidx]:', pidx >= 0 ? new Date(t[pidx]*1000).toISOString() : 'n/a',
+              '| h[pidx]:', pidx >= 0 ? h[pidx] : 'n/a',
               '| cprice:', rp.cprice, '| ctime:', rp.ctime ? new Date(rp.ctime*1000).toISOString() : 'n/a');
 
   // Background
