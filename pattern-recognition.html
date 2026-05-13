@@ -83,14 +83,6 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 .tf-chip:hover { opacity:.85; }
 .tf-chip.active { opacity:1; border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
 
-/* Age chips */
-.age-chip { padding:5px 14px; border-radius:20px; font-size:12px; font-weight:700; cursor:pointer; transition:all .15s; border:1.5px solid var(--border); color:var(--text-muted); background:var(--bg-tertiary); user-select:none; opacity:.55; }
-.age-chip:hover { opacity:.85; }
-.age-chip.active { opacity:1; border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
-
-/* Outdated card */
-.pattern-card.outdated { opacity:0.42; filter:grayscale(0.3); }
-.outdated-badge { font-size:10px; font-weight:700; background:rgba(77,122,150,0.12); color:var(--text-muted); border:1px solid var(--border); padding:2px 7px; border-radius:4px; text-transform:uppercase; letter-spacing:.05em; }
 
 /* Select all / clear */
 .chip-actions { display:flex; gap:6px; }
@@ -335,18 +327,6 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 
       <hr class="ctrl-divider" />
 
-      <!-- Max Age -->
-      <div class="ctrl-row">
-        <span class="ctrl-label">Max Age</span>
-        <div class="tf-chips">
-          <span class="age-chip active" data-days="1">Today</span>
-          <span class="age-chip" data-days="3">3 Days</span>
-          <span class="age-chip" data-days="7">7 Days</span>
-        </div>
-      </div>
-
-      <hr class="ctrl-divider" />
-
       <!-- Scan row -->
       <div class="scan-row">
         <span class="scan-counter" id="scanCounter"></span>
@@ -447,8 +427,6 @@ const API_BASE = 'https://finnhub.io/api/v1';
 let allResults   = [];   // { pattern, sym, symLabel, tf, tfLabel }
 let activeFilter = 'all';
 let activeSort   = 'rr';
-let maxAgeDays   = 1;
-
 const TF_LABELS   = { '5':'5m', '15':'15m', '30':'30m', '60':'1H', '240':'4H', 'D':'Daily', 'W':'Weekly', 'M':'Monthly' };
 const TF_ORDER    = { 'M':0, 'W':1, 'D':2, '240':3, '60':4, '30':5, '15':6, '5':7 };
 const TF_SECONDS  = { '5':300, '15':900, '30':1800, '60':3600, '240':14400, 'D':86400, 'W':604800, 'M':2592000 };
@@ -525,19 +503,13 @@ function buildCard(item) {
     ? `<svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4l8 16H4z"/></svg>`
     : `<svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><path d="M12 20L4 4h16z"/></svg>`;
 
-  const now = Date.now() / 1000;
-  const age = p.sortTime ? now - p.sortTime : 0;
-  const isOutdated = p.sortTime && age > maxAgeDays * 86400;
-  const outdatedBadge = isOutdated ? `<span class="outdated-badge">Outdated</span>` : '';
-
   return `
-    <div class="pattern-card ${type}${isOutdated ? ' outdated' : ''}" data-type="${type}" data-tf="${TF_ORDER[tf]??9}" data-time="${p.sortTime||0}">
+    <div class="pattern-card ${type}" data-type="${type}" data-tf="${TF_ORDER[tf]??9}" data-time="${p.sortTime||0}">
       <div class="card-header">
         <div style="flex:1">
           <div class="card-meta">
             <span class="card-tf-badge">${tfLabel}</span>
             <span class="card-type-badge ${type}">${arrow} ${type}</span>
-            ${outdatedBadge}
           </div>
           <div class="card-name">${name}</div>
           ${(p.ctime||p.dtime||p.sortTime) ? `<div class="card-time">${fmtTime(p.ctime||p.dtime||p.sortTime)}</div>` : ''}
@@ -552,12 +524,31 @@ function buildCard(item) {
 
 // ── Render results grouped by pair ────────────────────────────
 
+// Max age per timeframe (calendar days, accounts for ~2/7 weekend days)
+const TF_MAX_AGE = { '5':3, '15':3, '30':3, '60':3, '240':7, 'D':7, 'W':30, 'M':90 };
+
 function renderResults() {
   let items = [...allResults];
-
-  // Hide patterns older than 7 days
   const now = Date.now() / 1000;
-  items = items.filter(i => !i.pattern.sortTime || (now - i.pattern.sortTime) <= 7 * 86400);
+
+  // Age filter: H1 and below → 3 days, H4 / Daily → 7 days
+  items = items.filter(i => {
+    const maxAge = TF_MAX_AGE[i.tf] ?? 7;
+    const age = i.pattern.sortTime ? now - i.pattern.sortTime : 0;
+    return age <= maxAge * 86400;
+  });
+
+  // Stoploss filter: remove signals where price already broke through the stop
+  // Bearish: end_price > stoploss → stopped out above the pattern
+  // Bullish: end_price < stoploss → stopped out below the pattern
+  items = items.filter(i => {
+    const p = i.pattern;
+    if (!p.stoploss || !p.end_price) return true;
+    const type = (p.patterntype || '').toLowerCase();
+    if (type === 'bearish') return p.end_price <= p.stoploss;
+    if (type === 'bullish') return p.end_price >= p.stoploss;
+    return true;
+  });
 
   // Filter by type
   if (activeFilter !== 'all') {
@@ -1010,16 +1001,6 @@ document.getElementById('chartModal').addEventListener('click', e => {
 });
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') document.getElementById('chartModal').style.display = 'none';
-});
-
-// Age chips
-document.querySelectorAll('.age-chip').forEach(chip => {
-  chip.addEventListener('click', () => {
-    document.querySelectorAll('.age-chip').forEach(c => c.classList.remove('active'));
-    chip.classList.add('active');
-    maxAgeDays = parseInt(chip.dataset.days);
-    if (allResults.length > 0) renderResults();
-  });
 });
 
 // Scan button
