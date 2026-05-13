@@ -690,6 +690,7 @@ async function checkSLHits() {
   const triggered = allResults.filter(i =>
     i.pattern.dtime && i.pattern.dtime > 0 && i.pattern.stoploss && !i._slChecked
   );
+  console.log('[checkSLHits] triggered patterns to verify:', triggered.length);
   if (triggered.length === 0) return;
 
   let changed = false;
@@ -703,13 +704,16 @@ async function checkSLHits() {
       const res  = await fetch(url);
       const data = res.ok ? await res.json() : null;
       if (data && data.s === 'ok' && data.l && data.h) {
-        const type = (p.patterntype || '').toLowerCase();
-        const slHit = type === 'bearish'
-          ? Math.max(...data.h) >= p.stoploss
-          : Math.min(...data.l) <= p.stoploss;
+        const type   = (p.patterntype || '').toLowerCase();
+        const minLow = Math.min(...data.l);
+        const maxHig = Math.max(...data.h);
+        const slHit  = type === 'bearish' ? maxHig >= p.stoploss : minLow <= p.stoploss;
+        console.log(`[SL check] ${item.symLabel} ${item.tfLabel} ${type} | stoploss:${p.stoploss} | minLow:${minLow} | maxHigh:${maxHig} | slHit:${slHit}`);
         if (slHit) { item._slHit = true; changed = true; }
+      } else {
+        console.warn(`[SL check] ${item.symLabel} ${item.tfLabel} — candle fetch failed:`, data?.s);
       }
-    } catch {}
+    } catch (e) { console.error('[SL check] error:', e); }
     item._slChecked = true;
     if (idx % 5 === 4 && idx < triggered.length - 1) await sleep(1100);
     else await sleep(80);
