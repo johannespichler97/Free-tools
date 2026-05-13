@@ -538,11 +538,13 @@ function renderResults() {
     return age <= maxAge * 86400;
   });
 
-  // Stoploss filter: remove signals where price already broke through the stop
-  // Bearish: end_price > stoploss → stopped out above the pattern
-  // Bullish: end_price < stoploss → stopped out below the pattern
+  // Stoploss filter:
+  // - Triggered patterns: _slHit flag set by background candle check (accurate)
+  // - Incomplete patterns: end_price vs stoploss (quick, no extra API call needed)
   items = items.filter(i => {
+    if (i._slHit) return false;
     const p = i.pattern;
+    if (p.dtime && p.dtime > 0) return true; // triggered: wait for background check
     if (!p.stoploss || !p.end_price) return true;
     const type = (p.patterntype || '').toLowerCase();
     if (type === 'bearish') return p.end_price <= p.stoploss;
@@ -678,6 +680,41 @@ async function scan() {
   document.getElementById('sortRow').style.display = allResults.length > 0 ? 'flex' : 'none';
 
   renderResults();
+  checkSLHits(); // background: verify triggered patterns via daily candles
+}
+
+// ── Background stoploss verification for triggered patterns ────
+// Fetches Daily candles since dtime to check if the actual min/max
+// ever breached the stoploss (which end_price alone cannot detect).
+async function checkSLHits() {
+  const triggered = allResults.filter(i =>
+    i.pattern.dtime && i.pattern.dtime > 0 && i.pattern.stoploss && !i._slChecked
+  );
+  if (triggered.length === 0) return;
+
+  let changed = false;
+  for (let idx = 0; idx < triggered.length; idx++) {
+    const item = triggered[idx];
+    const p    = item.pattern;
+    const from = p.dtime;
+    const to   = Math.floor(Date.now() / 1000) + 86400;
+    const url  = `${API_BASE}/forex/candle?symbol=${encodeURIComponent(item.sym)}&resolution=D&from=${from}&to=${to}&token=${API_KEY}`;
+    try {
+      const res  = await fetch(url);
+      const data = res.ok ? await res.json() : null;
+      if (data && data.s === 'ok' && data.l && data.h) {
+        const type = (p.patterntype || '').toLowerCase();
+        const slHit = type === 'bearish'
+          ? Math.max(...data.h) >= p.stoploss
+          : Math.min(...data.l) <= p.stoploss;
+        if (slHit) { item._slHit = true; changed = true; }
+      }
+    } catch {}
+    item._slChecked = true;
+    if (idx % 5 === 4 && idx < triggered.length - 1) await sleep(1100);
+    else await sleep(80);
+  }
+  if (changed) renderResults();
 }
 
 // ── Chart modal ────────────────────────────────────────────────
