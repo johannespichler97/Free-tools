@@ -807,33 +807,35 @@ function renderCandleChart(canvas, data, item) {
   const startTs = rp.start_time || rp.atime;
   const aidx    = startTs ? findNearest(startTs) : 0;
 
-  // For triggered patterns use dtime. For incomplete patterns find the visual second
-  // peak/trough: search in the second half of [start_time…ctime] for the candle with
-  // the highest high (bearish) or lowest low (bullish). This matches what the eye sees
-  // as the second hump/trough of the pattern rather than Finnhub's confirmation timestamp.
+  // Triggered (dtime > 0): mark where the entry was broken.
+  // Incomplete bearish: find the candle in [atime..ctime] whose LOW is closest to the
+  //   entry price — this is the neckline-test candle (the valley where the pattern forms).
+  // Incomplete bullish: same logic with HIGH and entry (resistance-test candle).
   let pidx;
   if (rp.dtime && rp.dtime > 0) {
     pidx = findNearest(rp.dtime);
   } else {
-    const patStart = rp.start_time || rp.atime || 0;
-    const patEnd   = rp.ctime || rp.sortTime;
-    const midTs    = patStart + (patEnd - patStart) * 0.5;
-    let best  = patType === 'bullish' ? Infinity : -Infinity;
-    let found = -1;
-    for (let i = 0; i < n; i++) {
-      if (t[i] < midTs) continue;
-      if (t[i] > patEnd + tfSec2) break;
-      const price = patType === 'bullish' ? l[i] : h[i];
-      if (patType === 'bullish' ? (price < best) : (price > best)) {
-        best = price; found = i;
+    const entry = rp.entry || rp.dprice;
+    const atime = rp.atime || 0;
+    const ctime = rp.ctime || rp.sortTime;
+    if (entry) {
+      let best = Infinity, found = -1;
+      for (let i = 0; i < n; i++) {
+        if (t[i] < atime) continue;
+        if (t[i] > ctime) break;
+        const ref = patType === 'bullish' ? h[i] : l[i];
+        const d   = Math.abs(ref - entry);
+        if (d < best) { best = d; found = i; }
       }
+      pidx = found >= 0 ? found : findNearest(ctime);
+    } else {
+      pidx = findNearest(ctime);
     }
-    pidx = found >= 0 ? found : findNearest(patEnd);
   }
   console.log('[renderChart] pidx:', pidx, '| n:', n,
               '| t[pidx]:', pidx >= 0 ? new Date(t[pidx]*1000).toISOString() : 'n/a',
-              '| h[pidx]:', pidx >= 0 ? h[pidx] : 'n/a',
-              '| cprice:', rp.cprice, '| ctime:', rp.ctime ? new Date(rp.ctime*1000).toISOString() : 'n/a');
+              '| ref price:', pidx >= 0 ? (patType === 'bullish' ? h[pidx] : l[pidx]) : 'n/a',
+              '| entry:', rp.entry, '| dtime:', rp.dtime);
 
   // Background
   ctx.fillStyle = '#062434';
