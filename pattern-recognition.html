@@ -738,12 +738,13 @@ async function openChartModal(item) {
   ctx.textAlign = 'center';
   ctx.fillText('Loading chart data…', W / 2, H / 2);
 
-  // Chart window: from pattern start − 5 candles to signal point + 10 candles
+  // Always show at least 65 candles. Factor 1.5 adds buffer for weekend gaps.
+  // Also ensure the full pattern (start_time) is always visible.
   const tfSec      = TF_SECONDS[item.tf] || 86400;
-  const startTime  = p.start_time || p.atime || p.sortTime;
-  const markerTs   = (p.dtime && p.dtime > 0) ? p.dtime : (p.ctime || p.atime || p.sortTime);
-  const from       = (startTime || markerTs) - tfSec * 5;
-  const to         = Math.floor(Date.now() / 1000) + tfSec; // always fetch up to now
+  const startTime  = p.start_time || p.atime;
+  const to         = Math.floor(Date.now() / 1000) + tfSec;
+  const minFrom    = to - Math.ceil(65 * tfSec * 1.5);
+  const from       = startTime ? Math.min(startTime - tfSec * 5, minFrom) : minFrom;
   try {
     const url  = `${API_BASE}/forex/candle?symbol=${encodeURIComponent(item.sym)}&resolution=${item.tf}&from=${from}&to=${to}&token=${API_KEY}`;
     console.log('[candle fetch] url:', url);
