@@ -538,13 +538,11 @@ function renderResults() {
     return age <= maxAge * 86400;
   });
 
-  // Stoploss filter:
-  // - Triggered patterns: _slHit flag set by background candle check (accurate)
-  // - Incomplete patterns: end_price vs stoploss (quick, no extra API call needed)
+  // Stoploss filter: _slHit is set by the background candle check for all patterns.
+  // Quick pre-check via end_price catches obvious cases before the background check runs.
   items = items.filter(i => {
     if (i._slHit) return false;
     const p = i.pattern;
-    if (p.dtime && p.dtime > 0) return true; // triggered: wait for background check
     if (!p.stoploss || !p.end_price) return true;
     const type = (p.patterntype || '').toLowerCase();
     if (type === 'bearish') return p.end_price <= p.stoploss;
@@ -683,23 +681,25 @@ async function scan() {
   checkSLHits(); // background: verify triggered patterns via daily candles
 }
 
-// ── Background stoploss verification for triggered patterns ────
-// Fetches Daily candles since dtime to check if the actual min/max
-// ever breached the stoploss (which end_price alone cannot detect).
+// ── Background stoploss verification ──────────────────────────
+// For triggered patterns: fetch Daily candles since dtime.
+// For incomplete patterns: fetch Daily candles since ctime/atime.
+// Removes any pattern where the price ever crossed the stoploss.
 async function checkSLHits() {
-  const triggered = allResults.filter(i =>
-    i.pattern.dtime && i.pattern.dtime > 0 && i.pattern.stoploss && !i._slChecked
-  );
-  console.log('[checkSLHits] triggered patterns to verify:', triggered.length);
-  if (triggered.length === 0) return;
+  const toCheck = allResults.filter(i => {
+    const p = i.pattern;
+    return p.stoploss && !i._slChecked && (p.dtime > 0 || p.ctime || p.atime);
+  });
+  console.log('[checkSLHits] patterns to verify:', toCheck.length);
+  if (toCheck.length === 0) return;
 
   let changed = false;
-  for (let idx = 0; idx < triggered.length; idx++) {
-    const item = triggered[idx];
-    const p    = item.pattern;
-    const from = p.dtime;
-    const to   = Math.floor(Date.now() / 1000) + 86400;
-    const url  = `${API_BASE}/forex/candle?symbol=${encodeURIComponent(item.sym)}&resolution=D&from=${from}&to=${to}&token=${API_KEY}`;
+  for (let idx = 0; idx < toCheck.length; idx++) {
+    const item  = toCheck[idx];
+    const p     = item.pattern;
+    const from  = p.dtime > 0 ? p.dtime : (p.ctime || p.atime);
+    const to    = Math.floor(Date.now() / 1000) + 86400;
+    const url   = `${API_BASE}/forex/candle?symbol=${encodeURIComponent(item.sym)}&resolution=D&from=${from}&to=${to}&token=${API_KEY}`;
     try {
       const res  = await fetch(url);
       const data = res.ok ? await res.json() : null;
@@ -715,7 +715,7 @@ async function checkSLHits() {
       }
     } catch (e) { console.error('[SL check] error:', e); }
     item._slChecked = true;
-    if (idx % 5 === 4 && idx < triggered.length - 1) await sleep(1100);
+    if (idx % 5 === 4 && idx < toCheck.length - 1) await sleep(1100);
     else await sleep(80);
   }
   if (changed) renderResults();
