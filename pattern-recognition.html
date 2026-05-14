@@ -713,21 +713,23 @@ async function checkSLHits() {
         const t = data.t, l = data.l, h = data.h, c = data.c || [];
         let slHit = false;
 
-        if (triggered && p.stoploss) {
-          // Triggered: check if any candle since dtime crossed Finnhub's stoploss
-          for (let i = 0; i < t.length; i++) {
-            if (t[i] < refTs) continue;
-            if (type === 'bearish' && h[i] >= p.stoploss) { slHit = true; break; }
-            if (type === 'bullish' && l[i] <= p.stoploss)  { slHit = true; break; }
+        if (triggered) {
+          // Triggered: only filter if a valid stoploss level exists and was crossed
+          if (p.stoploss && p.stoploss > 0) {
+            for (let i = 0; i < t.length; i++) {
+              if (t[i] < refTs) continue;
+              if (type === 'bearish' && h[i] >= p.stoploss) { slHit = true; break; }
+              if (type === 'bullish' && l[i] <= p.stoploss)  { slHit = true; break; }
+            }
           }
+          // Triggered but no stoploss: cannot verify → keep pattern
         } else {
-          // Incomplete: use the CLOSE of the ctime candle as the threshold.
-          // Close = confirmed price level (body), more reliable than wick extremes.
+          // Incomplete: check if the close of the ctime candle was breached post-pattern.
+          // Close = candle body level, not the wick extreme.
           let threshold = null;
           for (let i = 0; i < t.length; i++) {
             if (t[i] === ctime && c[i] !== undefined) { threshold = c[i]; break; }
           }
-          // Fallback: use cprice (declared pattern price) if candle not found
           if (threshold === null) threshold = p.cprice ?? (type === 'bullish' ? Infinity : -Infinity);
           for (let i = 0; i < t.length; i++) {
             if (t[i] <= ctime) continue;
