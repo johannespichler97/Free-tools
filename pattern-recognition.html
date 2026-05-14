@@ -682,34 +682,63 @@ async function scan() {
 }
 
 // ── Background stoploss verification ──────────────────────────
-// For triggered patterns: fetch Daily candles since dtime.
-// For incomplete patterns: fetch Daily candles since ctime/atime.
-// Removes any pattern where the price ever crossed the stoploss.
+// Uses the pattern's own TF candles to detect if price violated the
+// pattern structure after it formed:
+// - Incomplete: any post-ctime candle LOW < min pattern low (bullish)
+//               or HIGH > max pattern high (bearish) → invalidated
+// - Triggered:  any post-dtime candle crosses p.stoploss → stopped out
 async function checkSLHits() {
   const toCheck = allResults.filter(i => {
     const p = i.pattern;
-    return p.stoploss && !i._slChecked && (p.dtime > 0 || p.ctime || p.atime);
+    return !i._slChecked && (p.ctime || p.atime || p.dtime);
   });
   console.log('[checkSLHits] patterns to verify:', toCheck.length);
   if (toCheck.length === 0) return;
 
   let changed = false;
   for (let idx = 0; idx < toCheck.length; idx++) {
-    const item  = toCheck[idx];
-    const p     = item.pattern;
-    const patStart = p.start_time || p.atime || p.ctime || p.dtime;
-    const from  = patStart - 2 * 86400; // 2-day buffer before pattern start
-    const to    = Math.floor(Date.now() / 1000) + 86400;
-    const url   = `${API_BASE}/forex/candle?symbol=${encodeURIComponent(item.sym)}&resolution=D&from=${from}&to=${to}&token=${API_KEY}`;
+    const item = toCheck[idx];
+    const p    = item.pattern;
+    const type = (p.patterntype || '').toLowerCase();
+    const triggered = p.dtime && p.dtime > 0;
+    const ctime  = p.ctime || p.atime;
+    const refTs  = triggered ? p.dtime : ctime; // candles after this → checked against threshold
+    const from   = (p.start_time || p.atime || ctime) - 5 * (TF_SECONDS[item.tf] || 3600);
+    const to     = Math.floor(Date.now() / 1000) + (TF_SECONDS[item.tf] || 3600);
+    const url    = `${API_BASE}/forex/candle?symbol=${encodeURIComponent(item.sym)}&resolution=${item.tf}&from=${from}&to=${to}&token=${API_KEY}`;
     try {
       const res  = await fetch(url);
       const data = res.ok ? await res.json() : null;
-      if (data && data.s === 'ok' && data.l && data.h) {
-        const type   = (p.patterntype || '').toLowerCase();
-        const minLow = Math.min(...data.l);
-        const maxHig = Math.max(...data.h);
-        const slHit  = type === 'bearish' ? maxHig >= p.stoploss : minLow <= p.stoploss;
-        console.log(`[SL check] ${item.symLabel} ${item.tfLabel} ${type} | stoploss:${p.stoploss} | minLow:${minLow} | maxHigh:${maxHig} | slHit:${slHit}`);
+      if (data && data.s === 'ok' && data.t && data.l && data.h) {
+        const t = data.t, l = data.l, h = data.h;
+        let slHit = false;
+
+        if (triggered && p.stoploss) {
+          // Triggered: check if any candle since dtime crossed Finnhub's stoploss
+          for (let i = 0; i < t.length; i++) {
+            if (t[i] < refTs) continue;
+            if (type === 'bearish' && h[i] >= p.stoploss) { slHit = true; break; }
+            if (type === 'bullish' && l[i] <= p.stoploss)  { slHit = true; break; }
+          }
+        } else {
+          // Incomplete: compute the actual extreme within the pattern range,
+          // then check if any post-ctime candle violated it.
+          let patExtreme = type === 'bullish' ? Infinity : -Infinity;
+          let postViolation = false;
+          for (let i = 0; i < t.length; i++) {
+            if (t[i] <= ctime) {
+              if (type === 'bullish') patExtreme = Math.min(patExtreme, l[i]);
+              else                    patExtreme = Math.max(patExtreme, h[i]);
+            } else {
+              if (patExtreme === Infinity || patExtreme === -Infinity) continue;
+              if (type === 'bullish' && l[i] < patExtreme) { postViolation = true; break; }
+              if (type === 'bearish' && h[i] > patExtreme) { postViolation = true; break; }
+            }
+          }
+          slHit = postViolation;
+        }
+
+        console.log(`[SL check] ${item.symLabel} ${item.tfLabel} ${type} | triggered:${triggered} | slHit:${slHit}`);
         if (slHit) { item._slHit = true; changed = true; }
       } else {
         console.warn(`[SL check] ${item.symLabel} ${item.tfLabel} — candle fetch failed:`, data?.s);
