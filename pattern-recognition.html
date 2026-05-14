@@ -697,7 +697,8 @@ async function checkSLHits() {
   for (let idx = 0; idx < toCheck.length; idx++) {
     const item  = toCheck[idx];
     const p     = item.pattern;
-    const from  = p.dtime > 0 ? p.dtime : (p.ctime || p.atime);
+    const patStart = p.start_time || p.atime || p.ctime || p.dtime;
+    const from  = patStart - 2 * 86400; // 2-day buffer before pattern start
     const to    = Math.floor(Date.now() / 1000) + 86400;
     const url   = `${API_BASE}/forex/candle?symbol=${encodeURIComponent(item.sym)}&resolution=D&from=${from}&to=${to}&token=${API_KEY}`;
     try {
