@@ -710,7 +710,7 @@ async function checkSLHits() {
       const res  = await fetch(url);
       const data = res.ok ? await res.json() : null;
       if (data && data.s === 'ok' && data.t && data.l && data.h) {
-        const t = data.t, l = data.l, h = data.h;
+        const t = data.t, l = data.l, h = data.h, c = data.c || [];
         let slHit = false;
 
         if (triggered && p.stoploss) {
@@ -721,21 +721,19 @@ async function checkSLHits() {
             if (type === 'bullish' && l[i] <= p.stoploss)  { slHit = true; break; }
           }
         } else {
-          // Incomplete: compute the actual extreme within the pattern range,
-          // then check if any post-ctime candle violated it.
-          let patExtreme = type === 'bullish' ? Infinity : -Infinity;
-          let postViolation = false;
+          // Incomplete: use the CLOSE of the ctime candle as the threshold.
+          // Close = confirmed price level (body), more reliable than wick extremes.
+          let threshold = null;
           for (let i = 0; i < t.length; i++) {
-            if (t[i] <= ctime) {
-              if (type === 'bullish') patExtreme = Math.min(patExtreme, l[i]);
-              else                    patExtreme = Math.max(patExtreme, h[i]);
-            } else {
-              if (patExtreme === Infinity || patExtreme === -Infinity) continue;
-              if (type === 'bullish' && l[i] < patExtreme) { postViolation = true; break; }
-              if (type === 'bearish' && h[i] > patExtreme) { postViolation = true; break; }
-            }
+            if (t[i] === ctime && c[i] !== undefined) { threshold = c[i]; break; }
           }
-          slHit = postViolation;
+          // Fallback: use cprice (declared pattern price) if candle not found
+          if (threshold === null) threshold = p.cprice ?? (type === 'bullish' ? Infinity : -Infinity);
+          for (let i = 0; i < t.length; i++) {
+            if (t[i] <= ctime) continue;
+            if (type === 'bullish' && l[i] < threshold) { slHit = true; break; }
+            if (type === 'bearish' && h[i] > threshold) { slHit = true; break; }
+          }
         }
 
         console.log(`[SL check] ${item.symLabel} ${item.tfLabel} ${type} | triggered:${triggered} | slHit:${slHit}`);
