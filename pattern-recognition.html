@@ -725,17 +725,24 @@ async function checkSLHits() {
           // then check if any post-ctime candle violated it.
           let patExtreme = type === 'bullish' ? Infinity : -Infinity;
           let postViolation = false;
+          let preCount = 0, postCount = 0, minPostLow = Infinity, maxPostHigh = -Infinity;
           for (let i = 0; i < t.length; i++) {
             if (t[i] <= ctime) {
+              preCount++;
               if (type === 'bullish') patExtreme = Math.min(patExtreme, l[i]);
               else                    patExtreme = Math.max(patExtreme, h[i]);
             } else {
+              postCount++;
+              if (type === 'bullish') minPostLow = Math.min(minPostLow, l[i]);
+              else                    maxPostHigh = Math.max(maxPostHigh, h[i]);
               if (patExtreme === Infinity || patExtreme === -Infinity) continue;
               if (type === 'bullish' && l[i] < patExtreme) { postViolation = true; break; }
               if (type === 'bearish' && h[i] > patExtreme) { postViolation = true; break; }
             }
           }
           slHit = postViolation;
+          const extremeRef = type === 'bullish' ? minPostLow : maxPostHigh;
+          console.log(`[SL check detail] ${item.symLabel} ${item.tfLabel} ${type} | ctime:${new Date(ctime*1000).toISOString()} | patExtreme:${patExtreme} | post${type==='bullish'?'MinLow':'MaxHigh'}:${extremeRef} | preCandles:${preCount} | postCandles:${postCount} | cprice:${p.cprice} | aprice:${p.aprice} | stoploss:${p.stoploss} | postViolation:${postViolation}`);
         }
 
         console.log(`[SL check] ${item.symLabel} ${item.tfLabel} ${type} | triggered:${triggered} | slHit:${slHit}`);
