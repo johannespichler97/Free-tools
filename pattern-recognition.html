@@ -882,8 +882,8 @@ function renderCandleChart(canvas, data, item) {
   const aidx    = startTs ? findNearest(startTs) : 0;
   const eidx    = endTs   ? findNearest(endTs)   : n - 1;
 
-  // Triggered: mark dtime (neckline break). Incomplete: mark ctime (second peak/trough).
-  const markerTs = (rp.dtime && rp.dtime > 0) ? rp.dtime : (rp.ctime || rp.sortTime);
+  // Triggered: mark dtime (neckline break). Incomplete: mark end_time/sortTime (pattern confirmed).
+  const markerTs = (rp.dtime && rp.dtime > 0) ? rp.dtime : (rp.end_time || rp.sortTime || rp.ctime);
   const pidx     = findNearest(markerTs);
 
   // Background
