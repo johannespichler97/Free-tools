@@ -377,10 +377,20 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
     </div>
 
     <div class="sort-row" id="sortRow" style="display:none;">
-      <span>Sort within groups by:</span>
+      <span>Sort:</span>
       <button class="sort-btn active" data-sort="default">Timeframe scanned</button>
       <button class="sort-btn" data-sort="tf">Higher TF first</button>
       <button class="sort-btn" data-sort="time">Latest</button>
+      <span style="margin-left:12px;">Max age:</span>
+      <select id="maxAgeSelect" style="background:var(--bg-tertiary);color:var(--text-primary);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;font-family:var(--font);cursor:pointer;">
+        <option value="1">1 day</option>
+        <option value="2">2 days</option>
+        <option value="3" selected>3 days</option>
+        <option value="4">4 days</option>
+        <option value="5">5 days</option>
+        <option value="6">6 days</option>
+        <option value="7">7 days</option>
+      </select>
     </div>
 
     <div id="slDebug" style="display:none;color:#f85149;font-weight:600;font-size:13px;padding:8px 24px;"></div>
@@ -526,7 +536,6 @@ function buildCard(item) {
 // ── Render results grouped by pair ────────────────────────────
 
 // Max age per timeframe (calendar days, accounts for ~2/7 weekend days)
-const TF_MAX_AGE = { '5':3, '15':3, '30':3, '60':3, '240':7, 'D':7, 'W':30, 'M':90 };
 
 function renderResults() {
   let items = [...allResults];
@@ -538,11 +547,12 @@ function renderResults() {
     return s === 'complete' || s === 'successful';
   });
 
-  // Age filter: H1 and below → 3 days, H4 / Daily → 7 days
+  // Age filter: user-selected 1–7 days, measured from end_time
+  const maxAgeDays = parseInt(document.getElementById('maxAgeSelect')?.value || '3', 10);
   items = items.filter(i => {
-    const maxAge = TF_MAX_AGE[i.tf] ?? 7;
-    const age = i.pattern.sortTime ? now - i.pattern.sortTime : 0;
-    return age <= maxAge * 86400;
+    const endTs = i.pattern.end_time || i.pattern.sortTime;
+    if (!endTs) return true;
+    return (now - endTs) <= maxAgeDays * 86400;
   });
 
   // Stoploss filter: hide signals already marked as SL hit by background check
@@ -1021,6 +1031,8 @@ document.querySelectorAll('[data-sort]').forEach(btn => {
     renderResults();
   });
 });
+
+document.getElementById('maxAgeSelect')?.addEventListener('change', renderResults);
 
 // Card click → chart modal (event delegation)
 document.getElementById('resultsArea').addEventListener('click', e => {
