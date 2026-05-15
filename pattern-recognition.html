@@ -703,7 +703,7 @@ async function checkSLHits() {
       if (data && data.s === 'ok' && data.t && data.l && data.h && data.c) {
         const t = data.t, l = data.l, h = data.h, c = data.c;
 
-        // Find extreme within the pattern range [start_time..end_time]
+        // Step 1: find the extreme within the pattern range [start_time..end_time]
         let extreme = type === 'bearish' ? -Infinity : Infinity;
         for (let i = 0; i < t.length; i++) {
           if (t[i] < start || t[i] > end) continue;
@@ -711,13 +711,15 @@ async function checkSLHits() {
           else                    extreme = Math.min(extreme, l[i]);
         }
 
-        // Current price = last candle's close
-        const currentPrice = c[c.length - 1];
-
+        // Step 2: check every candle AFTER end_time — if any candle ever breached
+        // the extreme (even if price recovered since), the SL was hit.
         let slHit = false;
-        if (extreme !== -Infinity && extreme !== Infinity && currentPrice != null) {
-          if (type === 'bearish' && currentPrice > extreme) slHit = true;
-          if (type === 'bullish' && currentPrice < extreme) slHit = true;
+        if (extreme !== -Infinity && extreme !== Infinity) {
+          for (let i = 0; i < t.length; i++) {
+            if (t[i] <= end) continue;
+            if (type === 'bearish' && h[i] > extreme) { slHit = true; break; }
+            if (type === 'bullish' && l[i] < extreme) { slHit = true; break; }
+          }
         }
 
         if (slHit) { item._slHit = true; changed = true; }
@@ -851,9 +853,8 @@ function renderCandleChart(canvas, data, item) {
   const aidx    = startTs ? findNearest(startTs) : 0;
   const eidx    = endTs   ? findNearest(endTs)   : n - 1;
 
-  // Triggered: mark dtime (neckline break). Incomplete: mark end_time/sortTime (pattern confirmed).
-  const markerTs = (rp.dtime && rp.dtime > 0) ? rp.dtime : (rp.end_time || rp.sortTime || rp.ctime);
-  const pidx     = findNearest(markerTs);
+  // Marker always sits at end_time — the last candle of the confirmed pattern
+  const pidx = eidx;
 
   // Background
   ctx.fillStyle = '#062434';
