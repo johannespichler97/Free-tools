@@ -544,17 +544,8 @@ function renderResults() {
     return age <= maxAge * 86400;
   });
 
-  // Stoploss filter: _slHit is set by the background candle check for all patterns.
-  // Quick pre-check via end_price catches obvious cases before the background check runs.
-  items = items.filter(i => {
-    if (i._slHit) return false;
-    const p = i.pattern;
-    if (!p.stoploss || !p.end_price) return true;
-    const type = (p.patterntype || '').toLowerCase();
-    if (type === 'bearish') return p.end_price <= p.stoploss;
-    if (type === 'bullish') return p.end_price >= p.stoploss;
-    return true;
-  });
+  // Stoploss filter: hide signals already marked as SL hit by background check
+  items = items.filter(i => !i._slHit);
 
   // Filter by type
   if (activeFilter !== 'all') {
@@ -684,21 +675,17 @@ async function scan() {
   document.getElementById('sortRow').style.display = allResults.length > 0 ? 'flex' : 'none';
 
   renderResults();
-  checkSLHits(); // background: verify triggered patterns via daily candles
+  setTimeout(() => checkSLHits(), 3000); // show signals first, then filter SL hits after 3s
 }
 
 // ── Background stoploss verification ──────────────────────────
 // Uses the pattern's own TF candles to detect if price violated the
-// pattern structure after it formed:
-// - Incomplete: any post-ctime candle LOW < min pattern low (bullish)
-//               or HIGH > max pattern high (bearish) → invalidated
-// - Triggered:  any post-dtime candle crosses p.stoploss → stopped out
+// Bearish: highest HIGH between start_time and end_time = the pattern's stoploss level.
+//          If current price > that high → price broke above the pattern → SL hit.
+// Bullish: lowest LOW between start_time and end_time = the pattern's stoploss level.
+//          If current price < that low → price broke below the pattern → SL hit.
 async function checkSLHits() {
-  const toCheck = allResults.filter(i => {
-    const p = i.pattern;
-    return !i._slChecked && (p.ctime || p.atime || p.dtime);
-  });
-  console.log('[checkSLHits] patterns to verify:', toCheck.length);
+  const toCheck = allResults.filter(i => !i._slChecked && i.pattern.start_time);
   if (toCheck.length === 0) return;
 
   let changed = false;
@@ -706,54 +693,36 @@ async function checkSLHits() {
     const item = toCheck[idx];
     const p    = item.pattern;
     const type = (p.patterntype || '').toLowerCase();
-    const triggered = p.dtime && p.dtime > 0;
-    const ctime  = p.ctime || p.atime;
-    const refTs  = triggered ? p.dtime : ctime; // candles after this → checked against threshold
-    const from   = (p.start_time || p.atime || ctime) - 5 * (TF_SECONDS[item.tf] || 3600);
-    const to     = Math.floor(Date.now() / 1000) + (TF_SECONDS[item.tf] || 3600);
-    const url    = `${API_BASE}/forex/candle?symbol=${encodeURIComponent(item.sym)}&resolution=${item.tf}&from=${from}&to=${to}&token=${API_KEY}`;
+    const start = p.start_time;
+    const end   = p.end_time || p.sortTime;
+    const now   = Math.floor(Date.now() / 1000) + (TF_SECONDS[item.tf] || 3600);
+    const url   = `${API_BASE}/forex/candle?symbol=${encodeURIComponent(item.sym)}&resolution=${item.tf}&from=${start}&to=${now}&token=${API_KEY}`;
     try {
       const res  = await fetch(url);
       const data = res.ok ? await res.json() : null;
-      if (data && data.s === 'ok' && data.t && data.l && data.h) {
-        const t = data.t, l = data.l, h = data.h, c = data.c || [];
-        let slHit = false;
+      if (data && data.s === 'ok' && data.t && data.l && data.h && data.c) {
+        const t = data.t, l = data.l, h = data.h, c = data.c;
 
-        if (triggered) {
-          // Triggered: only filter if a valid stoploss level exists and was crossed
-          if (p.stoploss && p.stoploss > 0) {
-            for (let i = 0; i < t.length; i++) {
-              if (t[i] < refTs) continue;
-              if (type === 'bearish' && h[i] >= p.stoploss) { slHit = true; break; }
-              if (type === 'bullish' && l[i] <= p.stoploss)  { slHit = true; break; }
-            }
-          }
-          // Triggered but no stoploss: cannot verify → keep pattern
-        } else {
-          // Incomplete: use close of ctime candle (bullish) or high of ctime candle (bearish).
-          // Bullish: body close is above the wick — filter if post-pattern wick goes below it.
-          // Bearish: high is the actual peak — filter if post-pattern wick breaks above it.
-          let threshold = null;
-          for (let i = 0; i < t.length; i++) {
-            if (t[i] === ctime) {
-              threshold = type === 'bullish' ? (c[i] ?? null) : (h[i] ?? null);
-              break;
-            }
-          }
-          if (threshold === null) threshold = p.cprice ?? (type === 'bullish' ? Infinity : -Infinity);
-          for (let i = 0; i < t.length; i++) {
-            if (t[i] <= ctime) continue;
-            if (type === 'bullish' && l[i] < threshold) { slHit = true; break; }
-            if (type === 'bearish' && h[i] > threshold) { slHit = true; break; }
-          }
+        // Find extreme within the pattern range [start_time..end_time]
+        let extreme = type === 'bearish' ? -Infinity : Infinity;
+        for (let i = 0; i < t.length; i++) {
+          if (t[i] < start || t[i] > end) continue;
+          if (type === 'bearish') extreme = Math.max(extreme, h[i]);
+          else                    extreme = Math.min(extreme, l[i]);
         }
 
-        console.log(`[SL check] ${item.symLabel} ${item.tfLabel} ${type} | triggered:${triggered} | slHit:${slHit}`);
+        // Current price = last candle's close
+        const currentPrice = c[c.length - 1];
+
+        let slHit = false;
+        if (extreme !== -Infinity && extreme !== Infinity && currentPrice != null) {
+          if (type === 'bearish' && currentPrice > extreme) slHit = true;
+          if (type === 'bullish' && currentPrice < extreme) slHit = true;
+        }
+
         if (slHit) { item._slHit = true; changed = true; }
-      } else {
-        console.warn(`[SL check] ${item.symLabel} ${item.tfLabel} — candle fetch failed:`, data?.s);
       }
-    } catch (e) { console.error('[SL check] error:', e); }
+    } catch (e) { /* silently skip on network error */ }
     item._slChecked = true;
     if (idx % 5 === 4 && idx < toCheck.length - 1) await sleep(1100);
     else await sleep(80);
