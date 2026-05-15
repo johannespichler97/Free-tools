@@ -383,6 +383,7 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
       <button class="sort-btn" data-sort="time">Latest</button>
     </div>
 
+    <div id="slDebug" style="display:none;color:#f85149;font-weight:600;font-size:13px;padding:8px 24px;"></div>
     <div id="resultsArea">
       <div class="state-box">
         <div class="state-icon">&#128202;</div>
@@ -681,14 +682,17 @@ async function scan() {
 // ── Background stoploss verification ──────────────────────────
 // Uses the pattern's own TF candles to detect if price violated the
 // Bearish: highest HIGH between start_time and end_time = the pattern's stoploss level.
-//          If current price > that high → price broke above the pattern → SL hit.
+//          If any post-end candle HIGH > that → SL hit → remove.
 // Bullish: lowest LOW between start_time and end_time = the pattern's stoploss level.
-//          If current price < that low → price broke below the pattern → SL hit.
+//          If any post-end candle LOW < that → SL hit → remove.
 async function checkSLHits() {
   const toCheck = allResults.filter(i => !i._slChecked && i.pattern.start_time);
-  if (toCheck.length === 0) return;
+  if (toCheck.length === 0) {
+    showSLDebug(0);
+    return;
+  }
 
-  let changed = false;
+  let removed = 0;
   for (let idx = 0; idx < toCheck.length; idx++) {
     const item = toCheck[idx];
     const p    = item.pattern;
@@ -700,10 +704,10 @@ async function checkSLHits() {
     try {
       const res  = await fetch(url);
       const data = res.ok ? await res.json() : null;
-      if (data && data.s === 'ok' && data.t && data.l && data.h && data.c) {
-        const t = data.t, l = data.l, h = data.h, c = data.c;
+      if (data && data.s === 'ok' && data.t && data.l && data.h) {
+        const t = data.t, l = data.l, h = data.h;
 
-        // Step 1: find the extreme within the pattern range [start_time..end_time]
+        // Step 1: highest HIGH (bearish) or lowest LOW (bullish) within [start_time..end_time]
         let extreme = type === 'bearish' ? -Infinity : Infinity;
         for (let i = 0; i < t.length; i++) {
           if (t[i] < start || t[i] > end) continue;
@@ -711,8 +715,7 @@ async function checkSLHits() {
           else                    extreme = Math.min(extreme, l[i]);
         }
 
-        // Step 2: check every candle AFTER end_time — if any candle ever breached
-        // the extreme (even if price recovered since), the SL was hit.
+        // Step 2: any post-end_time candle that ever breached the extreme → SL hit
         let slHit = false;
         if (extreme !== -Infinity && extreme !== Infinity) {
           for (let i = 0; i < t.length; i++) {
@@ -722,14 +725,23 @@ async function checkSLHits() {
           }
         }
 
-        if (slHit) { item._slHit = true; changed = true; }
+        if (slHit) { item._slHit = true; removed++; }
       }
     } catch (e) { /* silently skip on network error */ }
     item._slChecked = true;
     if (idx % 5 === 4 && idx < toCheck.length - 1) await sleep(1100);
     else await sleep(80);
   }
-  if (changed) renderResults();
+  if (removed > 0) renderResults();
+  showSLDebug(removed);
+}
+
+function showSLDebug(removed) {
+  const el = document.getElementById('slDebug');
+  if (!el) return;
+  el.textContent = `SL filter applied — ${removed} signal(s) removed`;
+  el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 8000);
 }
 
 // ── Chart modal ────────────────────────────────────────────────
