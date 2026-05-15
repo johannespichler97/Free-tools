@@ -531,6 +531,12 @@ function renderResults() {
   let items = [...allResults];
   const now = Date.now() / 1000;
 
+  // Only show confirmed patterns
+  items = items.filter(i => {
+    const s = (i.pattern.status || '').toLowerCase();
+    return s === 'complete' || s === 'successful';
+  });
+
   // Age filter: H1 and below → 3 days, H4 / Daily → 7 days
   items = items.filter(i => {
     const maxAge = TF_MAX_AGE[i.tf] ?? 7;
@@ -872,39 +878,13 @@ function renderCandleChart(canvas, data, item) {
   const patType = (rp.patterntype || 'bullish').toLowerCase();
   const tfSec2  = TF_SECONDS[item.tf] || 86400;
   const startTs = rp.start_time || rp.atime;
+  const endTs   = rp.end_time   || rp.sortTime;
   const aidx    = startTs ? findNearest(startTs) : 0;
+  const eidx    = endTs   ? findNearest(endTs)   : n - 1;
 
-  // Triggered (dtime > 0): mark where the entry was broken.
-  // Incomplete bearish: find the candle in [atime..ctime] whose LOW is closest to the
-  //   entry price — this is the neckline-test candle (the valley where the pattern forms).
-  // Triggered: mark the neckline-break candle. Incomplete: mark the second peak/trough (ctime).
-  let pidx;
-  if (rp.dtime && rp.dtime > 0) {
-    pidx = findNearest(rp.dtime);
-  } else {
-    const ctime  = rp.ctime || rp.sortTime;
-    const cprice = rp.cprice;
-    // Search from btime (valley/peak between A and C) through all available data,
-    // picking the candle whose extreme (HIGH for bearish, LOW for bullish)
-    // is closest to cprice. No upper-bound cutoff — handles price drift after ctime.
-    if (cprice) {
-      const searchFrom = rp.btime || rp.atime || 0;
-      let best = Infinity, found = -1;
-      for (let i = 0; i < n; i++) {
-        if (t[i] < searchFrom) continue;
-        const ref = patType === 'bullish' ? l[i] : h[i];
-        const d   = Math.abs(ref - cprice);
-        if (d < best) { best = d; found = i; }
-      }
-      pidx = found >= 0 ? found : findNearest(ctime);
-    } else {
-      pidx = findNearest(ctime);
-    }
-  }
-  console.log('[renderChart] pidx:', pidx, '| n:', n,
-              '| t[pidx]:', pidx >= 0 ? new Date(t[pidx]*1000).toISOString() : 'n/a',
-              '| ref price:', pidx >= 0 ? (patType === 'bullish' ? h[pidx] : l[pidx]) : 'n/a',
-              '| entry:', rp.entry, '| dtime:', rp.dtime);
+  // Triggered: mark dtime (neckline break). Incomplete: mark ctime (second peak/trough).
+  const markerTs = (rp.dtime && rp.dtime > 0) ? rp.dtime : (rp.ctime || rp.sortTime);
+  const pidx     = findNearest(markerTs);
 
   // Background
   ctx.fillStyle = '#062434';
@@ -949,10 +929,10 @@ function renderCandleChart(canvas, data, item) {
     ctx.fillText(`TP  ${fmtPrice(tp1, item.sym)}`, PL + 5, ty - 4);
   }
 
-  // Highlight the full pattern range (atime → dtime)
+  // Highlight the full pattern range (start_time → end_time)
   {
     const x1 = bX(aidx) - cW / n / 2;
-    const x2 = bX(pidx) + cW / n / 2;
+    const x2 = bX(eidx) + cW / n / 2;
     ctx.fillStyle = 'rgba(47,163,224,0.07)';
     ctx.fillRect(x1, PT, Math.max(cW / n, x2 - x1), cH);
   }
