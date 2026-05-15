@@ -884,16 +884,14 @@ function renderCandleChart(canvas, data, item) {
   } else {
     const ctime  = rp.ctime || rp.sortTime;
     const cprice = rp.cprice;
-    // Search from btime (valley/peak between A and C) up to ctime + 3 bars,
+    // Search from btime (valley/peak between A and C) through all available data,
     // picking the candle whose extreme (HIGH for bearish, LOW for bullish)
-    // is closest to cprice. This handles OANDA daily timestamp offsets correctly.
+    // is closest to cprice. No upper-bound cutoff — handles price drift after ctime.
     if (cprice) {
       const searchFrom = rp.btime || rp.atime || 0;
-      const searchTo   = ctime + (TF_SECONDS[item.tf] || 86400) * 3;
       let best = Infinity, found = -1;
       for (let i = 0; i < n; i++) {
         if (t[i] < searchFrom) continue;
-        if (t[i] > searchTo) break;
         const ref = patType === 'bullish' ? l[i] : h[i];
         const d   = Math.abs(ref - cprice);
         if (d < best) { best = d; found = i; }
