@@ -724,11 +724,15 @@ async function checkSLHits() {
           }
           // Triggered but no stoploss: cannot verify → keep pattern
         } else {
-          // Incomplete: check if the close of the ctime candle was breached post-pattern.
-          // Close = candle body level, not the wick extreme.
+          // Incomplete: use close of ctime candle (bullish) or high of ctime candle (bearish).
+          // Bullish: body close is above the wick — filter if post-pattern wick goes below it.
+          // Bearish: high is the actual peak — filter if post-pattern wick breaks above it.
           let threshold = null;
           for (let i = 0; i < t.length; i++) {
-            if (t[i] === ctime && c[i] !== undefined) { threshold = c[i]; break; }
+            if (t[i] === ctime) {
+              threshold = type === 'bullish' ? (c[i] ?? null) : (h[i] ?? null);
+              break;
+            }
           }
           if (threshold === null) threshold = p.cprice ?? (type === 'bullish' ? Infinity : -Infinity);
           for (let i = 0; i < t.length; i++) {
