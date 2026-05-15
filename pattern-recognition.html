@@ -882,8 +882,26 @@ function renderCandleChart(canvas, data, item) {
   if (rp.dtime && rp.dtime > 0) {
     pidx = findNearest(rp.dtime);
   } else {
-    const ctime = rp.ctime || rp.sortTime;
-    pidx = findNearest(ctime);
+    const ctime  = rp.ctime || rp.sortTime;
+    const cprice = rp.cprice;
+    // Search from btime (valley/peak between A and C) up to ctime + 3 bars,
+    // picking the candle whose extreme (HIGH for bearish, LOW for bullish)
+    // is closest to cprice. This handles OANDA daily timestamp offsets correctly.
+    if (cprice) {
+      const searchFrom = rp.btime || rp.atime || 0;
+      const searchTo   = ctime + (TF_SECONDS[item.tf] || 86400) * 3;
+      let best = Infinity, found = -1;
+      for (let i = 0; i < n; i++) {
+        if (t[i] < searchFrom) continue;
+        if (t[i] > searchTo) break;
+        const ref = patType === 'bullish' ? l[i] : h[i];
+        const d   = Math.abs(ref - cprice);
+        if (d < best) { best = d; found = i; }
+      }
+      pidx = found >= 0 ? found : findNearest(ctime);
+    } else {
+      pidx = findNearest(ctime);
+    }
   }
   console.log('[renderChart] pidx:', pidx, '| n:', n,
               '| t[pidx]:', pidx >= 0 ? new Date(t[pidx]*1000).toISOString() : 'n/a',
