@@ -686,7 +686,9 @@ async function scan() {
 // Bullish: lowest LOW between start_time and end_time = the pattern's stoploss level.
 //          If any post-end candle LOW < that → SL hit → remove.
 async function checkSLHits() {
-  const toCheck = allResults.filter(i => !i._slChecked && i.pattern.start_time);
+  console.log('[checkSLHits] called, allResults:', allResults.length);
+  const toCheck = allResults.filter(i => !i._slChecked);
+  console.log('[checkSLHits] toCheck:', toCheck.length, toCheck.map(i => `${i.symLabel} ${i.tfLabel} start_time=${i.pattern.start_time}`));
   if (toCheck.length === 0) {
     showSLDebug(0);
     return;
@@ -694,13 +696,15 @@ async function checkSLHits() {
 
   let removed = 0;
   for (let idx = 0; idx < toCheck.length; idx++) {
-    const item = toCheck[idx];
-    const p    = item.pattern;
-    const type = (p.patterntype || '').toLowerCase();
-    const start = p.start_time;
-    const end   = p.end_time || p.sortTime;
-    const now   = Math.floor(Date.now() / 1000) + (TF_SECONDS[item.tf] || 3600);
-    const url   = `${API_BASE}/forex/candle?symbol=${encodeURIComponent(item.sym)}&resolution=${item.tf}&from=${start}&to=${now}&token=${API_KEY}`;
+    const item  = toCheck[idx];
+    const p     = item.pattern;
+    const type  = (p.patterntype || '').toLowerCase();
+    const start = p.start_time || p.atime;
+    const end   = p.end_time   || p.sortTime;
+    if (!start || !end) { item._slChecked = true; continue; }
+
+    const now = Math.floor(Date.now() / 1000) + (TF_SECONDS[item.tf] || 3600);
+    const url = `${API_BASE}/forex/candle?symbol=${encodeURIComponent(item.sym)}&resolution=${item.tf}&from=${start}&to=${now}&token=${API_KEY}`;
     try {
       const res  = await fetch(url);
       const data = res.ok ? await res.json() : null;
@@ -725,9 +729,12 @@ async function checkSLHits() {
           }
         }
 
+        console.log(`[SL] ${item.symLabel} ${item.tfLabel} ${type} | extreme:${extreme} | slHit:${slHit} | candles:${t.length}`);
         if (slHit) { item._slHit = true; removed++; }
+      } else {
+        console.warn(`[SL] ${item.symLabel} ${item.tfLabel} — fetch failed:`, data?.s);
       }
-    } catch (e) { /* silently skip on network error */ }
+    } catch (e) { console.error('[SL] error:', e); }
     item._slChecked = true;
     if (idx % 5 === 4 && idx < toCheck.length - 1) await sleep(1100);
     else await sleep(80);
