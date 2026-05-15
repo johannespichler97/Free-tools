@@ -877,27 +877,13 @@ function renderCandleChart(canvas, data, item) {
   // Triggered (dtime > 0): mark where the entry was broken.
   // Incomplete bearish: find the candle in [atime..ctime] whose LOW is closest to the
   //   entry price — this is the neckline-test candle (the valley where the pattern forms).
-  // Incomplete bullish: same logic with HIGH and entry (resistance-test candle).
+  // Triggered: mark the neckline-break candle. Incomplete: mark the second peak/trough (ctime).
   let pidx;
   if (rp.dtime && rp.dtime > 0) {
     pidx = findNearest(rp.dtime);
   } else {
-    const entry = rp.entry || rp.dprice;
-    const atime = rp.atime || 0;
     const ctime = rp.ctime || rp.sortTime;
-    if (entry) {
-      let best = Infinity, found = -1;
-      for (let i = 0; i < n; i++) {
-        if (t[i] < atime) continue;
-        if (t[i] > ctime) break;
-        const ref = patType === 'bullish' ? h[i] : l[i];
-        const d   = Math.abs(ref - entry);
-        if (d < best) { best = d; found = i; }
-      }
-      pidx = found >= 0 ? found : findNearest(ctime);
-    } else {
-      pidx = findNearest(ctime);
-    }
+    pidx = findNearest(ctime);
   }
   console.log('[renderChart] pidx:', pidx, '| n:', n,
               '| t[pidx]:', pidx >= 0 ? new Date(t[pidx]*1000).toISOString() : 'n/a',
