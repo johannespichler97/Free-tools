@@ -870,7 +870,6 @@ function drawTimeline() {
     const boundsYesterday = getSessionBoundsUTC(session, yesterday);
 
     // Draw a band clamped to [00:00, 24:00] UTC today
-    const weekend = isWeekend(now);
     const drawBand = (openUTC, closeUTC) => {
       const clampedOpen  = Math.max(openUTC,  todayUTCMidnight);
       const clampedClose = Math.min(closeUTC, todayUTCEnd);
@@ -880,28 +879,22 @@ function drawTimeline() {
       const xClose = PAD_L + ((clampedClose - todayUTCMidnight) / 86400000) * plotW;
       const bandW  = xClose - xOpen;
 
-      // On weekends, render bands dimmed/gray to indicate market is closed
-      const col        = weekend ? '#2a4d64' : session.color;
-      const fillAlpha  = weekend ? '22' : '33';
-      const borderCol  = weekend ? '#1a3d54' : (col + 'aa');
-      const labelCol   = weekend ? '#1e4060' : col;
-
-      // Band fill
-      ctx.fillStyle = col + fillAlpha;
+        // Band fill
+      ctx.fillStyle = session.color + '33';
       ctx.beginPath();
       ctx.roundRect(xOpen, y, bandW, BAR_H, 4);
       ctx.fill();
 
       // Border
-      ctx.strokeStyle = borderCol;
-      ctx.lineWidth   = 1;
+      ctx.strokeStyle = session.color + 'aa';
+      ctx.lineWidth   = 1.5;
       ctx.beginPath();
       ctx.roundRect(xOpen, y, bandW, BAR_H, 4);
       ctx.stroke();
 
       // Session label (only if wide enough)
       if (bandW > 50) {
-        ctx.fillStyle   = labelCol;
+        ctx.fillStyle   = session.color;
         ctx.font        = `600 11px Inter, sans-serif`;
         ctx.textAlign   = 'left';
         const labelX    = xOpen + LABEL_PAD;
@@ -919,14 +912,6 @@ function drawTimeline() {
   for (let slot = 0; slot < 24 * 4; slot++) {
     const slotStart = todayUTCMidnight + slot * 900000; // todayUTCMidnight used below
     break; // skip — handled via opacity stacking above
-  }
-
-  // Weekend: subtle "Market Closed" label in bottom-right of band area
-  if (isWeekend(now)) {
-    ctx.font      = '500 11px Inter, sans-serif';
-    ctx.fillStyle = '#2a4d64';
-    ctx.textAlign = 'right';
-    ctx.fillText('Market Closed — Weekend', W - PAD_R, H - AXIS_H - 6);
   }
 
   // Current UTC time marker
