@@ -491,8 +491,10 @@ function getNextOpenUTC(session) {
   const now = new Date();
   for (let d = 0; d < 7; d++) {
     const t = new Date(now.getTime() + d * 86400000);
-    if (isWeekend(t)) continue; // skip Sat/Sun
-    const { openUTC, closeUTC } = getSessionBoundsUTC(session, t);
+    // Check weekday in the session's OWN timezone (e.g. NY at UTC-4 is still Sunday when UTC flips to Monday)
+    const localDay = new Intl.DateTimeFormat('en-US', { timeZone: session.tz, weekday: 'long' }).format(t);
+    if (localDay === 'Saturday' || localDay === 'Sunday') continue;
+    const { openUTC } = getSessionBoundsUTC(session, t);
     if (openUTC > now.getTime()) return openUTC;
   }
   return null;
@@ -667,16 +669,16 @@ function updateWeekendBanner() {
   if (!banner) return;
   if (isWeekend(now)) {
     banner.classList.add('visible');
-    // Find when Sydney (first session) opens on Monday
-    const monMs = nextMondayUTC(now);
-    const mon   = new Date(monMs);
-    // Sydney opens at 08:00 local = earliest session
+    // Use the already-correct getNextOpenUTC for each session, take the earliest
     const firstOpen = SESSIONS.reduce((earliest, s) => {
-      const { openUTC } = getSessionBoundsUTC(s, mon);
-      return openUTC < earliest ? openUTC : earliest;
+      const next = getNextOpenUTC(s);
+      return (next !== null && next < earliest) ? next : earliest;
     }, Infinity);
     const wait = firstOpen - now.getTime();
-    opensEl.textContent = `Opens in ${fmtDuration(wait)} (Monday)`;
+    const dayName = isFinite(firstOpen)
+      ? new Date(firstOpen).toLocaleDateString('en-US', { timeZone: displayTz, weekday: 'long' })
+      : 'Monday';
+    opensEl.textContent = `Opens in ${fmtDuration(wait)} (${dayName})`;
   } else {
     banner.classList.remove('visible');
     opensEl.textContent = '';
@@ -868,6 +870,7 @@ function drawTimeline() {
     const boundsYesterday = getSessionBoundsUTC(session, yesterday);
 
     // Draw a band clamped to [00:00, 24:00] UTC today
+    const weekend = isWeekend(now);
     const drawBand = (openUTC, closeUTC) => {
       const clampedOpen  = Math.max(openUTC,  todayUTCMidnight);
       const clampedClose = Math.min(closeUTC, todayUTCEnd);
@@ -877,23 +880,28 @@ function drawTimeline() {
       const xClose = PAD_L + ((clampedClose - todayUTCMidnight) / 86400000) * plotW;
       const bandW  = xClose - xOpen;
 
+      // On weekends, render bands dimmed/gray to indicate market is closed
+      const col        = weekend ? '#2a4d64' : session.color;
+      const fillAlpha  = weekend ? '22' : '33';
+      const borderCol  = weekend ? '#1a3d54' : (col + 'aa');
+      const labelCol   = weekend ? '#1e4060' : col;
+
       // Band fill
-      const col = session.color;
-      ctx.fillStyle = col + '33'; // ~20% opacity background
+      ctx.fillStyle = col + fillAlpha;
       ctx.beginPath();
       ctx.roundRect(xOpen, y, bandW, BAR_H, 4);
       ctx.fill();
 
       // Border
-      ctx.strokeStyle = col + 'aa';
-      ctx.lineWidth   = 1.5;
+      ctx.strokeStyle = borderCol;
+      ctx.lineWidth   = 1;
       ctx.beginPath();
       ctx.roundRect(xOpen, y, bandW, BAR_H, 4);
       ctx.stroke();
 
       // Session label (only if wide enough)
       if (bandW > 50) {
-        ctx.fillStyle   = col;
+        ctx.fillStyle   = labelCol;
         ctx.font        = `600 11px Inter, sans-serif`;
         ctx.textAlign   = 'left';
         const labelX    = xOpen + LABEL_PAD;
@@ -913,18 +921,12 @@ function drawTimeline() {
     break; // skip — handled via opacity stacking above
   }
 
-  // Weekend overlay — dim the entire bar area and show "Market Closed"
+  // Weekend: subtle "Market Closed" label in bottom-right of band area
   if (isWeekend(now)) {
-    const bandsBottom = BAR_Y + SESSIONS.length * (BAR_H + GAP) - GAP;
-    ctx.fillStyle = 'rgba(6,36,52,0.55)';
-    ctx.fillRect(PAD_L, BAR_Y, plotW, bandsBottom - BAR_Y);
-    ctx.fillStyle = 'rgba(227,179,65,0.18)';
-    ctx.fillRect(PAD_L, BAR_Y, plotW, bandsBottom - BAR_Y);
-
-    ctx.font      = '700 13px Inter, sans-serif';
-    ctx.fillStyle = '#e3b341';
-    ctx.textAlign = 'center';
-    ctx.fillText('🔒  MARKET CLOSED — WEEKEND', W / 2, BAR_Y + (bandsBottom - BAR_Y) / 2 + 5);
+    ctx.font      = '500 11px Inter, sans-serif';
+    ctx.fillStyle = '#2a4d64';
+    ctx.textAlign = 'right';
+    ctx.fillText('Market Closed — Weekend', W - PAD_R, H - AXIS_H - 6);
   }
 
   // Current UTC time marker
