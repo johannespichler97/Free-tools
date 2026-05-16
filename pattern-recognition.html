@@ -690,65 +690,75 @@ async function scan() {
 }
 
 // ── Background stoploss verification ──────────────────────────
-// Uses the pattern's own TF candles to detect if price violated the
-// Bearish: highest HIGH between start_time and end_time = the pattern's stoploss level.
-//          If any post-end candle HIGH > that → SL hit → remove.
-// Bullish: lowest LOW between start_time and end_time = the pattern's stoploss level.
-//          If any post-end candle LOW < that → SL hit → remove.
+// Groups patterns by symbol+TF so candles are fetched once per group,
+// not once per pattern. Reduces 30 API calls to ~5-10.
 async function checkSLHits() {
-  console.log('[checkSLHits] called, allResults:', allResults.length);
   const toCheck = allResults.filter(i => !i._slChecked);
-  console.log('[checkSLHits] toCheck:', toCheck.length, toCheck.map(i => `${i.symLabel} ${i.tfLabel} start_time=${i.pattern.start_time}`));
-  if (toCheck.length === 0) {
-    showSLDebug(0);
-    return;
+  if (toCheck.length === 0) { showSLDebug(0); return; }
+
+  // Group by sym+tf — one candle fetch covers all patterns in the group
+  const groups = {};
+  for (const item of toCheck) {
+    const key = `${item.sym}||${item.tf}`;
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(item);
   }
 
+  const groupKeys = Object.keys(groups);
   let removed = 0;
-  for (let idx = 0; idx < toCheck.length; idx++) {
-    const item  = toCheck[idx];
-    const p     = item.pattern;
-    const type  = (p.patterntype || '').toLowerCase();
-    const start = p.start_time || p.atime;
-    const end   = p.end_time   || p.sortTime;
-    if (!start || !end) { item._slChecked = true; continue; }
 
-    const now = Math.floor(Date.now() / 1000) + (TF_SECONDS[item.tf] || 3600);
-    const url = `${API_BASE}/forex/candle?symbol=${encodeURIComponent(item.sym)}&resolution=${item.tf}&from=${start}&to=${now}&token=${API_KEY}`;
+  for (let gi = 0; gi < groupKeys.length; gi++) {
+    const items   = groups[groupKeys[gi]];
+    const { sym, tf } = items[0];
+
+    // Fetch from the earliest start_time in this group through now
+    const minStart = Math.min(...items.map(i => i.pattern.start_time || i.pattern.atime || Infinity));
+    const now      = Math.floor(Date.now() / 1000) + (TF_SECONDS[tf] || 3600);
+    const url      = `${API_BASE}/forex/candle?symbol=${encodeURIComponent(sym)}&resolution=${tf}&from=${minStart}&to=${now}&token=${API_KEY}`;
+
     try {
       const res  = await fetch(url);
       const data = res.ok ? await res.json() : null;
       if (data && data.s === 'ok' && data.t && data.l && data.h) {
         const t = data.t, l = data.l, h = data.h;
 
-        // Step 1: highest HIGH (bearish) or lowest LOW (bullish) within [start_time..end_time]
-        let extreme = type === 'bearish' ? -Infinity : Infinity;
-        for (let i = 0; i < t.length; i++) {
-          if (t[i] < start || t[i] > end) continue;
-          if (type === 'bearish') extreme = Math.max(extreme, h[i]);
-          else                    extreme = Math.min(extreme, l[i]);
-        }
+        for (const item of items) {
+          const p     = item.pattern;
+          const type  = (p.patterntype || '').toLowerCase();
+          const start = p.start_time || p.atime;
+          const end   = p.end_time   || p.sortTime;
+          if (!start || !end) { item._slChecked = true; continue; }
 
-        // Step 2: any post-end_time candle that ever breached the extreme → SL hit
-        let slHit = false;
-        if (extreme !== -Infinity && extreme !== Infinity) {
+          // Highest HIGH (bearish) or lowest LOW (bullish) within [start..end]
+          let extreme = type === 'bearish' ? -Infinity : Infinity;
           for (let i = 0; i < t.length; i++) {
-            if (t[i] <= end) continue;
-            if (type === 'bearish' && h[i] > extreme) { slHit = true; break; }
-            if (type === 'bullish' && l[i] < extreme) { slHit = true; break; }
+            if (t[i] < start || t[i] > end) continue;
+            if (type === 'bearish') extreme = Math.max(extreme, h[i]);
+            else                    extreme = Math.min(extreme, l[i]);
           }
-        }
 
-        console.log(`[SL] ${item.symLabel} ${item.tfLabel} ${type} | extreme:${extreme} | slHit:${slHit} | candles:${t.length}`);
-        if (slHit) { item._slHit = true; removed++; }
+          // Any post-end candle that ever breached the extreme → SL hit
+          let slHit = false;
+          if (extreme !== -Infinity && extreme !== Infinity) {
+            for (let i = 0; i < t.length; i++) {
+              if (t[i] <= end) continue;
+              if (type === 'bearish' && h[i] > extreme) { slHit = true; break; }
+              if (type === 'bullish' && l[i] < extreme) { slHit = true; break; }
+            }
+          }
+
+          if (slHit) { item._slHit = true; removed++; }
+          item._slChecked = true;
+        }
       } else {
-        console.warn(`[SL] ${item.symLabel} ${item.tfLabel} — fetch failed:`, data?.s);
+        items.forEach(i => i._slChecked = true);
       }
-    } catch (e) { console.error('[SL] error:', e); }
-    item._slChecked = true;
-    if (idx % 5 === 4 && idx < toCheck.length - 1) await sleep(1100);
-    else await sleep(80);
+    } catch (e) { items.forEach(i => i._slChecked = true); }
+
+    // Rate limit only between different symbol+TF fetches
+    if (gi < groupKeys.length - 1) await sleep(250);
   }
+
   if (removed > 0) renderResults();
   showSLDebug(removed);
 }
