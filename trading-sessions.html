@@ -319,11 +319,6 @@ canvas#timelineCanvas { display:block; width:100%; }
   <!-- ── MAIN ── -->
   <main class="main">
 
-    <!-- Session cards -->
-    <div class="sessions-grid" id="sessionsGrid">
-      <!-- Cards injected by JS -->
-    </div>
-
     <!-- 24-hour timeline -->
     <div class="timeline-section">
       <div class="section-heading">24-Hour UTC Timeline</div>
@@ -332,6 +327,11 @@ canvas#timelineCanvas { display:block; width:100%; }
           <canvas id="timelineCanvas" height="130"></canvas>
         </div>
       </div>
+    </div>
+
+    <!-- Session cards -->
+    <div class="sessions-grid" id="sessionsGrid">
+      <!-- Cards injected by JS -->
     </div>
 
   </main>
@@ -907,7 +907,7 @@ function tickTimeline() {
 
   // Timeline redraws every minute
   drawTimeline();
-  setInterval(tickTimeline, 60000);
+  setInterval(tickTimeline, 1000);
 
   // Redraw timeline on resize (debounced)
   let resizeTimer;
