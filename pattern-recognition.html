@@ -261,7 +261,7 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 
       <!-- Instruments -->
       <div class="ctrl-row">
-        <span class="ctrl-label">Instruments</span>
+        <span class="ctrl-label">Instruments <span style="font-size:10px;color:var(--text-muted);font-weight:400;letter-spacing:0">(max 10)</span></span>
         <div class="chip-actions">
           <button class="chip-action-btn" id="selectAllAssets">Select All</button>
           <button class="chip-action-btn" id="clearAssets">Clear</button>
@@ -312,7 +312,7 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 
       <!-- Timeframes -->
       <div class="ctrl-row">
-        <span class="ctrl-label">Timeframes</span>
+        <span class="ctrl-label">Timeframes <span style="font-size:10px;color:var(--text-muted);font-weight:400;letter-spacing:0">(max 4)</span></span>
         <div class="tf-chips">
           <span class="tf-chip" data-res="5">5m</span>
           <span class="tf-chip" data-res="15">15m</span>
@@ -496,7 +496,7 @@ function updateCounter() {
   if (a === 0 || t === 0) {
     el.innerHTML = '<span style="color:var(--negative)">Select at least 1 instrument and 1 timeframe</span>';
   } else {
-    el.innerHTML = `<strong>${a}</strong>/10 instruments × <strong>${t}</strong>/3 timeframes = <strong>${total}</strong> scan${total!==1?'s':''}`;
+    el.innerHTML = `<strong>${a}</strong>/10 instruments × <strong>${t}</strong>/4 timeframes = <strong>${total}</strong> scan${total!==1?'s':''}`;
   }
 }
 
@@ -996,11 +996,11 @@ document.querySelectorAll('.asset-chip').forEach(chip => {
   });
 });
 
-// Timeframe chips — max 3
+// Timeframe chips — max 4
 document.querySelectorAll('.tf-chip').forEach(chip => {
   chip.addEventListener('click', () => {
     const active = document.querySelectorAll('.tf-chip.active');
-    if (!chip.classList.contains('active') && active.length >= 3) return;
+    if (!chip.classList.contains('active') && active.length >= 4) return;
     chip.classList.toggle('active');
     updateCounter();
   });
