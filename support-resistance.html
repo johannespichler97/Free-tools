@@ -150,6 +150,17 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 .sr-level-dist.s { background:var(--positive-bg); color:var(--positive); }
 .sr-nearest-tag { font-size:9px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; }
 
+.copy-btn {
+  display:inline-flex; align-items:center; justify-content:center;
+  width:20px; height:20px; border-radius:4px; border:none;
+  background:transparent; color:var(--text-muted); cursor:pointer;
+  opacity:0; transition:opacity .15s, color .15s, background .15s;
+  flex-shrink:0; padding:0; font-size:11px;
+}
+.sr-level-row:hover .copy-btn { opacity:1; }
+.copy-btn:hover { background:var(--bg-tertiary); color:var(--accent); }
+.copy-btn.copied { color:var(--positive); opacity:1; }
+
 /* Current price row */
 .sr-price-row { display:flex; align-items:center; gap:7px; padding:5px 6px; border-radius:6px; background:rgba(47,163,224,0.07); border:1px solid rgba(47,163,224,0.18); margin:6px 0; }
 .sr-price-dot { width:8px; height:8px; border-radius:50%; background:var(--accent); box-shadow:0 0 5px rgba(47,163,224,0.6); flex-shrink:0; }
@@ -400,7 +411,7 @@ const API_KEY  = 'd4fevfpr01qkcvvhv6h0d4fevfpr01qkcvvhv6hg';
 const API_BASE = 'https://finnhub.io/api/v1';
 const TF_LABELS  = {'5':'5m','15':'15m','30':'30m','60':'1H','240':'4H','D':'Daily','W':'Weekly','M':'Monthly'};
 const TF_SECONDS = {'5':300,'15':900,'30':1800,'60':3600,'240':14400,'D':86400,'W':604800,'M':2592000};
-const TF_CANDLES = {'5':120,'15':100,'30':100,'60':100,'240':80,'D':100,'W':60,'M':36};
+const TF_CANDLES = {'5':200,'15':150,'30':150,'60':150,'240':120,'D':200,'W':100,'M':60};
 
 let allResults = [];
 
@@ -591,25 +602,33 @@ function buildCard(item) {
   const nearestS = supports.length ? supports[supports.length-1] : null;
   const nearestR = resists.length  ? resists[0]                  : null;
 
-  // Resistance rows (descending, show max 3)
+  // Resistance rows (descending, show max 4)
   const rRows = [...resists].reverse().slice(0,4).map((lvl, i) => {
     const diff = price ? lvl - price : 0;
+    const priceStr = fmtPrice(lvl, sym);
     return `<div class="sr-level-row">
       <span class="sr-dot r"></span>
-      <span class="sr-level-price">${fmtPrice(lvl, sym)}</span>
+      <span class="sr-level-price">${priceStr}</span>
       ${price ? `<span class="sr-level-dist r">${fmtPips(diff,sym)}</span>` : ''}
       ${i===resists.length-1&&price?'<span class="sr-nearest-tag">nearest</span>':''}
+      <button class="copy-btn" title="Copy ${priceStr}" onclick="copyLevel(event,'${priceStr}')">
+        <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="5" width="9" height="9" rx="1.5"/><path d="M11 5V3a1 1 0 00-1-1H3a1 1 0 00-1 1v7a1 1 0 001 1h2"/></svg>
+      </button>
     </div>`;
   }).join('');
 
-  // Support rows (descending = nearest first, show max 3)
+  // Support rows (descending = nearest first, show max 4)
   const sRows = [...supports].reverse().slice(0,4).map((lvl, i) => {
     const diff = price ? lvl - price : 0;
+    const priceStr = fmtPrice(lvl, sym);
     return `<div class="sr-level-row">
       <span class="sr-dot s"></span>
-      <span class="sr-level-price">${fmtPrice(lvl, sym)}</span>
+      <span class="sr-level-price">${priceStr}</span>
       ${price ? `<span class="sr-level-dist s">${fmtPips(diff,sym)}</span>` : ''}
       ${i===0&&price?'<span class="sr-nearest-tag">nearest</span>':''}
+      <button class="copy-btn" title="Copy ${priceStr}" onclick="copyLevel(event,'${priceStr}')">
+        <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="5" width="9" height="9" rx="1.5"/><path d="M11 5V3a1 1 0 00-1-1H3a1 1 0 00-1 1v7a1 1 0 001 1h2"/></svg>
+      </button>
     </div>`;
   }).join('');
 
@@ -656,6 +675,20 @@ function buildCard(item) {
     </div>
     <div class="sr-click-hint">Click to view chart →</div>
   </div>`;
+}
+
+/* ── Copy level ── */
+function copyLevel(e, price) {
+  e.stopPropagation(); // don't open chart modal
+  navigator.clipboard.writeText(price).then(() => {
+    const btn = e.currentTarget;
+    btn.classList.add('copied');
+    btn.innerHTML = '<svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="2 8 6 12 14 4"/></svg>';
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      btn.innerHTML = '<svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="5" width="9" height="9" rx="1.5"/><path d="M11 5V3a1 1 0 00-1-1H3a1 1 0 00-1 1v7a1 1 0 001 1h2"/></svg>';
+    }, 1500);
+  });
 }
 
 /* ── Chart Modal ── */
@@ -723,121 +756,119 @@ function buildModalFooter(footer, item) {
 
 /* ── Canvas drawing ── */
 function drawSRChart(canvas, candles, levels, currentPrice, sym) {
-  const dpr  = window.devicePixelRatio || 1;
-  const W    = canvas.offsetWidth || 700;
-  const H    = 340;
+  const dpr = window.devicePixelRatio || 1;
+  const W   = canvas.offsetWidth || 700;
+  const H   = 340;
   canvas.width  = W * dpr;
   canvas.height = H * dpr;
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
 
-  const n = candles.t.length;
-  const PAD_L = 8, PAD_R = 72, PAD_T = 16, PAD_B = 28;
-  const plotW = W - PAD_L - PAD_R;
-  const plotH = H - PAD_T - PAD_B;
+  const { t, o, h, l, c } = candles;
+  const n = t.length;
+
+  // Same layout as pattern recognition
+  const PL = 72, PR = 12, PT = 22, PB = 34;
+  const cW = W - PL - PR;
+  const cH = H - PT - PB;
 
   // Price range — include S/R levels
-  const allP = [...candles.h, ...candles.l, ...levels];
-  if (currentPrice) allP.push(currentPrice);
-  let minP = Math.min(...allP);
-  let maxP = Math.max(...allP);
+  let maxP = Math.max(...h), minP = Math.min(...l);
+  for (const lvl of levels) { maxP = Math.max(maxP, lvl); minP = Math.min(minP, lvl); }
+  if (currentPrice) { maxP = Math.max(maxP, currentPrice); minP = Math.min(minP, currentPrice); }
   const pad = (maxP - minP) * 0.06;
-  minP -= pad; maxP += pad;
+  maxP += pad; minP -= pad;
+  const range = maxP - minP || 1;
 
-  const pX = i => PAD_L + (i / n) * plotW;
-  const pY = p => PAD_T + (1 - (p - minP) / (maxP - minP)) * plotH;
-  const cW = plotW / n;
+  const pY = p  => PT + cH * (1 - (p - minP) / range);
+  const bW = Math.max(1.5, cW / n * 0.65);
+  const bX = i  => PL + (i + 0.5) * (cW / n);
 
   // Background
   ctx.fillStyle = '#062434';
   ctx.fillRect(0, 0, W, H);
 
-  // Horizontal grid lines
-  ctx.strokeStyle = '#0d3550';
-  ctx.lineWidth = 1;
+  // Grid + left price axis (identical to pattern recognition)
+  ctx.strokeStyle = '#1a4d6e';
+  ctx.lineWidth = 0.5;
+  ctx.fillStyle = '#4d7a96';
+  ctx.font = '10px JetBrains Mono, monospace';
+  ctx.textAlign = 'right';
   for (let i = 0; i <= 5; i++) {
-    const y = PAD_T + (i / 5) * plotH;
-    ctx.beginPath(); ctx.moveTo(PAD_L, y); ctx.lineTo(W - PAD_R, y); ctx.stroke();
+    const y = PT + (cH / 5) * i;
+    ctx.beginPath(); ctx.moveTo(PL, y); ctx.lineTo(W - PR, y); ctx.stroke();
+    const p = maxP - (range / 5) * i;
+    ctx.fillText(fmtPrice(p, sym), PL - 5, y + 3.5);
   }
 
-  // S/R level lines (behind candles)
+  // S/R level lines — drawn before candles so they sit behind
   for (const lvl of levels) {
     const isR = currentPrice ? lvl >= currentPrice : false;
     const y   = pY(lvl);
-    ctx.save();
-    ctx.strokeStyle = isR ? 'rgba(248,81,73,0.65)' : 'rgba(63,185,80,0.65)';
+
+    // Subtle zone band
+    ctx.fillStyle = isR ? 'rgba(248,81,73,0.05)' : 'rgba(63,185,80,0.05)';
+    ctx.fillRect(PL, y - 3, cW, 6);
+
+    // Dashed line
+    ctx.strokeStyle = isR ? 'rgba(248,81,73,0.7)' : 'rgba(63,185,80,0.7)';
     ctx.lineWidth = 1.5;
     ctx.setLineDash([5, 4]);
-    ctx.beginPath(); ctx.moveTo(PAD_L, y); ctx.lineTo(W - PAD_R + 2, y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(PL, y); ctx.lineTo(W - PR, y); ctx.stroke();
     ctx.setLineDash([]);
 
-    // Zone band (subtle fill)
-    const bandH = Math.max(2, cW * 0.3);
-    ctx.fillStyle = isR ? 'rgba(248,81,73,0.06)' : 'rgba(63,185,80,0.06)';
-    ctx.fillRect(PAD_L, y - bandH/2, plotW, bandH);
-
-    // Price label on right
-    ctx.fillStyle  = isR ? '#f85149' : '#3fb950';
-    ctx.font       = `600 10px 'JetBrains Mono', monospace`;
-    ctx.textAlign  = 'left';
+    // Label on right edge (inside chart)
+    ctx.fillStyle    = isR ? '#f85149' : '#3fb950';
+    ctx.font         = '600 9px JetBrains Mono, monospace';
+    ctx.textAlign    = 'right';
     ctx.textBaseline = 'middle';
-    ctx.fillText(fmtPrice(lvl, sym), W - PAD_R + 6, y);
-    ctx.restore();
+    ctx.fillText(fmtPrice(lvl, sym), W - PR - 4, y);
   }
 
-  // Candlesticks
-  for (let i = 0; i < n; i++) {
-    const o = candles.o[i], c = candles.c[i];
-    const h = candles.h[i], l = candles.l[i];
-    const bull = c >= o;
-    const cx   = pX(i) + cW / 2;
-    const bW   = Math.max(1, cW * 0.7);
-    const bX   = cx - bW / 2;
+  // Current price dashed line
+  if (currentPrice) {
+    const y = pY(currentPrice);
+    ctx.strokeStyle = '#2FA3E0';
+    ctx.lineWidth   = 1.5;
+    ctx.setLineDash([4, 3]);
+    ctx.beginPath(); ctx.moveTo(PL, y); ctx.lineTo(W - PR, y); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle    = '#2FA3E0';
+    ctx.font         = '700 9px JetBrains Mono, monospace';
+    ctx.textAlign    = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(fmtPrice(currentPrice, sym), W - PR - 4, y - 8);
+  }
 
-    const col = bull ? '#3fb950' : '#f85149';
+  // Candlesticks — solid fill, identical style to pattern recognition
+  for (let i = 0; i < n; i++) {
+    const x    = bX(i);
+    const bull = c[i] >= o[i];
+    const col  = bull ? '#3fb950' : '#f85149';
+
     ctx.strokeStyle = col;
     ctx.lineWidth   = 1;
 
     // Wick
-    ctx.beginPath(); ctx.moveTo(cx, pY(h)); ctx.lineTo(cx, pY(l)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x, pY(h[i])); ctx.lineTo(x, pY(l[i])); ctx.stroke();
 
-    // Body
-    ctx.fillStyle = bull ? 'rgba(63,185,80,0.75)' : 'rgba(248,81,73,0.75)';
-    const yTop = pY(Math.max(o, c));
-    const yBot = pY(Math.min(o, c));
+    // Body — solid fill, no stroke overlay
+    const yTop = pY(Math.max(o[i], c[i]));
+    const yBot = pY(Math.min(o[i], c[i]));
     const bH   = Math.max(1, yBot - yTop);
-    ctx.fillRect(bX, yTop, bW, bH);
-    if (bH > 1) { ctx.strokeRect(bX, yTop, bW, bH); }
+    ctx.fillStyle = col;
+    ctx.fillRect(x - bW / 2, yTop, bW, bH);
   }
 
-  // Current price line (on top)
-  if (currentPrice) {
-    const y = pY(currentPrice);
-    ctx.save();
-    ctx.strokeStyle = 'rgba(47,163,224,0.9)';
-    ctx.lineWidth   = 1.5;
-    ctx.setLineDash([4, 3]);
-    ctx.beginPath(); ctx.moveTo(PAD_L, y); ctx.lineTo(W - PAD_R + 2, y); ctx.stroke();
-    ctx.setLineDash([]);
-
-    ctx.fillStyle = '#2FA3E0';
-    ctx.font      = `700 10px 'JetBrains Mono', monospace`;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(fmtPrice(currentPrice, sym), W - PAD_R + 6, y);
-    ctx.restore();
-  }
-
-  // X-axis date labels (every ~10 candles)
-  ctx.fillStyle  = '#4d7a96';
-  ctx.font       = '10px Inter, sans-serif';
-  ctx.textAlign  = 'center';
+  // Time axis labels
+  ctx.fillStyle    = '#4d7a96';
+  ctx.font         = '9px Inter, sans-serif';
+  ctx.textAlign    = 'center';
   ctx.textBaseline = 'top';
-  const step = Math.max(1, Math.floor(n / 8));
+  const step = Math.max(1, Math.floor(n / 6));
   for (let i = 0; i < n; i += step) {
-    const d = new Date(candles.t[i] * 1000);
-    const label = d.toLocaleDateString('en-GB', {month:'short', day:'numeric'});
-    ctx.fillText(label, pX(i) + cW / 2, H - PAD_B + 4);
+    const d = new Date(t[i] * 1000);
+    ctx.fillText(d.toLocaleDateString('en-US', {month:'short', day:'numeric'}), bX(i), H - 14);
   }
 }
 
