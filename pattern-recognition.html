@@ -685,8 +685,8 @@ async function scan() {
   document.getElementById('summaryBar').style.display = 'flex';
   document.getElementById('sortRow').style.display = allResults.length > 0 ? 'flex' : 'none';
 
+  await checkSLHits();
   renderResults();
-  checkSLHits();
 }
 
 // ── Background stoploss verification ──────────────────────────
@@ -759,7 +759,6 @@ async function checkSLHits() {
     if (gi < groupKeys.length - 1) await sleep(250);
   }
 
-  if (removed > 0) renderResults();
 }
 
 // ── Chart modal ────────────────────────────────────────────────
