@@ -496,7 +496,7 @@ function updateCounter() {
   if (a === 0 || t === 0) {
     el.innerHTML = '<span style="color:var(--negative)">Select at least 1 instrument and 1 timeframe</span>';
   } else {
-    el.innerHTML = `<strong>${a}</strong> instrument${a!==1?'s':''} × <strong>${t}</strong> timeframe${t!==1?'s':''} = <strong>${total}</strong> scan${total!==1?'s':''}`;
+    el.innerHTML = `<strong>${a}</strong>/10 instruments × <strong>${t}</strong>/3 timeframes = <strong>${total}</strong> scan${total!==1?'s':''}`;
   }
 }
 
@@ -986,17 +986,21 @@ function renderCandleChart(canvas, data, item) {
 
 // ── Event listeners ────────────────────────────────────────────
 
-// Asset chips
+// Asset chips — max 10
 document.querySelectorAll('.asset-chip').forEach(chip => {
   chip.addEventListener('click', () => {
+    const active = document.querySelectorAll('.asset-chip.active');
+    if (!chip.classList.contains('active') && active.length >= 10) return;
     chip.classList.toggle('active');
     updateCounter();
   });
 });
 
-// Timeframe chips
+// Timeframe chips — max 3
 document.querySelectorAll('.tf-chip').forEach(chip => {
   chip.addEventListener('click', () => {
+    const active = document.querySelectorAll('.tf-chip.active');
+    if (!chip.classList.contains('active') && active.length >= 3) return;
     chip.classList.toggle('active');
     updateCounter();
   });
@@ -1004,7 +1008,11 @@ document.querySelectorAll('.tf-chip').forEach(chip => {
 
 // Select all / clear
 document.getElementById('selectAllAssets').addEventListener('click', () => {
-  document.querySelectorAll('.asset-chip').forEach(c => c.classList.add('active'));
+  let count = 0;
+  document.querySelectorAll('.asset-chip').forEach(c => {
+    if (count < 10) { c.classList.add('active'); count++; }
+    else c.classList.remove('active');
+  });
   updateCounter();
 });
 document.getElementById('clearAssets').addEventListener('click', () => {
