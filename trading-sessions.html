@@ -871,12 +871,12 @@ function drawTimeline() {
     ctx.stroke();
     ctx.shadowBlur = 0;
 
-    // "NOW" label on the line
-    const utcHM = now.toLocaleTimeString('en-GB', { timeZone: 'UTC', hour: '2-digit', minute: '2-digit', hour12: false });
+    // "NOW" label on the line — show time in the user's selected timezone
+    const localHM = now.toLocaleTimeString('en-GB', { timeZone: displayTz, hour: '2-digit', minute: '2-digit', hour12: false });
     ctx.fillStyle   = '#51d7ce';
     ctx.font        = `700 10px JetBrains Mono, monospace`;
     ctx.textAlign   = xNow > W - 60 ? 'right' : 'left';
-    ctx.fillText(`▼ ${utcHM}`, xNow + (xNow > W - 60 ? -4 : 4), BAR_Y - 3);
+    ctx.fillText(`▼ ${localHM}`, xNow + (xNow > W - 60 ? -4 : 4), BAR_Y - 3);
   }
 }
 
