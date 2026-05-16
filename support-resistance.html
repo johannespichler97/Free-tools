@@ -266,8 +266,13 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
     <div class="controls-box">
 
       <div class="ctrl-row">
-        <span class="ctrl-label">Assets</span>
-        <div class="asset-chips" id="assetChips">
+        <span class="ctrl-label">Instruments <span style="font-size:10px;color:var(--text-muted);font-weight:400;letter-spacing:0">(max 10)</span></span>
+        <div class="chip-actions">
+          <button class="chip-action-btn" onclick="selectAllAssets()">Select All</button>
+          <button class="chip-action-btn" onclick="clearAssets()">Clear</button>
+        </div>
+      </div>
+      <div class="asset-chips" id="assetChips">
           <span class="asset-chip active"       data-sym="OANDA:AUD_CAD">AUDCAD</span>
           <span class="asset-chip"              data-sym="OANDA:AUD_CHF">AUDCHF</span>
           <span class="asset-chip"              data-sym="OANDA:AUD_JPY">AUDJPY</span>
@@ -298,9 +303,6 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
           <span class="asset-chip active"       data-sym="OANDA:USD_JPY">USDJPY</span>
           <span class="asset-chip metal"        data-sym="OANDA:XAG_USD">XAGUSD</span>
           <span class="asset-chip metal active" data-sym="OANDA:XAU_USD">XAUUSD</span>
-        </div>
-        <div class="chip-actions">
-          <button class="chip-action-btn" onclick="clearAssets()">Clear</button>
         </div>
       </div>
 
@@ -433,6 +435,13 @@ document.querySelectorAll('.tf-chip').forEach(c => c.addEventListener('click', (
   c.classList.toggle('active'); updateCounter();
 }));
 
+function selectAllAssets() {
+  let count = 0;
+  document.querySelectorAll('.asset-chip').forEach(c => {
+    if (count < 10) { c.classList.add('active'); count++; }
+  });
+  updateCounter();
+}
 function clearAssets() { document.querySelectorAll('.asset-chip.active').forEach(c => c.classList.remove('active')); updateCounter(); }
 
 updateCounter();
