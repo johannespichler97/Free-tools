@@ -706,13 +706,11 @@ async function checkSLHits() {
   }
 
   const groupKeys = Object.keys(groups);
-  let removed = 0;
 
-  for (let gi = 0; gi < groupKeys.length; gi++) {
-    const items   = groups[groupKeys[gi]];
+  async function fetchGroup(key) {
+    const items = groups[key];
     const { sym, tf } = items[0];
 
-    // Fetch from the earliest start_time in this group through now
     const minStart = Math.min(...items.map(i => i.pattern.start_time || i.pattern.atime || Infinity));
     const now      = Math.floor(Date.now() / 1000) + (TF_SECONDS[tf] || 3600);
     const url      = `${API_BASE}/forex/candle?symbol=${encodeURIComponent(sym)}&resolution=${tf}&from=${minStart}&to=${now}&token=${API_KEY}`;
@@ -748,18 +746,24 @@ async function checkSLHits() {
             }
           }
 
-          if (slHit) { item._slHit = true; removed++; }
+          if (slHit) item._slHit = true;
           item._slChecked = true;
         }
       } else {
         items.forEach(i => i._slChecked = true);
       }
     } catch (e) { items.forEach(i => i._slChecked = true); }
-
-    // Rate limit only between different symbol+TF fetches
-    if (gi < groupKeys.length - 1) await sleep(250);
   }
 
+  // Fetch all groups in parallel, max 5 concurrent to stay within rate limits
+  const CONCURRENCY = 5;
+  let idx = 0;
+  async function worker() {
+    while (idx < groupKeys.length) {
+      await fetchGroup(groupKeys[idx++]);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, groupKeys.length) }, worker));
 }
 
 // ── Chart modal ────────────────────────────────────────────────
