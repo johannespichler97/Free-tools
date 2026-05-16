@@ -220,6 +220,29 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 
 @media(max-width:700px) { .pair-group-grid,.skeleton-grid { grid-template-columns:1fr; } }
 @media(max-width:640px) { .header-inner,.main,.controls-bar { padding-left:16px; padding-right:16px; } }
+
+/* ── HAMBURGER MOBILE NAV ── */
+.hamburger { display:none; flex-direction:column; justify-content:center; gap:5px; background:none; border:none; padding:6px; cursor:pointer; border-radius:6px; transition:background .15s; margin-left:auto; }
+.hamburger:hover { background:var(--bg-hover); }
+.hamburger span { display:block; width:22px; height:2px; background:var(--text-primary); border-radius:1px; transition:all .25s; }
+.hamburger.open span:nth-child(1) { transform:translateY(7px) rotate(45deg); }
+.hamburger.open span:nth-child(2) { opacity:0; }
+.hamburger.open span:nth-child(3) { transform:translateY(-7px) rotate(-45deg); }
+@media(max-width:860px) {
+  .hamburger { display:flex; }
+  .header-inner { position:relative; flex-wrap:nowrap; }
+  .nav {
+    display:none; position:absolute; top:60px; left:0; right:0; z-index:99;
+    flex-direction:column; gap:0; padding:6px 0;
+    background:rgba(6,36,52,0.98); border-bottom:1px solid var(--border);
+    backdrop-filter:blur(12px);
+  }
+  .nav.open { display:flex; }
+  .nav-link { padding:13px 22px; border-radius:0; font-size:14px; border-bottom:1px solid rgba(26,77,110,0.4); }
+  .nav-link:last-child { border-bottom:none; }
+  .header-actions { gap:8px; }
+  .header-actions .btn-primary { display:none; }
+}
   </style>
 </head>
 <body>
@@ -246,6 +269,9 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
         <a href="trading-sessions.html" class="nav-link">Trading Sessions</a>
         <a href="position-size-calculator.html" class="nav-link">Position Size</a>
       </nav>
+      <button class="hamburger" id="hamburger" aria-label="Open navigation">
+        <span></span><span></span><span></span>
+      </button>
       <div class="header-actions">
         <span class="live-badge"><span class="live-dot">&#9679;</span> LIVE</span>
         <button class="btn-primary">Open Account</button>
@@ -304,13 +330,13 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
           <span class="asset-chip metal"        data-sym="OANDA:XAG_USD">XAGUSD</span>
           <span class="asset-chip metal active" data-sym="OANDA:XAU_USD">XAUUSD</span>
         </div>
-      </div>
 
       <hr class="ctrl-divider" />
 
       <div class="ctrl-row">
-        <span class="ctrl-label">Timeframes</span>
-        <div class="tf-chips" id="tfChips">
+        <span class="ctrl-label">Timeframes <span style="font-size:10px;color:var(--text-muted);font-weight:400;letter-spacing:0">(max 4)</span></span>
+      </div>
+      <div class="tf-chips" id="tfChips">
           <span class="tf-chip" data-res="5">5m</span>
           <span class="tf-chip" data-res="15">15m</span>
           <span class="tf-chip" data-res="30">30m</span>
@@ -320,7 +346,6 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
           <span class="tf-chip active" data-res="W">Weekly</span>
           <span class="tf-chip" data-res="M">Monthly</span>
         </div>
-      </div>
 
       <hr class="ctrl-divider" />
 
@@ -897,6 +922,24 @@ function drawNoData(canvas) {
   ctx.textBaseline = 'middle';
   ctx.fillText('No candle data available for this timeframe.', W/2, H/2);
 }
+  </script>
+  <script>
+  (function(){
+    var btn = document.getElementById('hamburger');
+    var nav = document.querySelector('.nav');
+    if (!btn || !nav) return;
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      btn.classList.toggle('open');
+      nav.classList.toggle('open');
+    });
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.header-inner')) {
+        btn.classList.remove('open');
+        nav.classList.remove('open');
+      }
+    });
+  })();
   </script>
 </body>
 </html>
