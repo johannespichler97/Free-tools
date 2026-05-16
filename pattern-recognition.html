@@ -393,7 +393,6 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
       </select>
     </div>
 
-    <div id="slDebug" style="display:none;color:#f85149;font-weight:600;font-size:13px;padding:8px 24px;"></div>
     <div id="resultsArea">
       <div class="state-box">
         <div class="state-icon">&#128202;</div>
@@ -558,6 +557,13 @@ function renderResults() {
   // Stoploss filter: hide signals already marked as SL hit by background check
   items = items.filter(i => !i._slHit);
 
+  // Update summary counters to match exactly what's displayed
+  const dispBull = items.filter(i => i.pattern.patterntype?.toLowerCase() === 'bullish').length;
+  const dispBear = items.filter(i => i.pattern.patterntype?.toLowerCase() === 'bearish').length;
+  document.getElementById('sumTotal').textContent = items.length;
+  document.getElementById('sumBull').textContent  = dispBull;
+  document.getElementById('sumBear').textContent  = dispBear;
+
   // Filter by type
   if (activeFilter !== 'all') {
     items = items.filter(i => i.pattern.patterntype?.toLowerCase() === activeFilter);
@@ -675,18 +681,12 @@ async function scan() {
   document.getElementById('progressWrap').style.display = 'none';
   document.getElementById('scanBtn').disabled = false;
 
-  // Update summary
-  const bull = allResults.filter(i => i.pattern.patterntype?.toLowerCase() === 'bullish').length;
-  const bear = allResults.filter(i => i.pattern.patterntype?.toLowerCase() === 'bearish').length;
-  document.getElementById('sumTotal').textContent   = allResults.length;
-  document.getElementById('sumBull').textContent    = bull;
-  document.getElementById('sumBear').textContent    = bear;
   document.getElementById('sumScanned').textContent = combos.length;
   document.getElementById('summaryBar').style.display = 'flex';
   document.getElementById('sortRow').style.display = allResults.length > 0 ? 'flex' : 'none';
 
   renderResults();
-  setTimeout(() => checkSLHits(), 3000); // show signals first, then filter SL hits after 3s
+  checkSLHits();
 }
 
 // ── Background stoploss verification ──────────────────────────
@@ -760,15 +760,6 @@ async function checkSLHits() {
   }
 
   if (removed > 0) renderResults();
-  showSLDebug(removed);
-}
-
-function showSLDebug(removed) {
-  const el = document.getElementById('slDebug');
-  if (!el) return;
-  el.textContent = `SL filter applied — ${removed} signal(s) removed`;
-  el.style.display = 'block';
-  setTimeout(() => { el.style.display = 'none'; }, 8000);
 }
 
 // ── Chart modal ────────────────────────────────────────────────
