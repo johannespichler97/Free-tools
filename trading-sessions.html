@@ -231,6 +231,19 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 }
 canvas#timelineCanvas { display:block; width:100%; }
 
+/* ── WEEKEND BANNER ── */
+.weekend-banner {
+  display:none; align-items:center; gap:14px;
+  background:rgba(227,179,65,0.10); border:1px solid rgba(227,179,65,0.35);
+  border-radius:var(--radius-lg); padding:16px 22px; margin-bottom:24px;
+}
+.weekend-banner.visible { display:flex; }
+.weekend-icon { font-size:22px; flex-shrink:0; }
+.weekend-text { flex:1; }
+.weekend-text strong { color:var(--medium); font-size:14px; }
+.weekend-text p { color:var(--text-secondary); font-size:13px; margin-top:3px; }
+.weekend-opens { font-family:var(--font-mono); color:var(--accent); font-weight:600; }
+
 /* ── FOOTER ── */
 .footer { background:var(--bg-secondary); border-top:1px solid var(--border); padding:24px; }
 .footer-inner { max-width:1200px; margin:0 auto; text-align:center; }
@@ -318,6 +331,15 @@ canvas#timelineCanvas { display:block; width:100%; }
 
   <!-- ── MAIN ── -->
   <main class="main">
+
+    <!-- Weekend notice -->
+    <div class="weekend-banner" id="weekendBanner">
+      <div class="weekend-icon">🔒</div>
+      <div class="weekend-text">
+        <strong>Markets Closed — Weekend</strong>
+        <p>Forex markets are closed on Saturday and Sunday. <span class="weekend-opens" id="weekendOpens"></span></p>
+      </div>
+    </div>
 
     <!-- 24-hour timeline -->
     <div class="timeline-section">
@@ -450,10 +472,26 @@ function getSessionBoundsUTC(session, forDate) {
 /**
  * Find the next open time for a session (searches up to 3 days ahead).
  */
+function isWeekend(date) {
+  const day = (date || new Date()).getUTCDay(); // 0=Sun, 6=Sat
+  return day === 0 || day === 6;
+}
+
+// Returns the UTC timestamp of the next Monday 00:00 UTC
+function nextMondayUTC(from) {
+  const d = new Date(from || Date.now());
+  d.setUTCHours(0, 0, 0, 0);
+  const day = d.getUTCDay(); // 0=Sun,6=Sat
+  const daysUntilMon = day === 0 ? 1 : (day === 6 ? 2 : 0);
+  d.setUTCDate(d.getUTCDate() + daysUntilMon);
+  return d.getTime();
+}
+
 function getNextOpenUTC(session) {
   const now = new Date();
-  for (let d = 0; d < 3; d++) {
+  for (let d = 0; d < 7; d++) {
     const t = new Date(now.getTime() + d * 86400000);
+    if (isWeekend(t)) continue; // skip Sat/Sun
     const { openUTC, closeUTC } = getSessionBoundsUTC(session, t);
     if (openUTC > now.getTime()) return openUTC;
   }
@@ -622,8 +660,32 @@ function renderCards() {
   updateCards();
 }
 
+function updateWeekendBanner() {
+  const now = new Date();
+  const banner = document.getElementById('weekendBanner');
+  const opensEl = document.getElementById('weekendOpens');
+  if (!banner) return;
+  if (isWeekend(now)) {
+    banner.classList.add('visible');
+    // Find when Sydney (first session) opens on Monday
+    const monMs = nextMondayUTC(now);
+    const mon   = new Date(monMs);
+    // Sydney opens at 08:00 local = earliest session
+    const firstOpen = SESSIONS.reduce((earliest, s) => {
+      const { openUTC } = getSessionBoundsUTC(s, mon);
+      return openUTC < earliest ? openUTC : earliest;
+    }, Infinity);
+    const wait = firstOpen - now.getTime();
+    opensEl.textContent = `Opens in ${fmtDuration(wait)} (Monday)`;
+  } else {
+    banner.classList.remove('visible');
+    opensEl.textContent = '';
+  }
+}
+
 function updateCards() {
   const now = new Date();
+  const weekend = isWeekend(now);
 
   SESSIONS.forEach(session => {
     /* --- Local time in session's own TZ --- */
@@ -644,7 +706,7 @@ function updateCards() {
     /* --- Open/Close bounds for today in session TZ --- */
     const { openUTC, closeUTC } = getSessionBoundsUTC(session, now);
     const nowMs   = now.getTime();
-    const isOpen  = nowMs >= openUTC && nowMs < closeUTC;
+    const isOpen  = !weekend && nowMs >= openUTC && nowMs < closeUTC;
 
     /* --- Status badge --- */
     const badge = document.getElementById(`status-${session.id}`);
@@ -851,6 +913,20 @@ function drawTimeline() {
     break; // skip — handled via opacity stacking above
   }
 
+  // Weekend overlay — dim the entire bar area and show "Market Closed"
+  if (isWeekend(now)) {
+    const bandsBottom = BAR_Y + SESSIONS.length * (BAR_H + GAP) - GAP;
+    ctx.fillStyle = 'rgba(6,36,52,0.55)';
+    ctx.fillRect(PAD_L, BAR_Y, plotW, bandsBottom - BAR_Y);
+    ctx.fillStyle = 'rgba(227,179,65,0.18)';
+    ctx.fillRect(PAD_L, BAR_Y, plotW, bandsBottom - BAR_Y);
+
+    ctx.font      = '700 13px Inter, sans-serif';
+    ctx.fillStyle = '#e3b341';
+    ctx.textAlign = 'center';
+    ctx.fillText('🔒  MARKET CLOSED — WEEKEND', W / 2, BAR_Y + (bandsBottom - BAR_Y) / 2 + 5);
+  }
+
   // Current UTC time marker
   const nowMs = now.getTime();
   const todayUTCMidnightMs = (() => { const d = new Date(); d.setUTCHours(0,0,0,0); return d.getTime(); })();
@@ -888,6 +964,7 @@ var todayUTCMidnight = (() => { const d = new Date(); d.setUTCHours(0,0,0,0); re
 ───────────────────────────────────────────── */
 function tick() {
   updateHeroClock();
+  updateWeekendBanner();
   updateCards();
 }
 
