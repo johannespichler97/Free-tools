@@ -340,7 +340,7 @@ thead th.col-actual,thead th.col-forecast,thead th.col-previous { text-align:rig
     <div class="hero-inner">
       <div class="hero-content">
         <h1>Economic Calendar</h1>
-        <p>Track market-moving events for Forex &amp; Gold.<br>All times shown in German time (CET/CEST).</p>
+        <p>Track market-moving events for Forex &amp; Gold.<br>Times shown in your selected timezone.</p>
       </div>
       <div class="hero-clock">
         <div class="clock-tz-badge" id="clockTZBadge">CET (UTC+1)</div>
@@ -427,7 +427,7 @@ thead th.col-actual,thead th.col-forecast,thead th.col-previous { text-align:rig
       <table class="calendar-table" id="calendarTable" style="display:none;">
         <thead>
           <tr>
-            <th class="col-time">Time (CET/CEST)</th>
+            <th class="col-time" id="colTimeHeader">Time</th>
             <th class="col-currency">Currency</th>
             <th class="col-impact">Impact</th>
             <th class="col-event">Event</th>
@@ -1185,7 +1185,7 @@ async function fetchCalendar(from, to) {
     if (!Array.isArray(allEvents)) throw new Error('Unexpected response format.');
     loading.style.display = 'none';
     applyFilters();
-    const t = new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit',timeZone:TZ});
+    const t = new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit',timeZone:selectedTZ});
     document.getElementById('lastUpdated').textContent = `Updated ${t} ${getTZLabel()}`;
 
   } catch(err) {
@@ -1231,6 +1231,8 @@ function updateClock() {
   const offset = getTZOffset();
   document.getElementById('clockTZBadge').textContent = `${tz} (${offset})`;
   document.getElementById('clockOffset').textContent  = selectedTZ.split('/').pop().replace(/_/g, ' ');
+  const colHdr = document.getElementById('colTimeHeader');
+  if (colHdr) colHdr.textContent = `Time (${tz})`;
 
   // Update NOW row clock if visible
   const nowRow = document.getElementById('nowRow');
