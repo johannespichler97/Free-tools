@@ -232,6 +232,20 @@ thead th.col-actual,thead th.col-forecast,thead th.col-previous { text-align:rig
 .event-country { font-size:11px; color:var(--text-muted); }
 .gold-tag { margin-left:6px; font-size:10px; color:var(--gold); background:var(--gold-bg); padding:1px 6px; border-radius:10px; font-weight:700; }
 
+/* Info expand */
+.event-row.has-info { cursor:pointer; }
+.event-row.has-info .event-name::after { content:' ⓘ'; font-size:11px; color:var(--text-muted); opacity:.6; }
+.event-row.has-info:hover .event-name::after { opacity:1; color:var(--accent); }
+.info-row td { padding:0; border-bottom:1px solid var(--border); }
+.info-panel { display:none; padding:14px 18px 16px; background:rgba(10,46,68,0.6); border-top:1px solid var(--border); }
+.info-row.open .info-panel { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; animation:fadeIn .15s ease; }
+.info-block-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--text-muted); margin-bottom:4px; }
+.info-block-text  { font-size:12.5px; color:var(--text-secondary); line-height:1.55; }
+.info-signal-up   { color:var(--positive); font-weight:600; }
+.info-signal-down { color:var(--negative); font-weight:600; }
+@media(max-width:800px) { .info-row.open .info-panel { grid-template-columns:1fr 1fr; } }
+@media(max-width:520px) { .info-row.open .info-panel { grid-template-columns:1fr; } }
+
 /* Value cells */
 .cell-actual,.cell-forecast,.cell-previous { text-align:right; font-size:13px; font-weight:500; padding-right:20px !important; white-space:nowrap; }
 .cell-actual { font-weight:700; font-size:14px; }
@@ -430,6 +444,312 @@ thead th.col-actual,thead th.col-forecast,thead th.col-previous { text-align:rig
 const API_KEY  = 'd4fevfpr01qkcvvhv6h0d4fevfpr01qkcvvhv6hg';
 const API_BASE = 'https://finnhub.io/api/v1';
 const TZ       = 'Europe/Berlin';
+
+// ── Event info database (built from 90-day high-impact data pull) ──
+const EVENT_DB = [
+  // ── US Employment ──
+  { match:['non farm payroll','nonfarm payroll'],
+    title:'Non-Farm Payrolls (NFP)',
+    what:'Monthly count of new jobs added across all US sectors except farming, government, and private households. Released on the first Friday of each month.',
+    why:'The single most market-moving US data release. It signals economic strength, consumer spending power, and directly influences Fed rate expectations.',
+    signal:'<span class="info-signal-up">Higher → bullish USD</span> (strong labour market supports rate hikes). <span class="info-signal-down">Lower → bearish USD</span> (soft jobs = room to cut rates).' },
+
+  { match:['jolts job opening'],
+    title:'JOLTs Job Openings',
+    what:'Monthly count of unfilled job vacancies across the US, published by the Bureau of Labor Statistics.',
+    why:'Measures labour demand. More openings = employers need workers = tight market. The Fed watches this closely as a leading wage pressure indicator.',
+    signal:'<span class="info-signal-up">Higher → bullish USD</span> (labour demand drives wage inflation, supports hawkish Fed). <span class="info-signal-down">Lower → bearish USD.</span>' },
+
+  { match:['unemployment rate'],
+    title:'Unemployment Rate',
+    what:'Percentage of the labour force actively seeking but unable to find work. Published monthly for each country.',
+    why:'A core measure of economic health. Central banks target low and stable unemployment as part of their dual mandate.',
+    signal:'<span class="info-signal-down">Higher → bearish for currency</span> (weak jobs = lower consumer spending, rate cut pressure). <span class="info-signal-up">Lower → bullish.</span>' },
+
+  // ── US Inflation ──
+  { match:['core pce price index','core pce'],
+    title:'Core PCE Price Index',
+    what:'Measures price changes of goods and services consumed by US households, excluding food and energy. The Fed\'s preferred inflation gauge.',
+    why:'This is what the Federal Reserve explicitly targets at 2%. More closely tracked by the FOMC than CPI when making rate decisions.',
+    signal:'<span class="info-signal-up">Higher → bullish USD</span> (hot inflation → Fed holds/hikes). <span class="info-signal-down">Lower → bearish USD</span> (cool inflation → rate cuts possible).' },
+
+  { match:['core inflation rate'],
+    title:'Core Inflation Rate (Core CPI)',
+    what:'Consumer Price Index excluding food and energy — the two most volatile components. Gives a cleaner read on underlying inflation trends.',
+    why:'Because food and energy prices swing sharply on supply shocks, central banks focus on core CPI to assess persistent inflation pressure.',
+    signal:'<span class="info-signal-up">Higher → bullish for currency</span> (persistent inflation keeps rates elevated). <span class="info-signal-down">Lower → bearish</span> (disinflation opens door to cuts).' },
+
+  { match:['inflation rate'],
+    title:'Inflation Rate (CPI)',
+    what:'Year-on-year or month-on-month change in the Consumer Price Index — the basket of everyday goods and services paid by households.',
+    why:'Central banks set rates to control inflation. A surprise above or below forecast directly shifts rate hike/cut expectations and moves the currency.',
+    signal:'<span class="info-signal-up">Higher → bullish for currency</span> (central bank may hike or hold rates longer). <span class="info-signal-down">Lower → bearish</span> (rate cuts become more likely).' },
+
+  { match:['ppi mom','ppi yoy','producer price'],
+    title:'Producer Price Index (PPI)',
+    what:'Measures price changes that domestic producers receive for their output — essentially inflation at the factory level before it reaches consumers.',
+    why:'PPI is a leading indicator of consumer inflation (CPI). Rising producer costs eventually get passed on to consumers, signalling future inflation pressure.',
+    signal:'<span class="info-signal-up">Higher → mildly bullish for currency</span> (cost-push inflation rising, CB may act). <span class="info-signal-down">Lower → bearish</span> (disinflation pipeline cooling).' },
+
+  { match:['personal income'],
+    title:'Personal Income MoM',
+    what:'Month-on-month change in total income received by US individuals — wages, salaries, dividends, and government transfers.',
+    why:'Higher personal income drives consumer spending and inflation. It feeds directly into PCE, the Fed\'s key inflation metric.',
+    signal:'<span class="info-signal-up">Higher → mildly bullish USD</span> (more income → more spending → inflation pressure). <span class="info-signal-down">Lower → bearish.</span>' },
+
+  { match:['personal spending'],
+    title:'Personal Spending MoM',
+    what:'Month-on-month change in what US consumers actually spent on goods and services. Accounts for ~70% of US GDP.',
+    why:'Consumer spending is the engine of the US economy. Strong spending supports growth and inflation, directly influencing Fed policy.',
+    signal:'<span class="info-signal-up">Higher → bullish USD</span> (demand-driven growth). <span class="info-signal-down">Lower → bearish</span> (slowdown in economic activity).' },
+
+  // ── GDP ──
+  { match:['gdp growth rate','gdp growth','full year gdp'],
+    title:'GDP Growth Rate',
+    what:'Measures the percentage change in the total economic output of a country. Published as advance (flash), preliminary, or final estimates.',
+    why:'GDP is the broadest measure of economic health. Faster growth supports higher interest rates and a stronger currency; contraction is the opposite.',
+    signal:'<span class="info-signal-up">Higher → bullish for currency</span> (strong economy supports higher rates). <span class="info-signal-down">Lower / negative → bearish</span> (recession risk, rate cuts).' },
+
+  // ── PMI ──
+  { match:['ism manufacturing'],
+    title:'ISM Manufacturing PMI',
+    what:'Monthly survey of US purchasing managers in manufacturing. Above 50 = expansion, below 50 = contraction.',
+    why:'One of the most timely leading indicators of US industrial activity. Released on the first business day of the month for the prior month.',
+    signal:'<span class="info-signal-up">Above 50 / higher than expected → bullish USD.</span> <span class="info-signal-down">Below 50 / miss → bearish USD.</span>' },
+
+  { match:['ism services','ism non-manufacturing','ism nonmanufacturing'],
+    title:'ISM Services PMI',
+    what:'Monthly survey of US purchasing managers in the services sector. Above 50 = expansion. Services represent ~80% of US GDP.',
+    why:'Because the US economy is services-dominated, this carries more weight than manufacturing PMI for overall growth and employment signals.',
+    signal:'<span class="info-signal-up">Above 50 / beat → bullish USD.</span> <span class="info-signal-down">Below 50 / miss → bearish USD.</span>' },
+
+  { match:['s&p global manufacturing pmi','markit manufacturing pmi','hcob manufacturing pmi'],
+    title:'Manufacturing PMI (Flash)',
+    what:'Purchasing Managers Index for manufacturing from S&P Global or HCOB. A flash estimate is the earliest read, released ~3 weeks into the month.',
+    why:'Provides an early signal of factory activity, new orders, employment, and prices. Markets often move on flash PMIs before official data.',
+    signal:'<span class="info-signal-up">Above 50 / beat → bullish for currency.</span> <span class="info-signal-down">Below 50 / miss → bearish.</span>' },
+
+  { match:['s&p global services pmi','markit services pmi','hcob services pmi'],
+    title:'Services PMI (Flash)',
+    what:'Purchasing Managers Index for the services sector. The flash estimate is released approximately 3 weeks before month-end.',
+    why:'Services PMI covers business activity, new orders, employment, and input prices across the dominant sector of most Western economies.',
+    signal:'<span class="info-signal-up">Above 50 / beat → bullish for currency.</span> <span class="info-signal-down">Below 50 / miss → bearish.</span>' },
+
+  { match:['nbs manufacturing pmi'],
+    title:'NBS Manufacturing PMI (China)',
+    what:'China\'s official manufacturing PMI published by the National Bureau of Statistics. Above 50 = expansion.',
+    why:'China is the world\'s largest manufacturer. This PMI influences commodity currencies (AUD, CAD) and global risk sentiment.',
+    signal:'<span class="info-signal-up">Above 50 / beat → bullish AUD, CAD, and risk-on assets.</span> <span class="info-signal-down">Miss → bearish commodity currencies.</span>' },
+
+  { match:['caixin manufacturing','ratingdog manufacturing'],
+    title:'Caixin Manufacturing PMI (China)',
+    what:'Private-sector manufacturing PMI for China, focused on smaller and mid-sized companies — a complement to the official NBS figure.',
+    why:'Often diverges from the official NBS PMI and is considered a more market-sensitive read on private-sector health in China.',
+    signal:'<span class="info-signal-up">Beat → bullish AUD, CAD, commodity currencies.</span> <span class="info-signal-down">Miss → bearish.</span>' },
+
+  { match:['ivey pmi'],
+    title:'Ivey PMI (Canada)',
+    what:'Monthly survey of Canadian purchasing managers across all sectors. Above 50 = expansion.',
+    why:'One of the most timely reads on Canadian economic activity, covering both public and private sector purchases.',
+    signal:'<span class="info-signal-up">Above 50 / beat → bullish CAD.</span> <span class="info-signal-down">Below 50 → bearish CAD.</span>' },
+
+  { match:['tankan'],
+    title:'Tankan Survey (Japan)',
+    what:'Quarterly survey by the Bank of Japan of business confidence among large Japanese manufacturers and non-manufacturers.',
+    why:'The BoJ uses Tankan extensively in setting monetary policy. A strong Tankan can signal BoJ tightening, which moves JPY significantly.',
+    signal:'<span class="info-signal-up">Higher → bullish JPY</span> (strong outlook supports BoJ normalisation). <span class="info-signal-down">Lower → bearish JPY.</span>' },
+
+  // ── Retail / Consumer ──
+  { match:['retail sales mom','retail sales yoy'],
+    title:'Retail Sales',
+    what:'Measures the total value of sales at retail outlets. A direct measure of consumer spending, which drives economic growth.',
+    why:'Consumer spending is the largest component of GDP in most economies. Retail sales is one of the most reliable leading indicators of economic momentum.',
+    signal:'<span class="info-signal-up">Higher → bullish for currency</span> (strong consumption = growth). <span class="info-signal-down">Lower → bearish.</span>' },
+
+  { match:['michigan consumer sentiment','university of michigan'],
+    title:'Michigan Consumer Sentiment',
+    what:'Monthly survey of US consumer attitudes toward the economy, personal finances, and buying conditions. Scale: higher = more optimistic.',
+    why:'Consumer confidence predicts future spending. When confidence falls, households cut back — signalling slower growth and lower inflation ahead.',
+    signal:'<span class="info-signal-up">Higher → mildly bullish USD</span> (confident consumers spend more). <span class="info-signal-down">Lower → bearish USD.</span>' },
+
+  { match:['consumer confidence'],
+    title:'Consumer Confidence',
+    what:'Survey measuring household optimism about economic conditions, employment, and income expectations.',
+    why:'Confident consumers spend more; pessimistic ones save. Serves as a leading indicator of personal spending and GDP growth.',
+    signal:'<span class="info-signal-up">Higher → bullish for currency.</span> <span class="info-signal-down">Lower → bearish.</span>' },
+
+  { match:['gfk consumer confidence'],
+    title:'GfK Consumer Confidence (Germany)',
+    what:'Monthly German consumer sentiment survey covering income expectations, willingness to buy, and economic outlook.',
+    why:'Germany is the Eurozone\'s largest economy. Weak German consumer confidence can drag EUR as it signals softer Eurozone growth.',
+    signal:'<span class="info-signal-up">Higher → bullish EUR.</span> <span class="info-signal-down">Lower → bearish EUR.</span>' },
+
+  { match:['westpac consumer confidence'],
+    title:'Westpac Consumer Confidence (Australia)',
+    what:'Monthly survey of Australian household sentiment on economic conditions, employment, and finances.',
+    why:'Consumer confidence is a leading indicator for Australian retail spending and GDP. Influences RBA rate expectations.',
+    signal:'<span class="info-signal-up">Higher → bullish AUD.</span> <span class="info-signal-down">Lower → bearish AUD.</span>' },
+
+  { match:['nab business confidence'],
+    title:'NAB Business Confidence (Australia)',
+    what:'Monthly survey of Australian business conditions across trading, profitability, and employment.',
+    why:'A leading indicator of business investment and hiring in Australia. Strong business conditions support RBA rate hike expectations.',
+    signal:'<span class="info-signal-up">Higher → bullish AUD.</span> <span class="info-signal-down">Lower → bearish AUD.</span>' },
+
+  // ── Housing (US) ──
+  { match:['building permit'],
+    title:'Building Permits',
+    what:'Number of new residential construction permits issued in the US. A forward-looking housing indicator since permits precede construction.',
+    why:'Housing construction drives economic activity across lumber, steel, appliances, and employment. It is a key leading indicator of GDP.',
+    signal:'<span class="info-signal-up">Higher → mildly bullish USD</span> (construction activity rising). <span class="info-signal-down">Lower → bearish.</span>' },
+
+  { match:['housing start'],
+    title:'Housing Starts',
+    what:'Number of new residential construction projects begun in the US during the month.',
+    why:'Housing starts signal near-term economic activity and employment in construction. Sensitive to mortgage rates, so it reflects Fed policy effects.',
+    signal:'<span class="info-signal-up">Higher → mildly bullish USD.</span> <span class="info-signal-down">Lower → bearish</span> (high rates cooling housing).' },
+
+  { match:['existing home sale'],
+    title:'Existing Home Sales',
+    what:'Monthly count of previously owned homes sold in the US. Represents ~85% of total home sales.',
+    why:'Reflects the health of the housing market and consumer willingness to make large purchases. Strongly tied to mortgage rate levels.',
+    signal:'<span class="info-signal-up">Higher → mildly bullish USD.</span> <span class="info-signal-down">Lower → bearish</span> (rate sensitivity signal).' },
+
+  // ── Trade ──
+  { match:['balance of trade','trade balance'],
+    title:'Balance of Trade',
+    what:'The difference between a country\'s exports and imports of goods. A surplus means more is exported; a deficit means more is imported.',
+    why:'A growing trade surplus increases demand for the exporting country\'s currency. Deficits can weaken a currency over time as more foreign currency is sold.',
+    signal:'<span class="info-signal-up">Larger surplus / smaller deficit → bullish for currency.</span> <span class="info-signal-down">Wider deficit → bearish.</span>' },
+
+  { match:['exports yoy'],
+    title:'Exports YoY (China)',
+    what:'Year-on-year growth in the total value of Chinese goods shipped abroad.',
+    why:'China\'s export strength drives global supply chains and commodity demand. Weak exports can signal global demand slowdown, hitting AUD, CAD, and CNY.',
+    signal:'<span class="info-signal-up">Higher → bullish CNY, AUD, CAD.</span> <span class="info-signal-down">Lower → bearish commodity currencies.</span>' },
+
+  { match:['imports yoy'],
+    title:'Imports YoY (China)',
+    what:'Year-on-year growth in goods purchased from abroad by China.',
+    why:'Strong Chinese imports signal domestic demand and are often bullish for commodity exporters like Australia and Canada.',
+    signal:'<span class="info-signal-up">Higher → bullish AUD, CAD</span> (China buying more raw materials). <span class="info-signal-down">Lower → bearish commodity currencies.</span>' },
+
+  { match:['industrial production'],
+    title:'Industrial Production YoY',
+    what:'Year-on-year change in the output of factories, mines, and utilities.',
+    why:'A direct measure of manufacturing and resource sector health. For China, it reflects the pulse of the world\'s largest production base.',
+    signal:'<span class="info-signal-up">Higher → bullish for currency</span> (strong output). <span class="info-signal-down">Lower → bearish.</span>' },
+
+  { match:['durable goods'],
+    title:'Durable Goods Orders',
+    what:'Monthly change in new orders placed with US manufacturers for goods expected to last 3+ years — planes, machines, appliances.',
+    why:'A leading indicator of business investment (capex). Strong orders mean firms are confident enough to spend on equipment and expansion.',
+    signal:'<span class="info-signal-up">Higher → bullish USD</span> (business investment rising). <span class="info-signal-down">Lower → bearish</span> (firms pulling back capex).' },
+
+  // ── Central Bank Rate Decisions ──
+  { match:['fed interest rate','fomc rate','federal reserve rate'],
+    title:'Fed Interest Rate Decision',
+    what:'The Federal Open Market Committee (FOMC) votes on the federal funds rate target — the overnight lending rate between US banks. Held 8 times per year.',
+    why:'The single most influential event for USD and global markets. Rate changes ripple through borrowing costs, bond yields, equities, and every currency pair involving USD.',
+    signal:'<span class="info-signal-up">Hike / hawkish tone → bullish USD.</span> <span class="info-signal-down">Cut / dovish tone → bearish USD.</span> Hold + guidance is key.' },
+
+  { match:['fomc minutes','fed minutes'],
+    title:'FOMC Meeting Minutes',
+    what:'Detailed record of the Fed\'s rate-setting meeting, released ~3 weeks after the decision. Reveals the internal debate and forward guidance nuances.',
+    why:'Traders mine the minutes for clues about future rate moves — dissents, inflation concerns, or growth worries not visible in the headline rate decision.',
+    signal:'<span class="info-signal-up">Hawkish tone (inflation concerns, rate hike discussion) → bullish USD.</span> <span class="info-signal-down">Dovish tone → bearish USD.</span>' },
+
+  { match:['fed press conference','fomc press conference'],
+    title:'Fed Press Conference',
+    what:'Post-decision press conference by the Fed Chair, held after each rate announcement. Covers the economic outlook, rate path, and balance sheet.',
+    why:'Often more market-moving than the rate decision itself. A single hawkish or dovish phrase from the Chair can cause sharp moves in USD and risk assets.',
+    signal:'<span class="info-signal-up">Hawkish language → bullish USD.</span> <span class="info-signal-down">Dovish or uncertain tone → bearish USD.</span>' },
+
+  { match:['fomc economic projection','fed economic projection','dot plot'],
+    title:'FOMC Economic Projections (Dot Plot)',
+    what:'Quarterly release showing each FOMC member\'s forecast for rates, GDP, unemployment, and inflation. The "dot plot" maps the expected rate path.',
+    why:'The dot plot directly signals how many rate cuts or hikes policymakers expect. Markets reprice instantly when dots shift.',
+    signal:'<span class="info-signal-up">Fewer cuts / higher dots → bullish USD.</span> <span class="info-signal-down">More cuts / lower dots → bearish USD.</span>' },
+
+  { match:['rba interest rate','reserve bank of australia rate'],
+    title:'RBA Interest Rate Decision',
+    what:'The Reserve Bank of Australia sets the official cash rate, influencing borrowing costs across the Australian economy.',
+    why:'The RBA rate is the primary driver of AUD interest rate differentials. Hawkish surprises boost AUD; dovish surprises crush it.',
+    signal:'<span class="info-signal-up">Hike / hawkish → bullish AUD.</span> <span class="info-signal-down">Cut / dovish → bearish AUD.</span>' },
+
+  { match:['rba meeting minutes'],
+    title:'RBA Meeting Minutes',
+    what:'Detailed notes from the Reserve Bank of Australia\'s rate-setting meeting, released two weeks after the decision.',
+    why:'Provides insight into the RBA\'s assessment of inflation, growth, and employment — signals about the future rate path.',
+    signal:'<span class="info-signal-up">Hawkish tone → bullish AUD.</span> <span class="info-signal-down">Dovish tone → bearish AUD.</span>' },
+
+  { match:['boc interest rate','bank of canada rate','boc rate'],
+    title:'BoC Interest Rate Decision',
+    what:'The Bank of Canada sets the overnight lending rate, influencing mortgage rates, business loans, and CAD exchange rates.',
+    why:'One of the most significant events for CAD pairs. The BoC\'s tone on inflation and oil-sensitive growth shapes the rate outlook.',
+    signal:'<span class="info-signal-up">Hike / hawkish → bullish CAD.</span> <span class="info-signal-down">Cut / dovish → bearish CAD.</span>' },
+
+  { match:['boc monetary policy report'],
+    title:'BoC Monetary Policy Report',
+    what:'Quarterly publication from the Bank of Canada containing detailed forecasts for inflation, growth, and the economic outlook.',
+    why:'Provides the framework behind BoC rate decisions. Significant upward inflation revisions are hawkish; downward revisions dovish.',
+    signal:'<span class="info-signal-up">Hawkish projections → bullish CAD.</span> <span class="info-signal-down">Dovish or downgraded forecasts → bearish CAD.</span>' },
+
+  { match:['boj interest rate','bank of japan rate'],
+    title:'BoJ Interest Rate Decision',
+    what:'The Bank of Japan sets its policy rate and manages yield curve control (YCC). Japan has historically been the global low-rate anchor.',
+    why:'BoJ decisions drive carry trade dynamics. When Japan raises rates, JPY strengthens sharply as carry trades unwind globally.',
+    signal:'<span class="info-signal-up">Hike / YCC tightening / hawkish → sharp bullish JPY.</span> <span class="info-signal-down">Hold / dovish → bearish JPY.</span>' },
+
+  { match:['boe interest rate','bank of england rate'],
+    title:'BoE Interest Rate Decision',
+    what:'The Bank of England\'s Monetary Policy Committee (MPC) sets Bank Rate — the interest rate paid to commercial banks holding reserves at the BoE.',
+    why:'Bank Rate drives mortgage costs, business lending, and GBP exchange rates. The vote split (e.g. 7-2 for hold) often matters as much as the decision.',
+    signal:'<span class="info-signal-up">Hike / hawkish / split skewed hawkish → bullish GBP.</span> <span class="info-signal-down">Cut / dovish → bearish GBP.</span>' },
+
+  { match:['ecb interest rate','ecb rate decision','deposit facility rate'],
+    title:'ECB Interest Rate Decision',
+    what:'The European Central Bank sets three key rates: the deposit facility rate, the main refinancing rate, and the marginal lending rate.',
+    why:'ECB rate decisions drive EUR pairs directly. The ECB also signals forward guidance through asset purchase decisions and inflation language.',
+    signal:'<span class="info-signal-up">Hike / hawkish → bullish EUR.</span> <span class="info-signal-down">Cut / dovish / QE expansion → bearish EUR.</span>' },
+
+  { match:['ecb press conference'],
+    title:'ECB Press Conference',
+    what:'Post-decision press conference by the ECB President, covering the inflation outlook, growth, and future policy path.',
+    why:'The press conference routinely overshadows the rate decision itself. Language on inflation persistence or downside growth risks sets EUR direction.',
+    signal:'<span class="info-signal-up">Hawkish language → bullish EUR.</span> <span class="info-signal-down">Dovish / concerned tone → bearish EUR.</span>' },
+
+  // ── German Indicators ──
+  { match:['zew economic sentiment'],
+    title:'ZEW Economic Sentiment Index',
+    what:'Monthly survey of ~300 German financial analysts assessing the 6-month economic outlook for Germany. Scale: above 0 = optimistic.',
+    why:'Germany is Europe\'s largest economy. ZEW expectations are a leading indicator for Eurozone growth and directly move EUR.',
+    signal:'<span class="info-signal-up">Higher / above 0 → bullish EUR.</span> <span class="info-signal-down">Lower / below 0 → bearish EUR.</span>' },
+
+  { match:['ifo business climate'],
+    title:'Ifo Business Climate Index',
+    what:'Monthly survey of ~9,000 German businesses on current business conditions and 6-month expectations.',
+    why:'The Ifo is one of the most reliable leading indicators for the German and Eurozone economy. Closely watched by the ECB.',
+    signal:'<span class="info-signal-up">Higher → bullish EUR</span> (German business confidence up). <span class="info-signal-down">Lower → bearish EUR.</span>' },
+
+  // ── Political / One-Off ──
+  { match:['speech','summit','state of the union'],
+    title:'Political Speech / Summit',
+    what:'A scheduled address or diplomatic meeting by a head of state or senior official.',
+    why:'Can trigger sharp market moves if unexpected policy, tariff, or geopolitical announcements are made. Impact is unpredictable and highly context-dependent.',
+    signal:'<span class="info-signal-up">Positive/constructive tone → risk-on, currency of speaking country can strengthen.</span> <span class="info-signal-down">Aggressive/negative rhetoric → risk-off, safe havens (JPY, CHF, gold) may rise.</span>' },
+
+  { match:['election'],
+    title:'Election',
+    what:'National or local election results that determine the governing party and potential policy direction.',
+    why:'Political transitions create policy uncertainty. Market-friendly (fiscally conservative, stable) results can strengthen a currency; populist or uncertain outcomes can weaken it.',
+    signal:'<span class="info-signal-up">Market-friendly result → bullish for currency.</span> <span class="info-signal-down">Uncertain / populist result → bearish, volatility spike.</span>' },
+];
+
+function getEventInfo(eventName) {
+  const lower = (eventName || '').toLowerCase();
+  return EVENT_DB.find(e => e.match.some(kw => lower.includes(kw))) || null;
+}
 
 const CURRENCY_META = {
   USD:{flag:'us',name:'United States'}, EUR:{flag:'eu',name:'Eurozone'},
@@ -740,8 +1060,9 @@ function renderTable(events) {
         : '';
       const tzHtml = tzStr ? `<span class="tz-label">${tzStr}</span>` : '';
 
+      const info = getEventInfo(ev.event);
       const row = document.createElement('tr');
-      row.className = `event-row${past&&!nowEv?' is-past':''}${!past&&idx===0&&isToday?' is-next':''}`;
+      row.className = `event-row${past&&!nowEv?' is-past':''}${!past&&idx===0&&isToday?' is-next':''}${info?' has-info':''}`;
       row.innerHTML = `
         <td class="cell-time">
           <div class="time-main">${timeStr}</div>
@@ -756,7 +1077,24 @@ function renderTable(events) {
         <td class="cell-actual">${formatActual(ev.actual,ev.estimate,ev.unit)}</td>
         <td class="cell-forecast">${formatValue(ev.estimate,ev.unit)}</td>
         <td class="cell-previous">${formatValue(ev.prev,ev.unit)}</td>`;
-      tbody.appendChild(row);
+
+      if (info) {
+        const infoRow = document.createElement('tr');
+        infoRow.className = 'info-row';
+        infoRow.innerHTML = `<td colspan="7"><div class="info-panel">
+          <div><div class="info-block-label">What it measures</div><div class="info-block-text">${info.what}</div></div>
+          <div><div class="info-block-label">Why it moves markets</div><div class="info-block-text">${info.why}</div></div>
+          <div><div class="info-block-label">Market signal</div><div class="info-block-text">${info.signal}</div></div>
+        </div></td>`;
+        row.addEventListener('click', () => {
+          const open = infoRow.classList.toggle('open');
+          row.style.background = open ? 'var(--bg-hover)' : '';
+        });
+        tbody.appendChild(row);
+        tbody.appendChild(infoRow);
+      } else {
+        tbody.appendChild(row);
+      }
     });
 
     // If all events were past and we never inserted NOW (end of day), add at end
