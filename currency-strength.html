@@ -580,12 +580,9 @@ function renderResults(results, resolution) {
         <div class="method-step">
           <div class="method-step-num">2</div>
           <div class="method-step-text">
-            <strong>% change is computed per pair</strong> by comparing the most recent close to the
-            close <em>N periods ago</em>: <code>(close[last] − close[last−N]) / close[last−N] × 100</code>,
-            where N is the agreed lookback per timeframe (15m = 20 periods = 5 h,
-            30m = 12 = 6 h, 1H = 10 = 10 h, 4H = 5 = 20 h, Daily = 4 = 4 days, Weekly = 4 = 4 weeks).
-            During active market hours <code>close[last]</code> is the current live price;
-            on weekends it is the last completed candle's close.
+            <strong>% change is computed per pair</strong> as <code>(close[last] − close[last−N]) / close[last−N] × 100</code>.
+            N varies by timeframe — <strong>15m: 5 h · 30m: 6 h · 1H: 10 h · 4H: 20 h · Daily: 4 d · Weekly: 4 w</strong>.
+            During market hours <code>close[last]</code> is the current live price; on weekends it is the last completed candle's close.
           </div>
         </div>
         <div class="method-step">
