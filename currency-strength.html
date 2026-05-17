@@ -238,6 +238,8 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
       <div class="ctrl-row">
         <span class="ctrl-label">Timeframe</span>
         <div class="tf-chips" id="tfChips">
+          <span class="tf-chip" data-res="15">15m</span>
+          <span class="tf-chip" data-res="30">30m</span>
           <span class="tf-chip" data-res="60">1H</span>
           <span class="tf-chip active" data-res="240">4H</span>
           <span class="tf-chip" data-res="D">Daily</span>
@@ -293,8 +295,8 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 const API_KEY  = 'd4fevfpr01qkcvvhv6h0d4fevfpr01qkcvvhv6hg';
 const API_BASE = 'https://finnhub.io/api/v1';
 
-const TF_LABELS = { '60':'1H', '240':'4H', 'D':'Daily', 'W':'Weekly' };
-const TF_SECONDS = { '60':3600, '240':14400, 'D':86400, 'W':604800 };
+const TF_LABELS = { '15':'15m', '30':'30m', '60':'1H', '240':'4H', 'D':'Daily', 'W':'Weekly' };
+const TF_SECONDS = { '15':900, '30':1800, '60':3600, '240':14400, 'D':86400, 'W':604800 };
 
 const CURRENCIES = ['EUR','USD','GBP','JPY','AUD','CAD','CHF','NZD'];
 
@@ -378,7 +380,8 @@ async function runScan() {
   const resolution = getActiveTF();
   const tfSec = TF_SECONDS[resolution] || 14400;
   const now = Math.floor(Date.now() / 1000);
-  const from = now - tfSec * 4;
+  // Look back at least 7 days so weekend + holiday gaps are always covered
+  const from = now - Math.max(tfSec * 10, 7 * 86400);
 
   // Show progress
   const progressWrap = document.getElementById('progressWrap');
