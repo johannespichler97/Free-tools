@@ -280,8 +280,8 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
         <span class="asset-chip"        data-sym="OANDA:NZD_CAD" data-pip="0.0001">NZDCAD</span>
         <span class="asset-chip"        data-sym="OANDA:NZD_CHF" data-pip="0.0001">NZDCHF</span>
         <span class="asset-chip"        data-sym="OANDA:CAD_CHF" data-pip="0.0001">CADCHF</span>
-        <span class="asset-chip metal active" data-sym="OANDA:XAU_USD" data-pip="0.01">XAUUSD</span>
-        <span class="asset-chip metal"        data-sym="OANDA:XAG_USD" data-pip="0.001">XAGUSD</span>
+        <span class="asset-chip metal active" data-sym="OANDA:XAU_USD" data-pip="0.10">XAUUSD</span>
+        <span class="asset-chip metal"        data-sym="OANDA:XAG_USD" data-pip="0.01">XAGUSD</span>
       </div>
 
       <hr class="ctrl-divider" />
@@ -289,6 +289,10 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
       <div class="ctrl-row">
         <span class="ctrl-label">Timeframe</span>
         <div class="tf-chips" id="tfChips">
+          <span class="tf-chip" data-res="1">M1</span>
+          <span class="tf-chip" data-res="5">M5</span>
+          <span class="tf-chip" data-res="15">M15</span>
+          <span class="tf-chip" data-res="30">M30</span>
           <span class="tf-chip" data-res="60">1H</span>
           <span class="tf-chip active" data-res="240">4H</span>
           <span class="tf-chip" data-res="D">Daily</span>
@@ -349,8 +353,8 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
   <script>
 const API_KEY  = 'd4fevfpr01qkcvvhv6h0d4fevfpr01qkcvvhv6hg';
 const API_BASE = 'https://finnhub.io/api/v1';
-const TF_LABELS  = { '60':'1H', '240':'4H', 'D':'Daily', 'W':'Weekly' };
-const TF_SECONDS = { '60':3600, '240':14400, 'D':86400, 'W':604800 };
+const TF_LABELS  = { '1':'M1', '5':'M5', '15':'M15', '30':'M30', '60':'1H', '240':'4H', 'D':'Daily', 'W':'Weekly' };
+const TF_SECONDS = { '1':60, '5':300, '15':900, '30':1800, '60':3600, '240':14400, 'D':86400, 'W':604800 };
 const MAX_ASSETS = 10;
 
 // ── Asset chip interactions ──
