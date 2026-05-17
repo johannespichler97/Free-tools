@@ -378,10 +378,32 @@ async function runScan() {
   btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:spin 1s linear infinite"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg> Calculating…`;
 
   const resolution = getActiveTF();
-  const tfSec = TF_SECONDS[resolution] || 14400;
   const now = Math.floor(Date.now() / 1000);
-  // Look back at least 7 days so weekend + holiday gaps are always covered
-  const from = now - Math.max(tfSec * 10, 7 * 86400);
+
+  // How many seconds the forex market has been continuously closed up to 'now'
+  // Forex closes Fri 22:00 UTC, reopens Sun 22:00 UTC
+  function closedGapSecs(ts) {
+    const d   = new Date(ts * 1000);
+    const day = d.getUTCDay(); // 0=Sun,5=Fri,6=Sat
+    const sod = d.getUTCHours() * 3600 + d.getUTCMinutes() * 60 + d.getUTCSeconds();
+    const FRI_CLOSE = 22 * 3600;
+    const SUN_OPEN  = 22 * 3600;
+    if (day === 5 && sod >= FRI_CLOSE) return sod - FRI_CLOSE;             // Friday after close
+    if (day === 6)                     return (86400 - FRI_CLOSE) + sod;   // All of Saturday
+    if (day === 0 && sod < SUN_OPEN)   return (86400 - FRI_CLOSE) + 86400 + sod; // Sunday before open
+    return 0;
+  }
+
+  // TF-appropriate target: enough periods to guarantee ≥2 completed candles
+  const TF_PERIODS = { '15':12, '30':8, '60':6, '240':5, 'D':4, 'W':4 };
+  const tfSec   = TF_SECONDS[resolution] || 14400;
+  const periods = TF_PERIODS[resolution] || 5;
+
+  // Inflate the base window by 168/120 to compensate for ~48h/week of weekend dead time,
+  // then add the current continuous closed gap so weekends don't eat into our window.
+  const calWindow = Math.ceil(tfSec * periods * (168 / 120));
+  const gap       = closedGapSecs(now);
+  const from      = now - calWindow - gap;
 
   // Show progress
   const progressWrap = document.getElementById('progressWrap');
