@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Volatility Scanner | Market Analytics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-primary:    #062434;
+  --bg-secondary:  #0a2e44;
+  --bg-tertiary:   #0e3a54;
+  --bg-hover:      #123f5c;
+  --border:        #1a4d6e;
+  --text-primary:  #E6E9EB;
+  --text-secondary:#8ab8d0;
+  --text-muted:    #4d7a96;
+  --accent:        #2FA3E0;
+  --accent-2:      #51d7ce;
+  --accent-dim:    rgba(47,163,224,0.12);
+  --positive:      #3fb950;
+  --positive-bg:   rgba(63,185,80,0.10);
+  --negative:      #f85149;
+  --negative-bg:   rgba(248,81,73,0.10);
+  --warn:          #e3b341;
+  --warn-bg:       rgba(227,179,65,0.10);
+  --font:          'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono:     'JetBrains Mono', monospace;
+  --radius-sm:     6px;
+  --radius-md:     10px;
+  --radius-lg:     14px;
+}
+
+html { scroll-behavior: smooth; }
+body { font-family: var(--font); background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; font-size: 14px; line-height: 1.5; }
+
+@keyframes pulse   { 0%,100%{opacity:1} 50%{opacity:0.4} }
+@keyframes spin    { to{transform:rotate(360deg)} }
+@keyframes fadeIn  { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+@keyframes shimmer { 0%{background-position:-400px 0} 100%{background-position:400px 0} }
+
+/* ── HEADER ── */
+.header { position:sticky; top:0; z-index:100; background:rgba(6,36,52,0.97); backdrop-filter:blur(12px); border-bottom:1px solid var(--border); }
+.header-inner { max-width:1200px; margin:0 auto; padding:0 24px; height:60px; display:flex; align-items:center; gap:32px; }
+.logo { display:flex; align-items:center; gap:8px; text-decoration:none; color:var(--text-primary); font-size:16px; font-weight:700; white-space:nowrap; }
+.logo-text strong { color:var(--accent); }
+.nav { display:flex; gap:2px; flex:1; }
+.nav-link { text-decoration:none; color:var(--text-secondary); padding:6px 10px; border-radius:var(--radius-sm); font-size:12.5px; font-weight:500; transition:all .15s; white-space:nowrap; }
+.nav-link:hover { color:var(--text-primary); background:var(--bg-hover); }
+.nav-link.active { color:var(--accent); background:var(--accent-dim); }
+.header-actions { display:flex; align-items:center; gap:12px; }
+.live-badge { font-size:11px; font-weight:600; color:var(--positive); letter-spacing:.05em; display:flex; align-items:center; gap:5px; }
+.live-dot { animation:pulse 2s infinite; }
+.btn-primary { background:linear-gradient(135deg,#51d7ce,#2FA3E0); color:#062434; border:none; padding:7px 18px; border-radius:20px; font-size:13px; font-weight:700; cursor:pointer; transition:opacity .15s; font-family:var(--font); }
+.btn-primary:hover { opacity:.88; }
+
+/* ── HERO ── */
+.hero { background:linear-gradient(135deg,#062434 0%,#0a2e44 60%,#0d3550 100%); border-bottom:1px solid var(--border); padding:28px 24px; }
+.hero-inner { max-width:1200px; margin:0 auto; }
+.hero h1 { font-size:26px; font-weight:700; }
+.hero h1::after { content:''; display:block; width:40px; height:3px; background:linear-gradient(90deg,#51d7ce,#2FA3E0); border-radius:2px; margin-top:10px; }
+.hero p { color:var(--text-secondary); font-size:15px; margin-top:10px; }
+
+/* ── CONTROLS ── */
+.controls-bar { background:var(--bg-primary); border-bottom:1px solid var(--border); padding:12px 24px; }
+.controls-box { max-width:1248px; margin:0 auto; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); padding:16px 18px; display:flex; flex-direction:column; gap:14px; }
+.ctrl-row { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.ctrl-label { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.07em; white-space:nowrap; min-width:80px; }
+.ctrl-divider { border:none; border-top:1px solid var(--border); margin:0; }
+
+.asset-chips { display:flex; flex-wrap:wrap; gap:5px; flex:1; }
+.asset-chip { padding:4px 10px; border-radius:20px; font-size:12px; font-weight:600; cursor:pointer; transition:all .15s; border:1.5px solid var(--border); color:var(--text-muted); background:var(--bg-tertiary); user-select:none; white-space:nowrap; opacity:.55; }
+.asset-chip:hover { opacity:.85; border-color:var(--text-muted); }
+.asset-chip.active { opacity:1; border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
+.asset-chip.metal.active { border-color:var(--accent-2); color:var(--accent-2); background:rgba(81,215,206,0.10); }
+
+.chip-actions { display:flex; gap:6px; }
+.chip-action-btn { padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; cursor:pointer; border:1px solid var(--border); background:transparent; color:var(--text-muted); font-family:var(--font); transition:all .15s; }
+.chip-action-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+.tf-chips { display:flex; gap:5px; flex-wrap:wrap; }
+.tf-chip { padding:5px 14px; border-radius:20px; font-size:12px; font-weight:700; cursor:pointer; transition:all .15s; border:1.5px solid var(--border); color:var(--text-muted); background:var(--bg-tertiary); user-select:none; opacity:.55; }
+.tf-chip:hover { opacity:.85; }
+.tf-chip.active { opacity:1; border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
+
+.atr-chips { display:flex; gap:5px; }
+.atr-chip { padding:5px 14px; border-radius:20px; font-size:12px; font-weight:700; cursor:pointer; transition:all .15s; border:1.5px solid var(--border); color:var(--text-muted); background:var(--bg-tertiary); user-select:none; opacity:.55; }
+.atr-chip:hover { opacity:.85; }
+.atr-chip.active { opacity:1; border-color:var(--accent-2); color:var(--accent-2); background:rgba(81,215,206,0.10); }
+
+.scan-row { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+.scan-counter { font-size:12px; color:var(--text-muted); }
+.scan-counter strong { color:var(--accent); }
+.btn-scan { background:linear-gradient(135deg,#51d7ce,#2FA3E0); color:#062434; border:none; padding:10px 28px; border-radius:20px; font-size:14px; font-weight:700; cursor:pointer; font-family:var(--font); transition:opacity .15s; display:flex; align-items:center; gap:8px; }
+.btn-scan:hover { opacity:.88; }
+.btn-scan:disabled { opacity:.45; cursor:not-allowed; }
+
+/* ── PROGRESS ── */
+.progress-wrap { max-width:1248px; margin:8px auto 0; padding:0 24px; display:none; }
+.progress-track { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); padding:14px 18px; }
+.progress-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+.progress-label { font-size:13px; color:var(--text-secondary); }
+.progress-pct { font-size:13px; font-weight:700; color:var(--accent); font-family:var(--font-mono); }
+.progress-bar { height:6px; background:var(--bg-tertiary); border-radius:3px; overflow:hidden; }
+.progress-fill { height:100%; background:linear-gradient(90deg,#51d7ce,#2FA3E0); border-radius:3px; transition:width .3s ease; width:0%; }
+.progress-current { font-size:11px; color:var(--text-muted); margin-top:7px; }
+
+/* ── MAIN ── */
+.main { max-width:1248px; margin:0 auto; padding:20px 24px 60px; }
+
+/* Summary bar */
+.summary-bar { display:flex; align-items:center; gap:0; margin-bottom:18px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); padding:12px 18px; flex-wrap:wrap; }
+.summary-stat { display:flex; flex-direction:column; align-items:center; gap:2px; padding:0 16px; border-right:1px solid var(--border); }
+.summary-stat:last-of-type { border-right:none; }
+.summary-stat-val { font-family:var(--font-mono); font-size:20px; font-weight:700; }
+.summary-stat-val.all  { color:var(--accent-2); }
+.summary-stat-val.high { color:var(--negative); }
+.summary-stat-val.med  { color:var(--warn); }
+.summary-stat-val.low  { color:var(--positive); }
+.summary-stat-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--text-muted); }
+.summary-updated { font-size:12px; color:var(--text-muted); margin-left:auto; }
+
+/* ── VOL TABLE ── */
+.vol-card { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; animation:fadeIn .25s ease; }
+.vol-card-header { display:grid; grid-template-columns:44px 150px 68px 1fr 96px 76px; align-items:center; padding:10px 18px; border-bottom:1px solid var(--border); background:var(--bg-tertiary); gap:8px; }
+.vol-th { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--text-muted); }
+.vol-th.right { text-align:right; }
+.vol-th.center { text-align:center; }
+
+.vol-row { display:grid; grid-template-columns:44px 150px 68px 1fr 96px 76px; align-items:center; padding:11px 18px; border-bottom:1px solid rgba(26,77,110,0.4); gap:8px; transition:background .12s; }
+.vol-row:last-child { border-bottom:none; }
+.vol-row:hover { background:var(--bg-hover); }
+
+.vol-rank { font-family:var(--font-mono); font-size:12px; color:var(--text-muted); font-weight:700; }
+.vol-pair { font-family:var(--font-mono); font-size:13px; font-weight:700; color:var(--text-primary); }
+
+.vol-tier { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; padding:3px 7px; border-radius:20px; white-space:nowrap; text-align:center; }
+.vol-tier.high { background:var(--negative-bg); color:var(--negative); border:1px solid rgba(248,81,73,.25); }
+.vol-tier.med  { background:var(--warn-bg);     color:var(--warn);     border:1px solid rgba(227,179,65,.25); }
+.vol-tier.low  { background:var(--positive-bg); color:var(--positive); border:1px solid rgba(63,185,80,.25); }
+
+.vol-bar-wrap { height:8px; background:var(--bg-primary); border-radius:4px; overflow:hidden; }
+.vol-bar-inner { height:100%; border-radius:4px; transition:width .5s ease; }
+.vol-bar-inner.high { background:linear-gradient(90deg,rgba(248,81,73,0.5),#f85149); }
+.vol-bar-inner.med  { background:linear-gradient(90deg,rgba(227,179,65,0.5),#e3b341); }
+.vol-bar-inner.low  { background:linear-gradient(90deg,rgba(63,185,80,0.5),#3fb950); }
+
+.vol-pips { font-family:var(--font-mono); font-size:13px; font-weight:700; color:var(--text-primary); text-align:right; }
+.vol-pips span { font-size:10px; color:var(--text-muted); font-weight:400; margin-left:2px; }
+.vol-pct  { font-family:var(--font-mono); font-size:12px; color:var(--text-secondary); text-align:right; }
+
+/* Skeleton */
+.skeleton-bar { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); height:320px; overflow:hidden; position:relative; }
+.skeleton-bar::after { content:''; position:absolute; inset:0; background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,.04) 50%,transparent 100%); background-size:400px 100%; animation:shimmer 1.4s infinite; }
+
+/* State */
+.state-box { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:80px 24px; gap:14px; text-align:center; color:var(--text-muted); }
+.state-icon { font-size:44px; opacity:.3; }
+.state-title { font-size:17px; font-weight:600; color:var(--text-secondary); }
+.state-sub { font-size:13px; max-width:360px; line-height:1.6; }
+
+/* ── FOOTER ── */
+.footer { background:var(--bg-secondary); border-top:1px solid var(--border); padding:24px; }
+.footer-inner { max-width:1200px; margin:0 auto; text-align:center; }
+.footer-disclaimer { font-size:12px; color:var(--text-muted); line-height:1.6; }
+.footer-copy { font-size:12px; color:var(--text-muted); margin-top:6px; }
+
+@media(max-width:800px) {
+  .vol-card-header,
+  .vol-row { grid-template-columns:36px 110px 60px 1fr 80px; }
+  .vol-pct { display:none; }
+}
+@media(max-width:560px) {
+  .vol-card-header,
+  .vol-row { grid-template-columns:30px 100px 1fr 72px; }
+  .vol-tier { display:none; }
+}
+@media(max-width:640px) { .header-inner,.main,.controls-bar { padding-left:16px; padding-right:16px; } }
+
+/* ── HAMBURGER ── */
+.hamburger { display:none; flex-direction:column; justify-content:center; gap:5px; background:none; border:none; padding:6px; cursor:pointer; border-radius:6px; transition:background .15s; margin-left:auto; }
+.hamburger:hover { background:var(--bg-hover); }
+.hamburger span { display:block; width:22px; height:2px; background:var(--text-primary); border-radius:1px; transition:all .25s; }
+.hamburger.open span:nth-child(1) { transform:translateY(7px) rotate(45deg); }
+.hamburger.open span:nth-child(2) { opacity:0; }
+.hamburger.open span:nth-child(3) { transform:translateY(-7px) rotate(-45deg); }
+@media(max-width:1340px) {
+  .hamburger { display:flex; }
+  .header-inner { position:relative; flex-wrap:nowrap; }
+  .nav { display:none; position:absolute; top:60px; left:0; right:0; z-index:99; flex-direction:column; gap:0; padding:6px 0; background:rgba(6,36,52,0.98); border-bottom:1px solid var(--border); backdrop-filter:blur(12px); }
+  .nav.open { display:flex; }
+  .nav-link { padding:13px 22px; border-radius:0; font-size:14px; border-bottom:1px solid rgba(26,77,110,0.4); }
+  .nav-link:last-child { border-bottom:none; }
+  .header-actions .btn-primary { display:none; }
+}
+  </style>
+</head>
+<body>
+
+  <header class="header">
+    <div class="header-inner">
+      <a href="economic-calendar.html" class="logo">
+        <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+          <defs><linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#51d7ce"/><stop offset="100%" stop-color="#2FA3E0"/></linearGradient></defs>
+          <circle cx="18" cy="18" r="16.5" stroke="url(#lg)" stroke-width="2" fill="none"/>
+          <rect x="8" y="20" width="4" height="8" rx="1" fill="url(#lg)"/>
+          <rect x="14" y="15" width="4" height="13" rx="1" fill="url(#lg)"/>
+          <rect x="20" y="11" width="4" height="17" rx="1" fill="url(#lg)"/>
+          <polyline points="22,9 27,9 27,14" stroke="url(#lg)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <line x1="14" y1="21" x2="27" y2="9" stroke="url(#lg)" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <span class="logo-text">Market<strong>Analytics</strong></span>
+      </a>
+      <nav class="nav">
+        <a href="economic-calendar.html"    class="nav-link">Economic Calendar</a>
+        <a href="pattern-recognition.html"  class="nav-link">Pattern Recognition</a>
+        <a href="support-resistance.html"   class="nav-link">Support/Resistance</a>
+        <a href="currency-strength.html"    class="nav-link">Currency Strength</a>
+        <a href="volatility-scanner.html"   class="nav-link active">Volatility</a>
+        <a href="trading-sessions.html"     class="nav-link">Trading Sessions</a>
+        <a href="position-size-calculator.html" class="nav-link">Position Size</a>
+      </nav>
+      <button class="hamburger" id="hamburger" aria-label="Open navigation">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="header-actions">
+        <span class="live-badge"><span class="live-dot">&#9679;</span> LIVE</span>
+        <button class="btn-primary">Open Account</button>
+      </div>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-inner">
+      <h1>Volatility Scanner</h1>
+      <p>Ranks instruments by ATR (Average True Range) — the higher the ATR, the more the pair is moving.</p>
+    </div>
+  </section>
+
+  <div class="controls-bar">
+    <div class="controls-box">
+
+      <div class="ctrl-row">
+        <span class="ctrl-label">Instruments <span style="font-size:10px;color:var(--text-muted);font-weight:400;letter-spacing:0">(max 10)</span></span>
+        <div class="chip-actions">
+          <button class="chip-action-btn" onclick="selectAllAssets()">Select All</button>
+          <button class="chip-action-btn" onclick="clearAssets()">Clear</button>
+        </div>
+      </div>
+      <div class="asset-chips" id="assetChips">
+        <span class="asset-chip active" data-sym="OANDA:EUR_USD" data-pip="0.0001">EURUSD</span>
+        <span class="asset-chip active" data-sym="OANDA:GBP_USD" data-pip="0.0001">GBPUSD</span>
+        <span class="asset-chip active" data-sym="OANDA:USD_JPY" data-pip="0.01">USDJPY</span>
+        <span class="asset-chip active" data-sym="OANDA:AUD_USD" data-pip="0.0001">AUDUSD</span>
+        <span class="asset-chip active" data-sym="OANDA:USD_CAD" data-pip="0.0001">USDCAD</span>
+        <span class="asset-chip active" data-sym="OANDA:USD_CHF" data-pip="0.0001">USDCHF</span>
+        <span class="asset-chip active" data-sym="OANDA:NZD_USD" data-pip="0.0001">NZDUSD</span>
+        <span class="asset-chip active" data-sym="OANDA:EUR_JPY" data-pip="0.01">EURJPY</span>
+        <span class="asset-chip active" data-sym="OANDA:GBP_JPY" data-pip="0.01">GBPJPY</span>
+        <span class="asset-chip"        data-sym="OANDA:EUR_GBP" data-pip="0.0001">EURGBP</span>
+        <span class="asset-chip"        data-sym="OANDA:EUR_AUD" data-pip="0.0001">EURAUD</span>
+        <span class="asset-chip"        data-sym="OANDA:EUR_CAD" data-pip="0.0001">EURCAD</span>
+        <span class="asset-chip"        data-sym="OANDA:EUR_CHF" data-pip="0.0001">EURCHF</span>
+        <span class="asset-chip"        data-sym="OANDA:EUR_NZD" data-pip="0.0001">EURNZD</span>
+        <span class="asset-chip"        data-sym="OANDA:GBP_AUD" data-pip="0.0001">GBPAUD</span>
+        <span class="asset-chip"        data-sym="OANDA:GBP_CAD" data-pip="0.0001">GBPCAD</span>
+        <span class="asset-chip"        data-sym="OANDA:GBP_CHF" data-pip="0.0001">GBPCHF</span>
+        <span class="asset-chip"        data-sym="OANDA:GBP_NZD" data-pip="0.0001">GBPNZD</span>
+        <span class="asset-chip"        data-sym="OANDA:AUD_JPY" data-pip="0.01">AUDJPY</span>
+        <span class="asset-chip"        data-sym="OANDA:CAD_JPY" data-pip="0.01">CADJPY</span>
+        <span class="asset-chip"        data-sym="OANDA:NZD_JPY" data-pip="0.01">NZDJPY</span>
+        <span class="asset-chip"        data-sym="OANDA:CHF_JPY" data-pip="0.01">CHFJPY</span>
+        <span class="asset-chip"        data-sym="OANDA:AUD_CAD" data-pip="0.0001">AUDCAD</span>
+        <span class="asset-chip"        data-sym="OANDA:AUD_CHF" data-pip="0.0001">AUDCHF</span>
+        <span class="asset-chip"        data-sym="OANDA:AUD_NZD" data-pip="0.0001">AUDNZD</span>
+        <span class="asset-chip"        data-sym="OANDA:NZD_CAD" data-pip="0.0001">NZDCAD</span>
+        <span class="asset-chip"        data-sym="OANDA:NZD_CHF" data-pip="0.0001">NZDCHF</span>
+        <span class="asset-chip"        data-sym="OANDA:CAD_CHF" data-pip="0.0001">CADCHF</span>
+        <span class="asset-chip metal active" data-sym="OANDA:XAU_USD" data-pip="0.01">XAUUSD</span>
+        <span class="asset-chip metal"        data-sym="OANDA:XAG_USD" data-pip="0.001">XAGUSD</span>
+      </div>
+
+      <hr class="ctrl-divider" />
+
+      <div class="ctrl-row">
+        <span class="ctrl-label">Timeframe</span>
+        <div class="tf-chips" id="tfChips">
+          <span class="tf-chip" data-res="60">1H</span>
+          <span class="tf-chip active" data-res="240">4H</span>
+          <span class="tf-chip" data-res="D">Daily</span>
+          <span class="tf-chip" data-res="W">Weekly</span>
+        </div>
+        <span class="ctrl-label" style="margin-left:16px">ATR Period</span>
+        <div class="atr-chips" id="atrChips">
+          <span class="atr-chip" data-period="7">7</span>
+          <span class="atr-chip active" data-period="14">14</span>
+          <span class="atr-chip" data-period="21">21</span>
+        </div>
+      </div>
+
+      <hr class="ctrl-divider" />
+
+      <div class="scan-row">
+        <span class="scan-counter" id="scanCounter">
+          <strong id="cntAsset">10</strong> instruments · ATR(<strong id="cntPeriod">14</strong>)
+        </span>
+        <button class="btn-scan" id="scanBtn" onclick="runScan()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          Scan Volatility
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress-track">
+      <div class="progress-header">
+        <span class="progress-label" id="progressLabel">Fetching candle data…</span>
+        <span class="progress-pct" id="progressPct">0%</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-current" id="progressCurrent"></div>
+    </div>
+  </div>
+
+  <main class="main" id="mainArea">
+    <div class="state-box">
+      <div class="state-icon">📡</div>
+      <div class="state-title">Ready to scan</div>
+      <div class="state-sub">Select instruments and press <strong>Scan Volatility</strong> to rank by ATR.</div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+      <p class="footer-disclaimer">
+        The information, charts, indicators, signals and analytical tools provided on market-analytics.io are for informational and educational purposes only. They do not constitute financial advice, investment advice, trading advice, or any recommendation to buy or sell any financial instrument.<br><br>
+        All market data and indicator values are provided without guarantee of accuracy, completeness, or timeliness and may be delayed or subject to errors. Past performance or historical data shown on this website is not indicative of future results. Trading foreign exchange and other financial instruments involves significant risk and may result in the loss of capital. Users are solely responsible for their own trading decisions and any resulting profits or losses. market-analytics.io shall not be held liable for any loss or damage, including financial loss, arising directly or indirectly from the use of or reliance on the information or tools provided on this website.
+      </p>
+      <p class="footer-copy">&copy; 2026 Market-Analytics.io. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script>
+const API_KEY  = 'd4fevfpr01qkcvvhv6h0d4fevfpr01qkcvvhv6hg';
+const API_BASE = 'https://finnhub.io/api/v1';
+const TF_LABELS  = { '60':'1H', '240':'4H', 'D':'Daily', 'W':'Weekly' };
+const TF_SECONDS = { '60':3600, '240':14400, 'D':86400, 'W':604800 };
+const MAX_ASSETS = 10;
+
+// ── Asset chip interactions ──
+document.querySelectorAll('.asset-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    const active = document.querySelectorAll('.asset-chip.active');
+    if (!chip.classList.contains('active') && active.length >= MAX_ASSETS) return;
+    chip.classList.toggle('active');
+    updateCounter();
+  });
+});
+function selectAllAssets() {
+  let count = 0;
+  document.querySelectorAll('.asset-chip').forEach(c => {
+    if (count < MAX_ASSETS) { c.classList.add('active'); count++; }
+  });
+  updateCounter();
+}
+function clearAssets() {
+  document.querySelectorAll('.asset-chip').forEach(c => c.classList.remove('active'));
+  updateCounter();
+}
+
+// ── TF chips (single select) ──
+document.querySelectorAll('.tf-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.tf-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+  });
+});
+
+// ── ATR period chips (single select) ──
+document.querySelectorAll('.atr-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.atr-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    updateCounter();
+  });
+});
+
+function updateCounter() {
+  const n = document.querySelectorAll('.asset-chip.active').length;
+  const p = document.querySelector('.atr-chip.active')?.dataset.period || '14';
+  document.getElementById('cntAsset').textContent = n;
+  document.getElementById('cntPeriod').textContent = p;
+}
+
+function getActiveAssets() {
+  return [...document.querySelectorAll('.asset-chip.active')].map(c => ({
+    sym:    c.dataset.sym,
+    label:  c.textContent.trim(),
+    pip:    parseFloat(c.dataset.pip),
+  }));
+}
+function getActiveTF()     { return document.querySelector('.tf-chip.active')?.dataset.res  || '240'; }
+function getActiveATR()    { return parseInt(document.querySelector('.atr-chip.active')?.dataset.period || '14'); }
+
+// ── Weekend gap (forex closed Fri 22:00 → Sun 22:00 UTC) ──
+function closedGapSecs(ts) {
+  const d   = new Date(ts * 1000);
+  const day = d.getUTCDay();
+  const sod = d.getUTCHours() * 3600 + d.getUTCMinutes() * 60 + d.getUTCSeconds();
+  const FRI_CLOSE = 22 * 3600, SUN_OPEN = 22 * 3600;
+  if (day === 5 && sod >= FRI_CLOSE) return sod - FRI_CLOSE;
+  if (day === 6)                     return (86400 - FRI_CLOSE) + sod;
+  if (day === 0 && sod < SUN_OPEN)   return (86400 - FRI_CLOSE) + 86400 + sod;
+  return 0;
+}
+
+// ── Wilder's ATR ──
+function calcATR(h, l, c, period) {
+  if (c.length < period + 1) return null;
+  const trs = [];
+  for (let i = 1; i < c.length; i++) {
+    trs.push(Math.max(h[i] - l[i], Math.abs(h[i] - c[i-1]), Math.abs(l[i] - c[i-1])));
+  }
+  // Seed with simple average of first `period` TRs
+  let atr = trs.slice(0, period).reduce((a, b) => a + b, 0) / period;
+  for (let i = period; i < trs.length; i++) {
+    atr = (atr * (period - 1) + trs[i]) / period;
+  }
+  return atr;
+}
+
+// ── Main scan ──
+let scanning = false;
+
+async function runScan() {
+  if (scanning) return;
+  const assets = getActiveAssets();
+  if (!assets.length) return;
+  scanning = true;
+
+  const btn = document.getElementById('scanBtn');
+  btn.disabled = true;
+  btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:spin 1s linear infinite"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg> Scanning…`;
+
+  const resolution = getActiveTF();
+  const atrPeriod  = getActiveATR();
+  const tfSec      = TF_SECONDS[resolution] || 14400;
+  const now        = Math.floor(Date.now() / 1000);
+
+  // Need (atrPeriod + 1) candles minimum; fetch 3× + weekend compensation
+  const fetchN   = (atrPeriod + 1) * 3;
+  const calWindow = Math.ceil(tfSec * fetchN * (168 / 120));
+  const gap        = closedGapSecs(now);
+  const from       = now - calWindow - gap;
+
+  const progressWrap    = document.getElementById('progressWrap');
+  const progressFill    = document.getElementById('progressFill');
+  const progressPct     = document.getElementById('progressPct');
+  const progressCurrent = document.getElementById('progressCurrent');
+  progressWrap.style.display = 'block';
+  progressFill.style.width   = '0%';
+  progressPct.textContent    = '0%';
+  document.getElementById('mainArea').innerHTML = `<div class="skeleton-bar"></div>`;
+
+  let done = 0;
+  const results = {};
+
+  function updateProgress(label) {
+    done++;
+    const pct = Math.round(done / assets.length * 100);
+    progressFill.style.width = pct + '%';
+    progressPct.textContent  = pct + '%';
+    progressCurrent.textContent = label ? `Fetched: ${label}` : '';
+    document.getElementById('progressLabel').textContent = `Fetching candle data… (${done}/${assets.length})`;
+  }
+
+  const CONCURRENCY = 5;
+  let idx = 0;
+  async function worker() {
+    while (idx < assets.length) {
+      const asset = assets[idx++];
+      try {
+        const url  = `${API_BASE}/forex/candle?symbol=${encodeURIComponent(asset.sym)}&resolution=${resolution}&from=${from}&to=${now}&token=${API_KEY}`;
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error();
+        const data = await resp.json();
+        if (data.s === 'ok' && data.c && data.c.length > atrPeriod) {
+          const atr = calcATR(data.h, data.l, data.c, atrPeriod);
+          const lastClose = data.c[data.c.length - 1];
+          results[asset.sym] = { ...asset, atr, lastClose, candles: data.c.length };
+        } else {
+          results[asset.sym] = { ...asset, atr: null, lastClose: null };
+        }
+      } catch {
+        results[asset.sym] = { ...asset, atr: null, lastClose: null };
+      }
+      updateProgress(asset.label);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, assets.length) }, worker));
+
+  progressWrap.style.display = 'none';
+  renderResults(results, resolution, atrPeriod);
+
+  btn.disabled = false;
+  btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Scan Volatility`;
+  scanning = false;
+}
+
+function renderResults(results, resolution, atrPeriod) {
+  const tfLabel = TF_LABELS[resolution] || resolution;
+  const rows = Object.values(results)
+    .filter(r => r.atr !== null)
+    .sort((a, b) => b.atr - a.atr);
+  const failed = Object.values(results).filter(r => r.atr === null);
+
+  if (!rows.length) {
+    document.getElementById('mainArea').innerHTML = `<div class="state-box"><div class="state-icon">⚠️</div><div class="state-title">No data returned</div><div class="state-sub">Try a different timeframe or check your connection.</div></div>`;
+    return;
+  }
+
+  const maxATR = rows[0].atr;
+  const n = rows.length;
+  const highCut = Math.ceil(n / 3);
+  const lowCut  = n - Math.floor(n / 3);
+
+  function tier(i)    { return i < highCut ? 'high' : i >= lowCut ? 'low' : 'med'; }
+  function tierLabel(i){ return i < highCut ? 'HIGH'  : i >= lowCut ? 'LOW'  : 'MED'; }
+
+  const now = new Date();
+  const updatedStr = now.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+
+  const highCount = rows.filter((_, i) => tier(i) === 'high').length;
+  const medCount  = rows.filter((_, i) => tier(i) === 'med').length;
+  const lowCount  = rows.filter((_, i) => tier(i) === 'low').length;
+
+  const tableRows = rows.map((r, i) => {
+    const t       = tier(i);
+    const pct     = (r.atr / maxATR * 100).toFixed(1);
+    const pips    = (r.atr / r.pip).toFixed(1);
+    const pctPrice = r.lastClose ? (r.atr / r.lastClose * 100).toFixed(3) : '—';
+    return `
+      <div class="vol-row">
+        <div class="vol-rank">#${i + 1}</div>
+        <div class="vol-pair">${r.label}</div>
+        <div class="vol-tier ${t}">${tierLabel(i)}</div>
+        <div class="vol-bar-wrap"><div class="vol-bar-inner ${t}" style="width:${pct}%"></div></div>
+        <div class="vol-pips">${pips}<span>pips</span></div>
+        <div class="vol-pct">${pctPrice}%</div>
+      </div>`;
+  }).join('');
+
+  const failedNote = failed.length
+    ? `<div style="padding:10px 18px;font-size:12px;color:var(--text-muted);border-top:1px solid var(--border)">${failed.length} instrument${failed.length > 1 ? 's' : ''} returned no data: ${failed.map(f => f.label).join(', ')}</div>`
+    : '';
+
+  document.getElementById('mainArea').innerHTML = `
+    <div class="summary-bar">
+      <div class="summary-stat">
+        <span class="summary-stat-val all">${rows.length}</span>
+        <span class="summary-stat-label">Scanned</span>
+      </div>
+      <div class="summary-stat">
+        <span class="summary-stat-val high">${highCount}</span>
+        <span class="summary-stat-label">High Vol</span>
+      </div>
+      <div class="summary-stat">
+        <span class="summary-stat-val med">${medCount}</span>
+        <span class="summary-stat-label">Medium Vol</span>
+      </div>
+      <div class="summary-stat">
+        <span class="summary-stat-val low">${lowCount}</span>
+        <span class="summary-stat-label">Low Vol</span>
+      </div>
+      <div class="summary-updated">ATR(${atrPeriod}) · ${tfLabel} · Updated ${updatedStr}</div>
+    </div>
+
+    <div class="vol-card">
+      <div class="vol-card-header">
+        <div class="vol-th">#</div>
+        <div class="vol-th">Instrument</div>
+        <div class="vol-th center">Tier</div>
+        <div class="vol-th">ATR Bar</div>
+        <div class="vol-th right">ATR (pips)</div>
+        <div class="vol-th right">ATR (%)</div>
+      </div>
+      ${tableRows}
+      ${failedNote}
+    </div>
+  `;
+}
+  </script>
+
+  <script>
+  (function(){
+    var btn = document.getElementById('hamburger');
+    var nav = document.querySelector('.nav');
+    if (!btn || !nav) return;
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      btn.classList.toggle('open');
+      nav.classList.toggle('open');
+    });
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.header-inner')) {
+        btn.classList.remove('open');
+        nav.classList.remove('open');
+      }
+    });
+  })();
+  </script>
+</body>
+</html>
