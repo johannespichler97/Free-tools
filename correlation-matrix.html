@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Correlation Matrix | Market Analytics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-primary:    #062434;
+  --bg-secondary:  #0a2e44;
+  --bg-tertiary:   #0e3a54;
+  --bg-hover:      #123f5c;
+  --border:        #1a4d6e;
+  --text-primary:  #E6E9EB;
+  --text-secondary:#8ab8d0;
+  --text-muted:    #4d7a96;
+  --accent:        #2FA3E0;
+  --accent-2:      #51d7ce;
+  --accent-dim:    rgba(47,163,224,0.12);
+  --positive:      #3fb950;
+  --positive-bg:   rgba(63,185,80,0.10);
+  --negative:      #f85149;
+  --negative-bg:   rgba(248,81,73,0.10);
+  --font:          'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono:     'JetBrains Mono', monospace;
+  --radius-sm:     6px;
+  --radius-md:     10px;
+  --radius-lg:     14px;
+}
+
+html { scroll-behavior: smooth; }
+body { font-family: var(--font); background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; font-size: 14px; line-height: 1.5; }
+
+@keyframes pulse   { 0%,100%{opacity:1} 50%{opacity:0.4} }
+@keyframes spin    { to{transform:rotate(360deg)} }
+@keyframes fadeIn  { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+@keyframes shimmer { 0%{background-position:-400px 0} 100%{background-position:400px 0} }
+
+/* ── HEADER ── */
+.header { position:sticky; top:0; z-index:100; background:rgba(6,36,52,0.97); backdrop-filter:blur(12px); border-bottom:1px solid var(--border); }
+.header-inner { max-width:1200px; margin:0 auto; padding:0 24px; height:60px; display:flex; align-items:center; gap:24px; }
+.logo { display:flex; align-items:center; gap:8px; text-decoration:none; color:var(--text-primary); font-size:16px; font-weight:700; white-space:nowrap; }
+.logo-text strong { color:var(--accent); }
+.nav { display:flex; gap:1px; flex:1; }
+.nav-link { text-decoration:none; color:var(--text-secondary); padding:6px 9px; border-radius:var(--radius-sm); font-size:12.5px; font-weight:500; transition:all .15s; white-space:nowrap; }
+.nav-link:hover { color:var(--text-primary); background:var(--bg-hover); }
+.nav-link.active { color:var(--accent); background:var(--accent-dim); }
+.header-actions { display:flex; align-items:center; gap:12px; }
+.live-badge { font-size:11px; font-weight:600; color:var(--positive); letter-spacing:.05em; display:flex; align-items:center; gap:5px; }
+.live-dot { animation:pulse 2s infinite; }
+.btn-primary { background:linear-gradient(135deg,#51d7ce,#2FA3E0); color:#062434; border:none; padding:7px 18px; border-radius:20px; font-size:13px; font-weight:700; cursor:pointer; transition:opacity .15s; font-family:var(--font); }
+.btn-primary:hover { opacity:.88; }
+
+/* ── HERO ── */
+.hero { background:linear-gradient(135deg,#062434 0%,#0a2e44 60%,#0d3550 100%); border-bottom:1px solid var(--border); padding:28px 24px; }
+.hero-inner { max-width:1200px; margin:0 auto; }
+.hero h1 { font-size:26px; font-weight:700; }
+.hero h1::after { content:''; display:block; width:40px; height:3px; background:linear-gradient(90deg,#51d7ce,#2FA3E0); border-radius:2px; margin-top:10px; }
+.hero p { color:var(--text-secondary); font-size:15px; margin-top:10px; }
+
+/* ── CONTROLS ── */
+.controls-bar { background:var(--bg-primary); border-bottom:1px solid var(--border); padding:12px 24px; }
+.controls-box { max-width:1248px; margin:0 auto; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); padding:16px 18px; display:flex; flex-direction:column; gap:14px; }
+.ctrl-row { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.ctrl-label { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.07em; white-space:nowrap; min-width:80px; }
+.ctrl-divider { border:none; border-top:1px solid var(--border); margin:0; }
+
+.asset-chips { display:flex; flex-wrap:wrap; gap:5px; flex:1; }
+.asset-chip { padding:4px 10px; border-radius:20px; font-size:12px; font-weight:600; cursor:pointer; transition:all .15s; border:1.5px solid var(--border); color:var(--text-muted); background:var(--bg-tertiary); user-select:none; white-space:nowrap; opacity:.55; }
+.asset-chip:hover { opacity:.85; border-color:var(--text-muted); }
+.asset-chip.active { opacity:1; border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
+.asset-chip.metal.active { border-color:var(--accent-2); color:var(--accent-2); background:rgba(81,215,206,0.10); }
+
+.chip-actions { display:flex; gap:6px; }
+.chip-action-btn { padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; cursor:pointer; border:1px solid var(--border); background:transparent; color:var(--text-muted); font-family:var(--font); transition:all .15s; }
+.chip-action-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+.tf-chips, .lb-chips { display:flex; gap:5px; flex-wrap:wrap; }
+.tf-chip, .lb-chip { padding:5px 14px; border-radius:20px; font-size:12px; font-weight:700; cursor:pointer; transition:all .15s; border:1.5px solid var(--border); color:var(--text-muted); background:var(--bg-tertiary); user-select:none; opacity:.55; }
+.tf-chip:hover, .lb-chip:hover { opacity:.85; }
+.tf-chip.active { opacity:1; border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
+.lb-chip.active { opacity:1; border-color:var(--accent-2); color:var(--accent-2); background:rgba(81,215,206,0.10); }
+
+.scan-row { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+.scan-counter { font-size:12px; color:var(--text-muted); }
+.scan-counter strong { color:var(--accent); }
+.btn-scan { background:linear-gradient(135deg,#51d7ce,#2FA3E0); color:#062434; border:none; padding:10px 28px; border-radius:20px; font-size:14px; font-weight:700; cursor:pointer; font-family:var(--font); transition:opacity .15s; display:flex; align-items:center; gap:8px; }
+.btn-scan:hover { opacity:.88; }
+.btn-scan:disabled { opacity:.45; cursor:not-allowed; }
+
+/* ── PROGRESS ── */
+.progress-wrap { max-width:1248px; margin:8px auto 0; padding:0 24px; display:none; }
+.progress-track { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); padding:14px 18px; }
+.progress-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+.progress-label { font-size:13px; color:var(--text-secondary); }
+.progress-pct { font-size:13px; font-weight:700; color:var(--accent); font-family:var(--font-mono); }
+.progress-bar { height:6px; background:var(--bg-tertiary); border-radius:3px; overflow:hidden; }
+.progress-fill { height:100%; background:linear-gradient(90deg,#51d7ce,#2FA3E0); border-radius:3px; transition:width .3s ease; width:0%; }
+.progress-current { font-size:11px; color:var(--text-muted); margin-top:7px; }
+
+/* ── MAIN ── */
+.main { max-width:1248px; margin:0 auto; padding:20px 24px 60px; }
+
+/* ── CORRELATION MATRIX ── */
+.matrix-card { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; margin-bottom:20px; animation:fadeIn .25s ease; }
+.matrix-card-header { padding:14px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.matrix-card-title { font-size:14px; font-weight:700; color:var(--text-primary); }
+.matrix-meta { font-size:12px; color:var(--text-muted); }
+
+.matrix-scroll { overflow-x:auto; padding:16px 20px; }
+.corr-grid { display:grid; min-width:max-content; gap:3px; }
+
+.corr-corner { /* empty top-left */ }
+.corr-col-lbl {
+  display:flex; align-items:flex-end; justify-content:center;
+  font-family:var(--font-mono); font-size:11px; font-weight:700;
+  color:var(--text-secondary); padding-bottom:6px;
+  min-width:70px; text-align:center;
+}
+.corr-row-lbl {
+  display:flex; align-items:center;
+  font-family:var(--font-mono); font-size:11px; font-weight:700;
+  color:var(--text-secondary); padding-right:8px; height:52px;
+  white-space:nowrap;
+}
+.corr-cell {
+  min-width:70px; height:52px; border-radius:6px;
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--font-mono); font-size:12px; font-weight:700;
+  cursor:default; transition:filter .12s;
+  position:relative;
+}
+.corr-cell:hover { filter:brightness(1.15); }
+.corr-cell.diagonal { background:rgba(47,163,224,0.18) !important; color:var(--accent) !important; border:1px solid rgba(47,163,224,0.3); }
+
+/* Legend */
+.corr-legend { display:flex; align-items:center; gap:6px; margin-top:14px; }
+.legend-label { font-size:11px; color:var(--text-muted); white-space:nowrap; }
+.legend-bar { flex:1; height:10px; border-radius:5px; background:linear-gradient(90deg,#f85149,rgba(248,81,73,0.15) 35%,var(--bg-tertiary) 50%,rgba(63,185,80,0.15) 65%,#3fb950); max-width:240px; }
+.legend-ticks { display:flex; justify-content:space-between; font-size:10px; color:var(--text-muted); font-family:var(--font-mono); max-width:240px; margin-top:2px; }
+
+/* Method box */
+.method-box { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); padding:20px 24px; }
+.method-box-title { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--text-muted); margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+.method-box-title::after { content:''; flex:1; height:1px; background:var(--border); }
+.method-steps { display:flex; flex-direction:column; gap:10px; }
+.method-step { display:flex; gap:14px; align-items:flex-start; }
+.method-step-num { flex-shrink:0; width:22px; height:22px; border-radius:50%; background:var(--accent-dim); border:1px solid rgba(47,163,224,.3); color:var(--accent); font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; margin-top:1px; }
+.method-step-text { font-size:13px; color:var(--text-secondary); line-height:1.6; }
+.method-step-text strong { color:var(--text-primary); font-weight:600; }
+.method-step-text code { font-family:var(--font-mono); font-size:12px; background:var(--bg-tertiary); border:1px solid var(--border); padding:1px 5px; border-radius:4px; color:var(--accent-2); }
+.method-note { margin-top:14px; padding:10px 14px; background:var(--bg-tertiary); border-radius:var(--radius-sm); border-left:3px solid var(--accent); font-size:12px; color:var(--text-muted); line-height:1.6; }
+.method-note strong { color:var(--text-secondary); }
+
+/* State */
+.state-box { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:80px 24px; gap:14px; text-align:center; color:var(--text-muted); }
+.state-icon { font-size:44px; opacity:.3; }
+.state-title { font-size:17px; font-weight:600; color:var(--text-secondary); }
+.state-sub { font-size:13px; max-width:360px; line-height:1.6; }
+
+/* Skeleton */
+.skeleton-bar { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); height:320px; overflow:hidden; position:relative; margin-bottom:20px; }
+.skeleton-bar::after { content:''; position:absolute; inset:0; background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,.04) 50%,transparent 100%); background-size:400px 100%; animation:shimmer 1.4s infinite; }
+
+/* Footer */
+.footer { background:var(--bg-secondary); border-top:1px solid var(--border); padding:24px; }
+.footer-inner { max-width:1200px; margin:0 auto; text-align:center; }
+.footer-disclaimer { font-size:12px; color:var(--text-muted); line-height:1.6; }
+.footer-copy { font-size:12px; color:var(--text-muted); margin-top:6px; }
+
+@media(max-width:640px) { .header-inner,.main,.controls-bar { padding-left:16px; padding-right:16px; } }
+
+/* ── HAMBURGER ── */
+.hamburger { display:none; flex-direction:column; justify-content:center; gap:5px; background:none; border:none; padding:6px; cursor:pointer; border-radius:6px; transition:background .15s; margin-left:auto; }
+.hamburger:hover { background:var(--bg-hover); }
+.hamburger span { display:block; width:22px; height:2px; background:var(--text-primary); border-radius:1px; transition:all .25s; }
+.hamburger.open span:nth-child(1) { transform:translateY(7px) rotate(45deg); }
+.hamburger.open span:nth-child(2) { opacity:0; }
+.hamburger.open span:nth-child(3) { transform:translateY(-7px) rotate(-45deg); }
+@media(max-width:1480px) {
+  .hamburger { display:flex; }
+  .header-inner { position:relative; flex-wrap:nowrap; }
+  .nav { display:none; position:absolute; top:60px; left:0; right:0; z-index:99; flex-direction:column; gap:0; padding:6px 0; background:rgba(6,36,52,0.98); border-bottom:1px solid var(--border); backdrop-filter:blur(12px); }
+  .nav.open { display:flex; }
+  .nav-link { padding:13px 22px; border-radius:0; font-size:14px; border-bottom:1px solid rgba(26,77,110,0.4); }
+  .nav-link:last-child { border-bottom:none; }
+  .header-actions .btn-primary { display:none; }
+}
+  </style>
+</head>
+<body>
+
+  <header class="header">
+    <div class="header-inner">
+      <a href="economic-calendar.html" class="logo">
+        <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+          <defs><linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#51d7ce"/><stop offset="100%" stop-color="#2FA3E0"/></linearGradient></defs>
+          <circle cx="18" cy="18" r="16.5" stroke="url(#lg)" stroke-width="2" fill="none"/>
+          <rect x="8" y="20" width="4" height="8" rx="1" fill="url(#lg)"/>
+          <rect x="14" y="15" width="4" height="13" rx="1" fill="url(#lg)"/>
+          <rect x="20" y="11" width="4" height="17" rx="1" fill="url(#lg)"/>
+          <polyline points="22,9 27,9 27,14" stroke="url(#lg)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <line x1="14" y1="21" x2="27" y2="9" stroke="url(#lg)" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <span class="logo-text">Market<strong>Analytics</strong></span>
+      </a>
+      <nav class="nav">
+        <a href="economic-calendar.html"       class="nav-link">Economic Calendar</a>
+        <a href="pattern-recognition.html"     class="nav-link">Pattern Recognition</a>
+        <a href="support-resistance.html"      class="nav-link">Support/Resistance</a>
+        <a href="currency-strength.html"       class="nav-link">Currency Strength</a>
+        <a href="volatility-scanner.html"      class="nav-link">Volatility</a>
+        <a href="correlation-matrix.html"      class="nav-link active">Correlation</a>
+        <a href="trading-sessions.html"        class="nav-link">Trading Sessions</a>
+        <a href="position-size-calculator.html" class="nav-link">Position Size</a>
+      </nav>
+      <button class="hamburger" id="hamburger" aria-label="Open navigation">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="header-actions">
+        <span class="live-badge"><span class="live-dot">&#9679;</span> LIVE</span>
+        <button class="btn-primary">Open Account</button>
+      </div>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-inner">
+      <h1>Correlation Matrix</h1>
+      <p>Measures how similarly pairs move to each other. Useful for spotting risk overlap in your open positions.</p>
+    </div>
+  </section>
+
+  <div class="controls-bar">
+    <div class="controls-box">
+
+      <div class="ctrl-row">
+        <span class="ctrl-label">Instruments <span style="font-size:10px;color:var(--text-muted);font-weight:400;letter-spacing:0">(max 10)</span></span>
+        <div class="chip-actions">
+          <button class="chip-action-btn" onclick="selectAllAssets()">Select All</button>
+          <button class="chip-action-btn" onclick="clearAssets()">Clear</button>
+        </div>
+      </div>
+      <div class="asset-chips" id="assetChips">
+        <span class="asset-chip active" data-sym="OANDA:EUR_USD" data-label="EURUSD">EURUSD</span>
+        <span class="asset-chip active" data-sym="OANDA:GBP_USD" data-label="GBPUSD">GBPUSD</span>
+        <span class="asset-chip active" data-sym="OANDA:USD_JPY" data-label="USDJPY">USDJPY</span>
+        <span class="asset-chip active" data-sym="OANDA:AUD_USD" data-label="AUDUSD">AUDUSD</span>
+        <span class="asset-chip active" data-sym="OANDA:USD_CAD" data-label="USDCAD">USDCAD</span>
+        <span class="asset-chip active" data-sym="OANDA:USD_CHF" data-label="USDCHF">USDCHF</span>
+        <span class="asset-chip active" data-sym="OANDA:NZD_USD" data-label="NZDUSD">NZDUSD</span>
+        <span class="asset-chip"        data-sym="OANDA:EUR_JPY" data-label="EURJPY">EURJPY</span>
+        <span class="asset-chip"        data-sym="OANDA:GBP_JPY" data-label="GBPJPY">GBPJPY</span>
+        <span class="asset-chip"        data-sym="OANDA:EUR_GBP" data-label="EURGBP">EURGBP</span>
+        <span class="asset-chip"        data-sym="OANDA:EUR_AUD" data-label="EURAUD">EURAUD</span>
+        <span class="asset-chip"        data-sym="OANDA:EUR_CAD" data-label="EURCAD">EURCAD</span>
+        <span class="asset-chip"        data-sym="OANDA:EUR_CHF" data-label="EURCHF">EURCHF</span>
+        <span class="asset-chip"        data-sym="OANDA:EUR_NZD" data-label="EURNZD">EURNZD</span>
+        <span class="asset-chip"        data-sym="OANDA:GBP_AUD" data-label="GBPAUD">GBPAUD</span>
+        <span class="asset-chip"        data-sym="OANDA:GBP_CAD" data-label="GBPCAD">GBPCAD</span>
+        <span class="asset-chip"        data-sym="OANDA:GBP_CHF" data-label="GBPCHF">GBPCHF</span>
+        <span class="asset-chip"        data-sym="OANDA:GBP_NZD" data-label="GBPNZD">GBPNZD</span>
+        <span class="asset-chip"        data-sym="OANDA:AUD_JPY" data-label="AUDJPY">AUDJPY</span>
+        <span class="asset-chip"        data-sym="OANDA:CAD_JPY" data-label="CADJPY">CADJPY</span>
+        <span class="asset-chip"        data-sym="OANDA:NZD_JPY" data-label="NZDJPY">NZDJPY</span>
+        <span class="asset-chip"        data-sym="OANDA:CHF_JPY" data-label="CHFJPY">CHFJPY</span>
+        <span class="asset-chip"        data-sym="OANDA:AUD_CAD" data-label="AUDCAD">AUDCAD</span>
+        <span class="asset-chip"        data-sym="OANDA:AUD_NZD" data-label="AUDNZD">AUDNZD</span>
+        <span class="asset-chip"        data-sym="OANDA:NZD_CAD" data-label="NZDCAD">NZDCAD</span>
+        <span class="asset-chip"        data-sym="OANDA:NZD_CHF" data-label="NZDCHF">NZDCHF</span>
+        <span class="asset-chip"        data-sym="OANDA:CAD_CHF" data-label="CADCHF">CADCHF</span>
+        <span class="asset-chip metal"  data-sym="OANDA:XAU_USD" data-label="XAUUSD">XAUUSD</span>
+        <span class="asset-chip metal"  data-sym="OANDA:XAG_USD" data-label="XAGUSD">XAGUSD</span>
+      </div>
+
+      <hr class="ctrl-divider" />
+
+      <div class="ctrl-row">
+        <span class="ctrl-label">Timeframe</span>
+        <div class="tf-chips" id="tfChips">
+          <span class="tf-chip" data-res="15">M15</span>
+          <span class="tf-chip" data-res="30">M30</span>
+          <span class="tf-chip" data-res="60">1H</span>
+          <span class="tf-chip active" data-res="240">4H</span>
+          <span class="tf-chip" data-res="D">Daily</span>
+          <span class="tf-chip" data-res="W">Weekly</span>
+        </div>
+        <span class="ctrl-label" style="margin-left:16px">Lookback</span>
+        <div class="lb-chips" id="lbChips">
+          <span class="lb-chip" data-lb="20">20</span>
+          <span class="lb-chip active" data-lb="50">50</span>
+          <span class="lb-chip" data-lb="100">100</span>
+          <span class="lb-chip" data-lb="200">200</span>
+        </div>
+      </div>
+
+      <hr class="ctrl-divider" />
+
+      <div class="scan-row">
+        <span class="scan-counter" id="scanCounter">
+          <strong id="cntAsset">7</strong> instruments &nbsp;·&nbsp; lookback <strong id="cntLB">50</strong> candles
+        </span>
+        <button class="btn-scan" id="scanBtn" onclick="runScan()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          Build Matrix
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress-track">
+      <div class="progress-header">
+        <span class="progress-label" id="progressLabel">Fetching candle data…</span>
+        <span class="progress-pct" id="progressPct">0%</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-current" id="progressCurrent"></div>
+    </div>
+  </div>
+
+  <main class="main" id="mainArea">
+    <div class="state-box">
+      <div class="state-icon">⬛</div>
+      <div class="state-title">Ready to build</div>
+      <div class="state-sub">Select instruments and press <strong>Build Matrix</strong> to compute correlations.</div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+      <p class="footer-disclaimer">
+        The information, charts, indicators, signals and analytical tools provided on market-analytics.io are for informational and educational purposes only. They do not constitute financial advice, investment advice, trading advice, or any recommendation to buy or sell any financial instrument.<br><br>
+        All market data and indicator values are provided without guarantee of accuracy, completeness, or timeliness and may be delayed or subject to errors. Past performance or historical data shown on this website is not indicative of future results. Trading foreign exchange and other financial instruments involves significant risk and may result in the loss of capital. Users are solely responsible for their own trading decisions and any resulting profits or losses. market-analytics.io shall not be held liable for any loss or damage, including financial loss, arising directly or indirectly from the use of or reliance on the information or tools provided on this website.
+      </p>
+      <p class="footer-copy">&copy; 2026 Market-Analytics.io. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script>
+const API_KEY  = 'd4fevfpr01qkcvvhv6h0d4fevfpr01qkcvvhv6hg';
+const API_BASE = 'https://finnhub.io/api/v1';
+const TF_LABELS  = { '15':'M15','30':'M30','60':'1H','240':'4H','D':'Daily','W':'Weekly' };
+const TF_SECONDS = { '15':900,'30':1800,'60':3600,'240':14400,'D':86400,'W':604800 };
+const MAX_ASSETS = 10;
+
+// ── Controls ──
+document.querySelectorAll('.asset-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    const active = document.querySelectorAll('.asset-chip.active');
+    if (!chip.classList.contains('active') && active.length >= MAX_ASSETS) return;
+    chip.classList.toggle('active');
+    updateCounter();
+  });
+});
+function selectAllAssets() {
+  let n = 0;
+  document.querySelectorAll('.asset-chip').forEach(c => { if (n < MAX_ASSETS) { c.classList.add('active'); n++; } });
+  updateCounter();
+}
+function clearAssets() {
+  document.querySelectorAll('.asset-chip').forEach(c => c.classList.remove('active'));
+  updateCounter();
+}
+document.querySelectorAll('.tf-chip').forEach(c => {
+  c.addEventListener('click', () => { document.querySelectorAll('.tf-chip').forEach(x => x.classList.remove('active')); c.classList.add('active'); });
+});
+document.querySelectorAll('.lb-chip').forEach(c => {
+  c.addEventListener('click', () => { document.querySelectorAll('.lb-chip').forEach(x => x.classList.remove('active')); c.classList.add('active'); updateCounter(); });
+});
+function updateCounter() {
+  document.getElementById('cntAsset').textContent = document.querySelectorAll('.asset-chip.active').length;
+  document.getElementById('cntLB').textContent    = document.querySelector('.lb-chip.active')?.dataset.lb || '50';
+}
+function getActiveAssets() {
+  return [...document.querySelectorAll('.asset-chip.active')].map(c => ({ sym: c.dataset.sym, label: c.dataset.label }));
+}
+function getActiveTF() { return document.querySelector('.tf-chip.active')?.dataset.res || '240'; }
+function getActiveLB() { return parseInt(document.querySelector('.lb-chip.active')?.dataset.lb || '50'); }
+
+// ── Weekend gap ──
+function closedGapSecs(ts) {
+  const d = new Date(ts * 1000), day = d.getUTCDay();
+  const sod = d.getUTCHours() * 3600 + d.getUTCMinutes() * 60 + d.getUTCSeconds();
+  const FRI_CLOSE = 22 * 3600, SUN_OPEN = 22 * 3600;
+  if (day === 5 && sod >= FRI_CLOSE) return sod - FRI_CLOSE;
+  if (day === 6)                     return (86400 - FRI_CLOSE) + sod;
+  if (day === 0 && sod < SUN_OPEN)   return (86400 - FRI_CLOSE) + 86400 + sod;
+  return 0;
+}
+
+// ── % Returns ──
+function toReturns(closes) {
+  const r = [];
+  for (let i = 1; i < closes.length; i++) r.push((closes[i] - closes[i-1]) / closes[i-1]);
+  return r;
+}
+
+// ── Pearson correlation ──
+function pearson(a, b) {
+  const n = Math.min(a.length, b.length);
+  if (n < 3) return null;
+  const ra = a.slice(-n), rb = b.slice(-n);
+  const mA = ra.reduce((s, v) => s + v, 0) / n;
+  const mB = rb.reduce((s, v) => s + v, 0) / n;
+  let num = 0, dA = 0, dB = 0;
+  for (let i = 0; i < n; i++) {
+    const da = ra[i] - mA, db = rb[i] - mB;
+    num += da * db; dA += da * da; dB += db * db;
+  }
+  const denom = Math.sqrt(dA * dB);
+  return denom === 0 ? null : num / denom;
+}
+
+// ── Cell color ──
+function cellBg(r) {
+  if (r === null) return 'rgba(14,58,84,0.5)';
+  const t = Math.min(Math.abs(r), 1);
+  const alpha = (0.08 + t * 0.72).toFixed(2);
+  return r >= 0 ? `rgba(63,185,80,${alpha})` : `rgba(248,81,73,${alpha})`;
+}
+function cellColor(r) {
+  if (r === null) return '#4d7a96';
+  return Math.abs(r) >= 0.5 ? '#E6E9EB' : Math.abs(r) >= 0.25 ? '#8ab8d0' : '#4d7a96';
+}
+
+// ── Main ──
+let scanning = false;
+
+async function runScan() {
+  if (scanning) return;
+  const assets = getActiveAssets();
+  if (assets.length < 2) { alert('Select at least 2 instruments.'); return; }
+  scanning = true;
+
+  const btn = document.getElementById('scanBtn');
+  btn.disabled = true;
+  btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:spin 1s linear infinite"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg> Building…`;
+
+  const resolution = getActiveTF();
+  const lookback   = getActiveLB();
+  const tfSec      = TF_SECONDS[resolution] || 14400;
+  const now        = Math.floor(Date.now() / 1000);
+  const fetchN     = lookback + 5;
+  const calWindow  = Math.ceil(tfSec * fetchN * (168 / 120));
+  const gap        = closedGapSecs(now);
+  const from       = now - calWindow - gap;
+
+  const pw = document.getElementById('progressWrap');
+  const pf = document.getElementById('progressFill');
+  const pp = document.getElementById('progressPct');
+  const pc = document.getElementById('progressCurrent');
+  pw.style.display = 'block';
+  pf.style.width = '0%'; pp.textContent = '0%';
+  document.getElementById('mainArea').innerHTML = `<div class="skeleton-bar"></div>`;
+
+  let done = 0;
+  const returns = {};
+
+  function updateProgress(label) {
+    done++;
+    const pct = Math.round(done / assets.length * 100);
+    pf.style.width = pct + '%'; pp.textContent = pct + '%';
+    pc.textContent = label ? `Fetched: ${label}` : '';
+    document.getElementById('progressLabel').textContent = `Fetching candle data… (${done}/${assets.length})`;
+  }
+
+  const CONCURRENCY = 5;
+  let idx = 0;
+  async function worker() {
+    while (idx < assets.length) {
+      const asset = assets[idx++];
+      try {
+        const url  = `${API_BASE}/forex/candle?symbol=${encodeURIComponent(asset.sym)}&resolution=${resolution}&from=${from}&to=${now}&token=${API_KEY}`;
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error();
+        const data = await resp.json();
+        if (data.s === 'ok' && data.c && data.c.length > 2) {
+          returns[asset.sym] = { label: asset.label, returns: toReturns(data.c).slice(-lookback) };
+        } else {
+          returns[asset.sym] = { label: asset.label, returns: null };
+        }
+      } catch {
+        returns[asset.sym] = { label: asset.label, returns: null };
+      }
+      updateProgress(asset.label);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, assets.length) }, worker));
+
+  pw.style.display = 'none';
+  renderMatrix(assets, returns, resolution, lookback);
+
+  btn.disabled = false;
+  btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg> Build Matrix`;
+  scanning = false;
+}
+
+function renderMatrix(assets, returns, resolution, lookback) {
+  const n       = assets.length;
+  const tfLabel = TF_LABELS[resolution] || resolution;
+  const now     = new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+
+  // Build n×n correlation table
+  const corr = Array.from({ length: n }, (_, i) =>
+    Array.from({ length: n }, (_, j) => {
+      if (i === j) return 1;
+      const ri = returns[assets[i].sym]?.returns;
+      const rj = returns[assets[j].sym]?.returns;
+      if (!ri || !rj) return null;
+      return pearson(ri, rj);
+    })
+  );
+
+  const cols = `80px repeat(${n}, 1fr)`;
+
+  // Column header row
+  const colHeaders = `<div class="corr-corner"></div>` +
+    assets.map(a => `<div class="corr-col-lbl">${a.label.replace('USD','<br>USD').replace('JPY','<br>JPY').replace('GBP','<br>GBP').replace('EUR','<br>EUR').replace('AUD','<br>AUD').replace('CAD','<br>CAD').replace('CHF','<br>CHF').replace('NZD','<br>NZD').replace('XAU','<br>XAU').replace('XAG','<br>XAG')}</div>`).join('');
+
+  // Data rows
+  const dataRows = assets.map((rowAsset, i) => {
+    const cells = assets.map((_, j) => {
+      const r   = corr[i][j];
+      const bg  = i === j ? '' : `background:${cellBg(r)};`;
+      const clr = i === j ? '' : `color:${cellColor(r)};`;
+      const cls = i === j ? 'corr-cell diagonal' : 'corr-cell';
+      const val = i === j ? '—' : r === null ? 'N/A' : (r >= 0 ? '+' : '') + r.toFixed(2);
+      return `<div class="${cls}" style="${bg}${clr}">${val}</div>`;
+    }).join('');
+    return `<div class="corr-row-lbl">${rowAsset.label}</div>${cells}`;
+  }).join('');
+
+  const failed = assets.filter(a => !returns[a.sym]?.returns).map(a => a.label);
+  const failedNote = failed.length
+    ? `<div style="padding:10px 20px;font-size:12px;color:var(--text-muted);border-top:1px solid var(--border);">No data: ${failed.join(', ')}</div>`
+    : '';
+
+  document.getElementById('mainArea').innerHTML = `
+    <div class="matrix-card">
+      <div class="matrix-card-header">
+        <span class="matrix-card-title">Correlation Matrix</span>
+        <span class="matrix-meta">ATR ${tfLabel} · ${lookback} candles · Updated ${now}</span>
+      </div>
+      <div class="matrix-scroll">
+        <div class="corr-grid" style="grid-template-columns:${cols}">
+          ${colHeaders}
+          ${dataRows}
+        </div>
+        <div class="corr-legend" style="margin-top:16px">
+          <span class="legend-label">−1.0</span>
+          <div>
+            <div class="legend-bar"></div>
+            <div class="legend-ticks"><span>−1</span><span>−0.5</span><span>0</span><span>+0.5</span><span>+1</span></div>
+          </div>
+          <span class="legend-label">+1.0</span>
+        </div>
+      </div>
+      ${failedNote}
+    </div>
+
+    <div class="method-box">
+      <div class="method-box-title">How the correlation is calculated</div>
+      <div class="method-steps">
+        <div class="method-step">
+          <div class="method-step-num">1</div>
+          <div class="method-step-text">
+            <strong>One API call per instrument</strong> — closing prices are fetched for the selected timeframe.
+            Only ${n} request${n !== 1 ? 's' : ''} total; all pair combinations are computed in the browser.
+          </div>
+        </div>
+        <div class="method-step">
+          <div class="method-step-num">2</div>
+          <div class="method-step-text">
+            <strong>Prices are converted to % returns</strong> before correlating:
+            <code>(close[i] − close[i−1]) / close[i−1]</code>.
+            Working on returns instead of raw prices removes the non-stationary trend component
+            that would otherwise create false correlations between any two uptrending assets.
+          </div>
+        </div>
+        <div class="method-step">
+          <div class="method-step-num">3</div>
+          <div class="method-step-text">
+            <strong>Pearson correlation</strong> is computed for every pair combination using the last
+            <strong>${lookback} returns</strong>:
+            <code>r = Σ((rA−μA)(rB−μB)) / (σA · σB · N)</code>.
+            The result ranges from <strong>−1</strong> (perfect inverse) to <strong>+1</strong> (perfect same direction).
+            The diagonal is always 1.00 — a series is perfectly correlated with itself.
+          </div>
+        </div>
+      </div>
+      <div class="method-note">
+        <strong>Lookback matters:</strong> fewer candles (20) capture recent regime changes quickly but are noisier;
+        more candles (200) are more stable but slower to reflect current market dynamics.
+        Correlations can shift significantly between bull and bear regimes — always re-run before trading.
+      </div>
+    </div>
+  `;
+}
+  </script>
+
+  <script>
+  (function(){
+    var btn = document.getElementById('hamburger');
+    var nav = document.querySelector('.nav');
+    if (!btn || !nav) return;
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      btn.classList.toggle('open');
+      nav.classList.toggle('open');
+    });
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.header-inner')) {
+        btn.classList.remove('open');
+        nav.classList.remove('open');
+      }
+    });
+  })();
+  </script>
+</body>
+</html>

@@ -45,8 +45,8 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 .header-inner { max-width:1200px; margin:0 auto; padding:0 24px; height:60px; display:flex; align-items:center; gap:32px; }
 .logo { display:flex; align-items:center; gap:8px; text-decoration:none; color:var(--text-primary); font-size:16px; font-weight:700; white-space:nowrap; }
 .logo-text strong { color:var(--accent); }
-.nav { display:flex; gap:4px; flex:1; }
-.nav-link { text-decoration:none; color:var(--text-secondary); padding:6px 11px; border-radius:var(--radius-sm); font-size:13px; font-weight:500; transition:all .15s; white-space:nowrap; }
+.nav { display:flex; gap:1px; flex:1; }
+.nav-link { text-decoration:none; color:var(--text-secondary); padding:6px 9px; border-radius:var(--radius-sm); font-size:12.5px; font-weight:500; transition:all .15s; white-space:nowrap; }
 .nav-link:hover { color:var(--text-primary); background:var(--bg-hover); }
 .nav-link.active { color:var(--accent); background:var(--accent-dim); }
 .header-actions { display:flex; align-items:center; gap:12px; }
@@ -226,7 +226,7 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 .hamburger.open span:nth-child(1) { transform:translateY(7px) rotate(45deg); }
 .hamburger.open span:nth-child(2) { opacity:0; }
 .hamburger.open span:nth-child(3) { transform:translateY(-7px) rotate(-45deg); }
-@media(max-width:1340px) {
+@media(max-width:1480px) {
   .hamburger { display:flex; }
   .header-inner { position:relative; flex-wrap:nowrap; }
   .nav {
@@ -265,6 +265,7 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
         <a href="support-resistance.html" class="nav-link">Support/Resistance</a>
         <a href="currency-strength.html" class="nav-link">Currency Strength</a>
         <a href="volatility-scanner.html" class="nav-link">Volatility</a>
+        <a href="correlation-matrix.html" class="nav-link">Correlation</a>
         <a href="trading-sessions.html" class="nav-link">Trading Sessions</a>
         <a href="position-size-calculator.html" class="nav-link">Position Size</a>
       </nav>
