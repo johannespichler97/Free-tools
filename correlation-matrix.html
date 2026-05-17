@@ -120,7 +120,7 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
   display:flex; align-items:flex-end; justify-content:center;
   font-family:var(--font-mono); font-size:11px; font-weight:700;
   color:var(--text-secondary); padding-bottom:6px;
-  min-width:70px; text-align:center;
+  min-width:70px; text-align:center; white-space:nowrap;
 }
 .corr-row-lbl {
   display:flex; align-items:center;
@@ -522,7 +522,7 @@ function renderMatrix(assets, returns, resolution, lookback) {
 
   // Column header row
   const colHeaders = `<div class="corr-corner"></div>` +
-    assets.map(a => `<div class="corr-col-lbl">${a.label.replace('USD','<br>USD').replace('JPY','<br>JPY').replace('GBP','<br>GBP').replace('EUR','<br>EUR').replace('AUD','<br>AUD').replace('CAD','<br>CAD').replace('CHF','<br>CHF').replace('NZD','<br>NZD').replace('XAU','<br>XAU').replace('XAG','<br>XAG')}</div>`).join('');
+    assets.map(a => `<div class="corr-col-lbl">${a.label}</div>`).join('');
 
   // Data rows
   const dataRows = assets.map((rowAsset, i) => {
