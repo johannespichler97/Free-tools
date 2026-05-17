@@ -395,7 +395,7 @@ async function runScan() {
   }
 
   // TF-appropriate target: enough periods to guarantee ≥2 completed candles
-  const TF_PERIODS = { '15':12, '30':8, '60':6, '240':5, 'D':4, 'W':4 };
+  const TF_PERIODS = { '15':20, '30':12, '60':10, '240':5, 'D':4, 'W':4 };
   const tfSec   = TF_SECONDS[resolution] || 14400;
   const periods = TF_PERIODS[resolution] || 5;
 
