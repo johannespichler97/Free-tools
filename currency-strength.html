@@ -585,9 +585,11 @@ function renderResults(results, resolution) {
         <div class="method-step">
           <div class="method-step-num">2</div>
           <div class="method-step-text">
-            <strong>% change is computed per pair</strong> using the last two completed candles
-            from the selected timeframe: <code>(close[−1] − close[−2]) / close[−2] × 100</code>.
-            This measures how much the pair moved in the most recent completed period.
+            <strong>% change is computed per pair</strong> using the most recent close against the
+            previous candle's close: <code>(close[last] − close[prev]) / close[prev] × 100</code>.
+            During active market hours <code>close[last]</code> is the current live price of the
+            ongoing candle; on weekends it is the last completed candle's close. Either way it
+            reflects the freshest available price movement for the selected timeframe.
           </div>
         </div>
         <div class="method-step">
