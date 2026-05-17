@@ -994,6 +994,8 @@ function renderTable(events) {
   const todayKey = toYMD(new Date());
 
   Object.keys(grouped).sort().forEach(dateKey => {
+    // Skip groups outside the requested Berlin date range
+    if (displayRange && (dateKey < displayRange.from || dateKey > displayRange.to)) return;
     // Day separator
     const sep = document.createElement('tr');
     sep.className = 'day-separator';
@@ -1120,6 +1122,8 @@ function buildNowRow() {
 }
 
 // ── API fetch ─────────────────────────────────────────────────
+let displayRange = null; // Berlin-date range to actually show in the table
+
 async function fetchCalendar(from, to) {
   const loading    = document.getElementById('loading');
   const errorState = document.getElementById('errorState');
@@ -1133,8 +1137,14 @@ async function fetchCalendar(from, to) {
   const range = from&&to ? {from,to}
     : getDateRange(document.querySelector('.tab-btn.active')?.dataset.range||'today');
 
+  // Store the Berlin dates we actually want to display
+  displayRange = { from: range.from, to: range.to };
+  // Fetch 1 extra day before to catch UTC-evening events that fall on Berlin "today"
+  // (e.g. NZ data at 22:30 UTC Sunday = 00:30 CEST Monday)
+  const fetchFrom = shiftDay(range.from, -1);
+
   try {
-    const res  = await fetch(`${API_BASE}/calendar/economic?from=${range.from}&to=${range.to}&token=${API_KEY}`);
+    const res  = await fetch(`${API_BASE}/calendar/economic?from=${fetchFrom}&to=${range.to}&token=${API_KEY}`);
     if (!res.ok) throw new Error(`API Error ${res.status}`);
     const data = await res.json();
     allEvents  = data.economicCalendar || data || [];
