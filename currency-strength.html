@@ -187,6 +187,19 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
   .header-actions { gap:8px; }
   .header-actions .btn-primary { display:none; }
 }
+
+/* ── METHOD BOX ── */
+.method-box { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); padding:20px 24px; margin-top:20px; }
+.method-box-title { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--text-muted); margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+.method-box-title::after { content:''; flex:1; height:1px; background:var(--border); }
+.method-steps { display:flex; flex-direction:column; gap:10px; }
+.method-step { display:flex; gap:14px; align-items:flex-start; }
+.method-step-num { flex-shrink:0; width:22px; height:22px; border-radius:50%; background:var(--accent-dim); border:1px solid rgba(47,163,224,.3); color:var(--accent); font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; margin-top:1px; }
+.method-step-text { font-size:13px; color:var(--text-secondary); line-height:1.6; }
+.method-step-text strong { color:var(--text-primary); font-weight:600; }
+.method-step-text code { font-family:var(--font-mono); font-size:12px; background:var(--bg-tertiary); border:1px solid var(--border); padding:1px 5px; border-radius:4px; color:var(--accent-2); }
+.method-note { margin-top:14px; padding:10px 14px; background:var(--bg-tertiary); border-radius:var(--radius-sm); border-left:3px solid var(--accent); font-size:12px; color:var(--text-muted); line-height:1.6; }
+.method-note strong { color:var(--text-secondary); }
   </style>
 </head>
 <body>
@@ -558,6 +571,58 @@ function renderResults(results, resolution) {
 
     <div class="pair-section-title">Pair Changes</div>
     <div class="pair-grid">${pairCards}</div>
+
+    <div class="method-box">
+      <div class="method-box-title">How the strength score is calculated</div>
+      <div class="method-steps">
+        <div class="method-step">
+          <div class="method-step-num">1</div>
+          <div class="method-step-text">
+            <strong>28 pairs are fetched</strong> — every combination of the 8 major currencies
+            (EUR, USD, GBP, JPY, AUD, CAD, CHF, NZD), covering all C(8,2) = 28 crosses.
+          </div>
+        </div>
+        <div class="method-step">
+          <div class="method-step-num">2</div>
+          <div class="method-step-text">
+            <strong>% change is computed per pair</strong> using the last two completed candles
+            from the selected timeframe: <code>(close[−1] − close[−2]) / close[−2] × 100</code>.
+            This measures how much the pair moved in the most recent completed period.
+          </div>
+        </div>
+        <div class="method-step">
+          <div class="method-step-num">3</div>
+          <div class="method-step-text">
+            <strong>Each currency receives a score contribution</strong> from every pair it appears in:
+            the <em>base</em> currency gets <code>+% change</code> (rising pair = stronger base),
+            the <em>quote</em> currency gets <code>−% change</code> (rising pair = weaker quote).
+          </div>
+        </div>
+        <div class="method-step">
+          <div class="method-step-num">4</div>
+          <div class="method-step-text">
+            <strong>The final score is an average</strong> across all 7 pairs each currency appears in.
+            Pairs that fail to load are excluded from that currency's denominator so one bad fetch
+            doesn't distort the result.
+          </div>
+        </div>
+        <div class="method-step">
+          <div class="method-step-num">5</div>
+          <div class="method-step-text">
+            <strong>Currencies are ranked highest to lowest</strong>. A positive score means the
+            currency gained more than it lost across its pairs; a negative score means the opposite.
+            The bar width is scaled relative to the strongest currency in the current snapshot.
+          </div>
+        </div>
+      </div>
+      <div class="method-note">
+        <strong>Lookback window:</strong> To ensure at least 2 completed candles are always available —
+        including on weekends when markets are closed — the API window is inflated by ×1.4
+        (accounting for ~48 h of market closure per week) and the current continuous closed gap
+        (Friday 22:00 UTC → Sunday 22:00 UTC) is added on top.
+        You are always seeing the most recent available market data.
+      </div>
+    </div>
   `;
 }
   </script>
