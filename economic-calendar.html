@@ -145,6 +145,12 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 .btn-refresh:hover svg { transform:rotate(180deg); }
 .last-updated { font-size:11px; color:var(--text-muted); }
 
+/* ── TZ SELECTOR ── */
+.tz-select { background:var(--bg-tertiary); border:1px solid var(--border); color:var(--text-primary); padding:5px 8px; border-radius:var(--radius-sm); font-size:12px; font-family:var(--font); cursor:pointer; outline:none; max-width:210px; }
+.tz-select:focus { border-color:var(--accent); }
+.tz-select option { background:var(--bg-secondary); }
+.tz-detected-badge { font-size:11px; color:var(--text-muted); white-space:nowrap; }
+
 /* ── MAIN ── */
 .main { max-width:1248px; margin:0 auto; padding:12px 24px 60px; }
 .table-container { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; }
@@ -387,6 +393,11 @@ thead th.col-actual,thead th.col-forecast,thead th.col-previous { text-align:rig
           <div class="currency-chip gold active" data-currency="XAU">GOLD</div>
         </div>
       </div>
+      <div class="filter-group">
+        <span class="filter-label">Timezone</span>
+        <select class="tz-select" id="tzSelect" aria-label="Select display timezone"></select>
+        <span class="tz-detected-badge" id="tzDetected"></span>
+      </div>
       <div class="filter-group filter-group--right">
         <button class="btn-refresh" id="refreshBtn">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
@@ -443,7 +454,30 @@ thead th.col-actual,thead th.col-forecast,thead th.col-previous { text-align:rig
 <script>
 const API_KEY  = 'd4fevfpr01qkcvvhv6h0d4fevfpr01qkcvvhv6hg';
 const API_BASE = 'https://finnhub.io/api/v1';
-const TZ       = 'Europe/Berlin';
+let selectedTZ = 'Europe/Berlin'; // updated by TZ selector
+
+const TIMEZONE_LIST = [
+  'UTC','Europe/London','Europe/Berlin','Europe/Paris','Europe/Zurich',
+  'Europe/Madrid','Europe/Rome','Europe/Moscow','Europe/Kiev','Asia/Istanbul',
+  'America/New_York','America/Chicago','America/Denver','America/Los_Angeles',
+  'America/Toronto','America/Vancouver','America/Mexico_City','America/Sao_Paulo',
+  'America/Buenos_Aires','Asia/Dubai','Asia/Kolkata','Asia/Tokyo','Asia/Shanghai',
+  'Asia/Singapore','Asia/Hong_Kong','Asia/Seoul','Australia/Sydney',
+  'Australia/Melbourne','Pacific/Auckland','Africa/Johannesburg',
+];
+
+function getTzOffsetMin(tz, date) {
+  const d     = new Date(date);
+  const utc   = new Date(d.toLocaleString('en-US', { timeZone: 'UTC' }));
+  const local = new Date(d.toLocaleString('en-US', { timeZone: tz }));
+  return (local - utc) / 60000;
+}
+function fmtOffset(min) {
+  const sign = min >= 0 ? '+' : '-';
+  const abs  = Math.abs(min);
+  const h    = Math.floor(abs / 60), m = abs % 60;
+  return m === 0 ? `${sign}${h}` : `${sign}${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+}
 
 // ── Event info database (built from 90-day high-impact data pull) ──
 const EVENT_DB = [
@@ -776,39 +810,38 @@ let activeFilters = {
 
 // ── Timezone helpers ──────────────────────────────────────────
 function getTZLabel() {
-  const parts = new Intl.DateTimeFormat('en', { timeZone: TZ, timeZoneName: 'short' }).formatToParts(new Date());
-  return parts.find(p => p.type === 'timeZoneName')?.value || 'CET';
+  const parts = new Intl.DateTimeFormat('en', { timeZone: selectedTZ, timeZoneName: 'short' }).formatToParts(new Date());
+  return parts.find(p => p.type === 'timeZoneName')?.value || selectedTZ;
 }
 
 function getTZOffset() {
-  return getTZLabel() === 'CEST' ? 'UTC+2' : 'UTC+1';
+  return `UTC${fmtOffset(getTzOffsetMin(selectedTZ, new Date()))}`;
 }
 
-// Reliable YYYY-MM-DD in Berlin timezone (en-CA gives ISO date format)
+// Reliable YYYY-MM-DD in selected timezone
 function toYMD(date) {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(date);
+  return new Intl.DateTimeFormat('en-CA', { timeZone: selectedTZ }).format(date);
 }
 
-// Add/subtract days from a YYYY-MM-DD string, staying in Berlin time
+// Add/subtract N days from a YYYY-MM-DD string using UTC noon to avoid DST issues
 function shiftDay(ymd, n) {
-  const d = new Date(ymd + 'T12:00:00');  // noon avoids DST boundary issues
-  d.setDate(d.getDate() + n);
-  return toYMD(d);
+  const d = new Date(ymd + 'T12:00:00Z');
+  d.setUTCDate(d.getUTCDate() + n);
+  return new Intl.DateTimeFormat('en-CA', { timeZone: selectedTZ }).format(d);
 }
 
-function formatTimeBerlin(dateStr) {
+function formatEventTime(dateStr) {
   if (!dateStr) return { time: '—', tz: '' };
   const d = parseApiTime(dateStr);
   if (!d) return { time: 'All Day', tz: '' };
-  const time = d.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit', timeZone: TZ, hour12: false });
-  const tz = getTZLabel();
-  return { time, tz };
+  const time = d.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit', timeZone: selectedTZ, hour12: false });
+  return { time, tz: getTZLabel() };
 }
 
-function formatDateBerlin(dateStr) {
+function formatEventDate(dateStr) {
   if (!dateStr) return '';
   const d = new Date(dateStr + 'T12:00:00Z');
-  return d.toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric', timeZone: TZ });
+  return d.toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric', timeZone: selectedTZ });
 }
 
 // Finnhub returns "YYYY-MM-DD HH:MM:SS" without timezone → always UTC
@@ -999,7 +1032,7 @@ function renderTable(events) {
     // Day separator
     const sep = document.createElement('tr');
     sep.className = 'day-separator';
-    sep.innerHTML = `<td colspan="7">${formatDateBerlin(dateKey)}</td>`;
+    sep.innerHTML = `<td colspan="7">${formatEventDate(dateKey)}</td>`;
     tbody.appendChild(sep);
 
     const dayEvents = [...grouped[dateKey]].sort((a,b) =>
@@ -1024,7 +1057,7 @@ function renderTable(events) {
       const cls    = {3:'high',2:'medium',1:'low'}[impact]||'low';
       const lbl    = {3:'High',2:'Medium',1:'Low'}[impact]||'Low';
       const currency = detectCurrency(ev);
-      const { time: timeStr, tz: tzStr } = formatTimeBerlin(evTime);
+      const { time: timeStr, tz: tzStr } = formatEventTime(evTime);
       const rel    = getRelativeTime(evTime);
       const dots   = [1,2,3].map(i=>`<span class="impact-dot${i<=impact?' filled':''}"></span>`).join('');
       const isGoldTag = currency==='USD' && GOLD_KEYWORDS.some(k=>(ev.event||'').toLowerCase().includes(k));
@@ -1110,7 +1143,7 @@ function buildNowRow() {
   const tr = document.createElement('tr');
   tr.className = 'now-row';
   tr.id = 'nowRow';
-  const { time } = formatTimeBerlin(new Date().toISOString());
+  const { time } = formatEventTime(new Date().toISOString());
   const tz = getTZLabel();
   tr.innerHTML = `<td colspan="7">
     <div class="now-line">
@@ -1137,14 +1170,15 @@ async function fetchCalendar(from, to) {
   const range = from&&to ? {from,to}
     : getDateRange(document.querySelector('.tab-btn.active')?.dataset.range||'today');
 
-  // Store the Berlin dates we actually want to display
+  // Store the local-TZ dates we actually want to display
   displayRange = { from: range.from, to: range.to };
-  // Fetch 1 extra day before to catch UTC-evening events that fall on Berlin "today"
-  // (e.g. NZ data at 22:30 UTC Sunday = 00:30 CEST Monday)
+  // Fetch ±1 extra day to catch all UTC timestamps that fall within the selected
+  // timezone's display range (UTC+ needs earlier UTC date; UTC- needs later UTC date)
   const fetchFrom = shiftDay(range.from, -1);
+  const fetchTo   = shiftDay(range.to,    1);
 
   try {
-    const res  = await fetch(`${API_BASE}/calendar/economic?from=${fetchFrom}&to=${range.to}&token=${API_KEY}`);
+    const res  = await fetch(`${API_BASE}/calendar/economic?from=${fetchFrom}&to=${fetchTo}&token=${API_KEY}`);
     if (!res.ok) throw new Error(`API Error ${res.status}`);
     const data = await res.json();
     allEvents  = data.economicCalendar || data || [];
@@ -1166,8 +1200,8 @@ function applyFilters() {
 }
 
 function getDateRange(range) {
-  const today = toYMD(new Date());  // today in Berlin time
-  const dow = new Date(today + 'T12:00:00').getDay(); // 0=Sun, 1=Mon …
+  const today = toYMD(new Date());  // today in selected timezone
+  const dow = new Date(today + 'T12:00:00Z').getUTCDay(); // 0=Sun, 1=Mon … (UTC avoids local-tz drift)
   const daysSinceMon = dow === 0 ? 6 : dow - 1;
   const thisMonday = shiftDay(today, -daysSinceMon);
 
@@ -1185,22 +1219,23 @@ function getDateRange(range) {
 function updateClock() {
   const now = new Date();
   const parts = new Intl.DateTimeFormat('de-DE', {
-    timeZone: TZ, hour:'2-digit', minute:'2-digit', second:'2-digit', hour12: false
+    timeZone: selectedTZ, hour:'2-digit', minute:'2-digit', second:'2-digit', hour12: false
   }).formatToParts(now);
   const get = t => parts.find(p=>p.type===t)?.value||'--';
   document.getElementById('clockH').textContent = get('hour');
   document.getElementById('clockM').textContent = get('minute');
   document.getElementById('clockS').textContent = get('second');
   document.getElementById('clockDate').textContent = now.toLocaleDateString('de-DE',
-    {weekday:'long',day:'2-digit',month:'long',year:'numeric',timeZone:TZ});
-  const tz = getTZLabel();
+    {weekday:'long',day:'2-digit',month:'long',year:'numeric',timeZone: selectedTZ});
+  const tz     = getTZLabel();
   const offset = getTZOffset();
   document.getElementById('clockTZBadge').textContent = `${tz} (${offset})`;
+  document.getElementById('clockOffset').textContent  = selectedTZ.split('/').pop().replace(/_/g, ' ');
 
   // Update NOW row clock if visible
   const nowRow = document.getElementById('nowRow');
   if (nowRow) {
-    const { time } = formatTimeBerlin(now.toISOString());
+    const { time } = formatEventTime(now.toISOString());
     const nc = nowRow.querySelector('.now-clock');
     if (nc) nc.textContent = `${time} ${tz}`;
   }
@@ -1246,6 +1281,54 @@ setInterval(() => fetchCalendar(
 ), 60000);
 setInterval(applyFilters, 30000);
 
+// ── Timezone selector init ────────────────────────────────────
+(function initTZ() {
+  const select = document.getElementById('tzSelect');
+  const now    = new Date();
+  TIMEZONE_LIST.forEach(tz => {
+    const opt    = document.createElement('option');
+    opt.value    = tz;
+    const min    = getTzOffsetMin(tz, now);
+    const abbr   = new Intl.DateTimeFormat('en', { timeZone: tz, timeZoneName: 'short' })
+                     .formatToParts(now).find(p => p.type === 'timeZoneName')?.value || '';
+    const city   = tz.split('/').pop().replace(/_/g, ' ');
+    opt.textContent = `${city}  (UTC${fmtOffset(min)}  ${abbr})`;
+    select.appendChild(opt);
+  });
+
+  // Auto-detect browser timezone
+  const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  if (TIMEZONE_LIST.includes(browserTz)) {
+    selectedTZ = browserTz;
+    select.value = browserTz;
+    document.getElementById('tzDetected').textContent = `Auto-detected`;
+  } else {
+    // Find closest by offset
+    const bOff = getTzOffsetMin(browserTz, now);
+    let best = 'Europe/Berlin', bestDiff = Infinity;
+    TIMEZONE_LIST.forEach(tz => {
+      const diff = Math.abs(getTzOffsetMin(tz, now) - bOff);
+      if (diff < bestDiff) { bestDiff = diff; best = tz; }
+    });
+    selectedTZ = best;
+    select.value = best;
+    document.getElementById('tzDetected').textContent = `~${browserTz.split('/').pop().replace(/_/g,' ')}`;
+  }
+
+  select.addEventListener('change', () => {
+    selectedTZ = select.value;
+    // Recalculate date range for active tab in new timezone
+    const activeTab = document.querySelector('.tab-btn.active');
+    if (activeTab) {
+      const r = getDateRange(activeTab.dataset.range);
+      displayRange = { from: r.from, to: r.to };
+      document.getElementById('dateFrom').value = r.from;
+      document.getElementById('dateTo').value   = r.to;
+    }
+    applyFilters(); // re-render without re-fetching
+  });
+})();
+
 // ── Init ──────────────────────────────────────────────────────
 (function init() {
   updateClock();
@@ -1253,8 +1336,7 @@ setInterval(applyFilters, 30000);
   const r = getDateRange('today');
   document.getElementById('dateFrom').value = r.from;
   document.getElementById('dateTo').value   = r.to;
-
-fetchCalendar(r.from, r.to);
+  fetchCalendar(r.from, r.to);
 })();
 </script>
   <script>
