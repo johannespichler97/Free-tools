@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Currency Strength | Market Analytics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-primary:    #062434;
+  --bg-secondary:  #0a2e44;
+  --bg-tertiary:   #0e3a54;
+  --bg-hover:      #123f5c;
+  --border:        #1a4d6e;
+  --text-primary:  #E6E9EB;
+  --text-secondary:#8ab8d0;
+  --text-muted:    #4d7a96;
+  --accent:        #2FA3E0;
+  --accent-2:      #51d7ce;
+  --accent-dim:    rgba(47,163,224,0.12);
+  --positive:      #3fb950;
+  --positive-bg:   rgba(63,185,80,0.10);
+  --negative:      #f85149;
+  --negative-bg:   rgba(248,81,73,0.10);
+  --font:          'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono:     'JetBrains Mono', monospace;
+  --radius-sm:     6px;
+  --radius-md:     10px;
+  --radius-lg:     14px;
+}
+
+html { scroll-behavior: smooth; }
+body { font-family: var(--font); background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; font-size: 14px; line-height: 1.5; }
+
+@keyframes pulse   { 0%,100%{opacity:1} 50%{opacity:0.4} }
+@keyframes spin    { to{transform:rotate(360deg)} }
+@keyframes fadeIn  { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+@keyframes shimmer { 0%{background-position:-400px 0} 100%{background-position:400px 0} }
+
+/* ── HEADER ── */
+.header { position:sticky; top:0; z-index:100; background:rgba(6,36,52,0.97); backdrop-filter:blur(12px); border-bottom:1px solid var(--border); }
+.header-inner { max-width:1200px; margin:0 auto; padding:0 24px; height:60px; display:flex; align-items:center; gap:32px; }
+.logo { display:flex; align-items:center; gap:8px; text-decoration:none; color:var(--text-primary); font-size:16px; font-weight:700; white-space:nowrap; }
+.logo-text strong { color:var(--accent); }
+.nav { display:flex; gap:2px; flex:1; }
+.nav-link { text-decoration:none; color:var(--text-secondary); padding:6px 11px; border-radius:var(--radius-sm); font-size:13px; font-weight:500; transition:all .15s; white-space:nowrap; }
+.nav-link:hover { color:var(--text-primary); background:var(--bg-hover); }
+.nav-link.active { color:var(--accent); background:var(--accent-dim); }
+.header-actions { display:flex; align-items:center; gap:12px; }
+.live-badge { font-size:11px; font-weight:600; color:var(--positive); letter-spacing:.05em; display:flex; align-items:center; gap:5px; }
+.live-dot { animation:pulse 2s infinite; }
+.btn-primary { background:linear-gradient(135deg,#51d7ce,#2FA3E0); color:#062434; border:none; padding:7px 18px; border-radius:20px; font-size:13px; font-weight:700; cursor:pointer; transition:opacity .15s; font-family:var(--font); }
+.btn-primary:hover { opacity:.88; }
+
+/* ── HERO ── */
+.hero { background:linear-gradient(135deg,#062434 0%,#0a2e44 60%,#0d3550 100%); border-bottom:1px solid var(--border); padding:28px 24px; }
+.hero-inner { max-width:1200px; margin:0 auto; }
+.hero h1 { font-size:26px; font-weight:700; }
+.hero h1::after { content:''; display:block; width:40px; height:3px; background:linear-gradient(90deg,#51d7ce,#2FA3E0); border-radius:2px; margin-top:10px; }
+.hero p { color:var(--text-secondary); font-size:15px; margin-top:10px; }
+
+/* ── CONTROLS ── */
+.controls-bar { background:var(--bg-primary); border-bottom:1px solid var(--border); padding:12px 24px; }
+.controls-box { max-width:1248px; margin:0 auto; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); padding:16px 18px; display:flex; flex-direction:column; gap:14px; }
+.ctrl-row { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.ctrl-label { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.07em; white-space:nowrap; min-width:80px; }
+.ctrl-divider { border:none; border-top:1px solid var(--border); margin:0; }
+
+.tf-chips { display:flex; gap:5px; flex-wrap:wrap; }
+.tf-chip { padding:5px 14px; border-radius:20px; font-size:12px; font-weight:700; cursor:pointer; transition:all .15s; border:1.5px solid var(--border); color:var(--text-muted); background:var(--bg-tertiary); user-select:none; opacity:.55; }
+.tf-chip:hover { opacity:.85; }
+.tf-chip.active { opacity:1; border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
+
+.scan-row { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+.scan-counter { font-size:12px; color:var(--text-muted); }
+.scan-counter strong { color:var(--accent); }
+.btn-scan { background:linear-gradient(135deg,#51d7ce,#2FA3E0); color:#062434; border:none; padding:10px 28px; border-radius:20px; font-size:14px; font-weight:700; cursor:pointer; font-family:var(--font); transition:opacity .15s; display:flex; align-items:center; gap:8px; }
+.btn-scan:hover { opacity:.88; }
+.btn-scan:disabled { opacity:.45; cursor:not-allowed; }
+
+/* ── PROGRESS ── */
+.progress-wrap { max-width:1248px; margin:8px auto 0; padding:0 24px; display:none; }
+.progress-track { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); padding:14px 18px; }
+.progress-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+.progress-label { font-size:13px; color:var(--text-secondary); }
+.progress-pct { font-size:13px; font-weight:700; color:var(--accent); font-family:var(--font-mono); }
+.progress-bar { height:6px; background:var(--bg-tertiary); border-radius:3px; overflow:hidden; }
+.progress-fill { height:100%; background:linear-gradient(90deg,#51d7ce,#2FA3E0); border-radius:3px; transition:width .3s ease; width:0%; }
+.progress-current { font-size:11px; color:var(--text-muted); margin-top:7px; }
+
+/* ── MAIN ── */
+.main { max-width:1248px; margin:0 auto; padding:20px 24px 60px; }
+
+/* Summary bar */
+.summary-bar { display:flex; align-items:center; gap:12px; margin-bottom:18px; flex-wrap:wrap; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); padding:12px 18px; }
+.summary-stat { display:flex; flex-direction:column; align-items:center; gap:2px; padding:0 14px; border-right:1px solid var(--border); }
+.summary-stat:last-child { border-right:none; }
+.summary-stat-val { font-family:var(--font-mono); font-size:22px; font-weight:700; }
+.summary-stat-val.all   { color:var(--accent-2); }
+.summary-stat-val.green { color:var(--positive); }
+.summary-stat-val.red   { color:var(--negative); }
+.summary-stat-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--text-muted); }
+.summary-updated { font-size:12px; color:var(--text-muted); margin-left:auto; }
+
+/* ── STRENGTH METER ── */
+.strength-card { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; margin-bottom:20px; animation:fadeIn .25s ease; }
+.strength-card-header { padding:14px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.strength-card-title { font-size:14px; font-weight:700; color:var(--text-primary); }
+.strength-tf-badge { font-size:11px; font-weight:700; background:var(--accent-dim); color:var(--accent); border:1px solid rgba(47,163,224,.25); padding:3px 10px; border-radius:20px; }
+
+.strength-list { padding:10px 0; }
+.strength-row { display:flex; align-items:center; gap:12px; padding:10px 20px; transition:background .12s; }
+.strength-row:hover { background:var(--bg-tertiary); }
+.strength-rank { font-family:var(--font-mono); font-size:11px; font-weight:700; color:var(--text-muted); width:22px; text-align:right; flex-shrink:0; }
+.strength-currency { font-family:var(--font-mono); font-size:15px; font-weight:700; color:var(--text-primary); width:42px; flex-shrink:0; }
+.strength-bar-wrap { flex:1; display:flex; align-items:center; height:20px; position:relative; }
+.strength-bar-left { flex:1; display:flex; justify-content:flex-end; height:8px; }
+.strength-bar-right { flex:1; display:flex; justify-content:flex-start; height:8px; }
+.strength-bar-divider { width:2px; height:24px; background:var(--border); flex-shrink:0; border-radius:1px; }
+.strength-bar-inner { height:8px; border-radius:4px; min-width:0; transition:width .5s ease; }
+.strength-bar-inner.pos { background:linear-gradient(90deg,rgba(63,185,80,0.5),#3fb950); }
+.strength-bar-inner.neg { background:linear-gradient(90deg,#f85149,rgba(248,81,73,0.5)); }
+.strength-score { font-family:var(--font-mono); font-size:13px; font-weight:700; width:64px; text-align:right; flex-shrink:0; }
+.strength-score.pos { color:var(--positive); }
+.strength-score.neg { color:var(--negative); }
+.strength-score.zero { color:var(--text-muted); }
+
+.strength-row-divider { height:1px; background:var(--border); opacity:.35; margin:2px 20px; }
+
+/* ── PAIR CHANGES GRID ── */
+.pair-section-title { font-size:13px; font-weight:700; color:var(--text-secondary); margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+.pair-section-title::after { content:''; flex:1; height:1px; background:var(--border); }
+.pair-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:8px; }
+.pair-card { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-md); padding:10px 12px; display:flex; flex-direction:column; gap:4px; animation:fadeIn .2s ease; }
+.pair-card.pos { border-left:3px solid var(--positive); }
+.pair-card.neg { border-left:3px solid var(--negative); }
+.pair-card.nodata { border-left:3px solid var(--border); opacity:.5; }
+.pair-name { font-family:var(--font-mono); font-size:12px; font-weight:700; color:var(--text-secondary); }
+.pair-change { font-family:var(--font-mono); font-size:14px; font-weight:700; }
+.pair-change.pos { color:var(--positive); }
+.pair-change.neg { color:var(--negative); }
+.pair-change.nodata { color:var(--text-muted); font-size:12px; }
+
+/* ── STATE BOX ── */
+.state-box { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:80px 24px; gap:14px; text-align:center; color:var(--text-muted); }
+.state-icon { font-size:44px; opacity:.3; }
+.state-title { font-size:17px; font-weight:600; color:var(--text-secondary); }
+.state-sub { font-size:13px; max-width:360px; line-height:1.6; }
+
+/* Skeleton */
+.skeleton-bar { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); height:360px; overflow:hidden; position:relative; margin-bottom:20px; }
+.skeleton-bar::after { content:''; position:absolute; inset:0; background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,.04) 50%,transparent 100%); background-size:400px 100%; animation:shimmer 1.4s infinite; }
+
+/* ── FOOTER ── */
+.footer { background:var(--bg-secondary); border-top:1px solid var(--border); padding:24px; }
+.footer-inner { max-width:1200px; margin:0 auto; text-align:center; }
+.footer-disclaimer { font-size:12px; color:var(--text-muted); line-height:1.6; }
+.footer-disclaimer a { color:var(--accent); text-decoration:none; }
+.footer-copy { font-size:12px; color:var(--text-muted); margin-top:6px; }
+
+@media(max-width:700px) { .pair-grid { grid-template-columns:repeat(auto-fill,minmax(110px,1fr)); } }
+@media(max-width:640px) { .header-inner,.main,.controls-bar { padding-left:16px; padding-right:16px; } }
+
+/* ── HAMBURGER MOBILE NAV ── */
+.hamburger { display:none; flex-direction:column; justify-content:center; gap:5px; background:none; border:none; padding:6px; cursor:pointer; border-radius:6px; transition:background .15s; margin-left:auto; }
+.hamburger:hover { background:var(--bg-hover); }
+.hamburger span { display:block; width:22px; height:2px; background:var(--text-primary); border-radius:1px; transition:all .25s; }
+.hamburger.open span:nth-child(1) { transform:translateY(7px) rotate(45deg); }
+.hamburger.open span:nth-child(2) { opacity:0; }
+.hamburger.open span:nth-child(3) { transform:translateY(-7px) rotate(-45deg); }
+@media(max-width:860px) {
+  .hamburger { display:flex; }
+  .header-inner { position:relative; flex-wrap:nowrap; }
+  .nav {
+    display:none; position:absolute; top:60px; left:0; right:0; z-index:99;
+    flex-direction:column; gap:0; padding:6px 0;
+    background:rgba(6,36,52,0.98); border-bottom:1px solid var(--border);
+    backdrop-filter:blur(12px);
+  }
+  .nav.open { display:flex; }
+  .nav-link { padding:13px 22px; border-radius:0; font-size:14px; border-bottom:1px solid rgba(26,77,110,0.4); }
+  .nav-link:last-child { border-bottom:none; }
+  .header-actions { gap:8px; }
+  .header-actions .btn-primary { display:none; }
+}
+  </style>
+</head>
+<body>
+
+  <!-- ── HEADER ── -->
+  <header class="header">
+    <div class="header-inner">
+      <a href="economic-calendar.html" class="logo">
+        <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs><linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#51d7ce"/><stop offset="100%" stop-color="#2FA3E0"/></linearGradient></defs>
+          <circle cx="18" cy="18" r="16.5" stroke="url(#lg)" stroke-width="2" fill="none"/>
+          <rect x="8" y="20" width="4" height="8" rx="1" fill="url(#lg)"/>
+          <rect x="14" y="15" width="4" height="13" rx="1" fill="url(#lg)"/>
+          <rect x="20" y="11" width="4" height="17" rx="1" fill="url(#lg)"/>
+          <polyline points="22,9 27,9 27,14" stroke="url(#lg)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <line x1="14" y1="21" x2="27" y2="9" stroke="url(#lg)" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <span class="logo-text">Market<strong>Analytics</strong></span>
+      </a>
+      <nav class="nav">
+        <a href="economic-calendar.html" class="nav-link">Economic Calendar</a>
+        <a href="pattern-recognition.html" class="nav-link">Pattern Recognition</a>
+        <a href="support-resistance.html" class="nav-link">Support/Resistance</a>
+        <a href="currency-strength.html" class="nav-link active">Currency Strength</a>
+        <a href="trading-sessions.html" class="nav-link">Trading Sessions</a>
+        <a href="position-size-calculator.html" class="nav-link">Position Size</a>
+      </nav>
+      <button class="hamburger" id="hamburger" aria-label="Open navigation">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="header-actions">
+        <span class="live-badge"><span class="live-dot">&#9679;</span> LIVE</span>
+        <button class="btn-primary">Open Account</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── HERO ── -->
+  <section class="hero">
+    <div class="hero-inner">
+      <h1>Currency Strength Meter</h1>
+      <p>Compares all 28 major forex pairs to rank the relative strength of 8 currencies in real time.</p>
+    </div>
+  </section>
+
+  <!-- ── CONTROLS ── -->
+  <div class="controls-bar">
+    <div class="controls-box">
+      <div class="ctrl-row">
+        <span class="ctrl-label">Timeframe</span>
+        <div class="tf-chips" id="tfChips">
+          <span class="tf-chip" data-res="60">1H</span>
+          <span class="tf-chip active" data-res="240">4H</span>
+          <span class="tf-chip" data-res="D">Daily</span>
+          <span class="tf-chip" data-res="W">Weekly</span>
+        </div>
+      </div>
+      <hr class="ctrl-divider" />
+      <div class="scan-row">
+        <span class="scan-counter">
+          Fetches <strong>28</strong> pairs &times; 1 timeframe &nbsp;|&nbsp; 5 concurrent requests
+        </span>
+        <button class="btn-scan" id="scanBtn" onclick="runScan()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.63"/></svg>
+          Calculate Strength
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PROGRESS ── -->
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress-track">
+      <div class="progress-header">
+        <span class="progress-label" id="progressLabel">Fetching pair data…</span>
+        <span class="progress-pct" id="progressPct">0%</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-current" id="progressCurrent"></div>
+    </div>
+  </div>
+
+  <!-- ── MAIN ── -->
+  <main class="main" id="mainArea">
+    <div class="state-box">
+      <div class="state-icon">📊</div>
+      <div class="state-title">Ready to calculate</div>
+      <div class="state-sub">Select a timeframe and press <strong>Calculate Strength</strong> to rank all 8 major currencies.</div>
+    </div>
+  </main>
+
+  <!-- ── FOOTER ── -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <p class="footer-disclaimer">
+        The information, charts, indicators, signals and analytical tools provided on market-analytics.io are for informational and educational purposes only. They do not constitute financial advice, investment advice, trading advice, or any recommendation to buy or sell any financial instrument.<br><br>
+        All market data and indicator values are provided without guarantee of accuracy, completeness, or timeliness and may be delayed or subject to errors. Past performance or historical data shown on this website is not indicative of future results. Trading foreign exchange and other financial instruments involves significant risk and may result in the loss of capital. Users are solely responsible for their own trading decisions and any resulting profits or losses. market-analytics.io shall not be held liable for any loss or damage, including financial loss, arising directly or indirectly from the use of or reliance on the information or tools provided on this website.
+      </p>
+      <p class="footer-copy">&copy; 2026 Market-Analytics.io. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script>
+const API_KEY  = 'd4fevfpr01qkcvvhv6h0d4fevfpr01qkcvvhv6hg';
+const API_BASE = 'https://finnhub.io/api/v1';
+
+const TF_LABELS = { '60':'1H', '240':'4H', 'D':'Daily', 'W':'Weekly' };
+const TF_SECONDS = { '60':3600, '240':14400, 'D':86400, 'W':604800 };
+
+const CURRENCIES = ['EUR','USD','GBP','JPY','AUD','CAD','CHF','NZD'];
+
+// All 28 pairs (C(8,2)) using OANDA symbols
+const PAIRS = [
+  { sym:'OANDA:EUR_USD', base:'EUR', quote:'USD' },
+  { sym:'OANDA:EUR_GBP', base:'EUR', quote:'GBP' },
+  { sym:'OANDA:EUR_JPY', base:'EUR', quote:'JPY' },
+  { sym:'OANDA:EUR_AUD', base:'EUR', quote:'AUD' },
+  { sym:'OANDA:EUR_CAD', base:'EUR', quote:'CAD' },
+  { sym:'OANDA:EUR_CHF', base:'EUR', quote:'CHF' },
+  { sym:'OANDA:EUR_NZD', base:'EUR', quote:'NZD' },
+  { sym:'OANDA:GBP_USD', base:'GBP', quote:'USD' },
+  { sym:'OANDA:GBP_JPY', base:'GBP', quote:'JPY' },
+  { sym:'OANDA:GBP_AUD', base:'GBP', quote:'AUD' },
+  { sym:'OANDA:GBP_CAD', base:'GBP', quote:'CAD' },
+  { sym:'OANDA:GBP_CHF', base:'GBP', quote:'CHF' },
+  { sym:'OANDA:GBP_NZD', base:'GBP', quote:'NZD' },
+  { sym:'OANDA:USD_JPY', base:'USD', quote:'JPY' },
+  { sym:'OANDA:USD_CAD', base:'USD', quote:'CAD' },
+  { sym:'OANDA:USD_CHF', base:'USD', quote:'CHF' },
+  { sym:'OANDA:AUD_USD', base:'AUD', quote:'USD' },
+  { sym:'OANDA:AUD_JPY', base:'AUD', quote:'JPY' },
+  { sym:'OANDA:AUD_CAD', base:'AUD', quote:'CAD' },
+  { sym:'OANDA:AUD_CHF', base:'AUD', quote:'CHF' },
+  { sym:'OANDA:AUD_NZD', base:'AUD', quote:'NZD' },
+  { sym:'OANDA:NZD_USD', base:'NZD', quote:'USD' },
+  { sym:'OANDA:NZD_JPY', base:'NZD', quote:'JPY' },
+  { sym:'OANDA:NZD_CAD', base:'NZD', quote:'CAD' },
+  { sym:'OANDA:NZD_CHF', base:'NZD', quote:'CHF' },
+  { sym:'OANDA:CAD_JPY', base:'CAD', quote:'JPY' },
+  { sym:'OANDA:CAD_CHF', base:'CAD', quote:'CHF' },
+  { sym:'OANDA:CHF_JPY', base:'CHF', quote:'JPY' },
+];
+
+// ── TF chip selection (single select) ──
+document.querySelectorAll('.tf-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.tf-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+  });
+});
+
+function getActiveTF() {
+  const el = document.querySelector('.tf-chip.active');
+  return el ? el.dataset.res : '240';
+}
+
+// ── Fetch a single pair's candle data ──
+async function fetchPairChange(pair, resolution, from, to) {
+  const url = `${API_BASE}/forex/candle?symbol=${encodeURIComponent(pair.sym)}&resolution=${resolution}&from=${from}&to=${to}&token=${API_KEY}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const data = await res.json();
+
+  if (!data || data.s !== 'ok' || !data.c || data.c.length < 1) return null;
+
+  let change;
+  if (data.c.length === 1) {
+    // Only one candle: open-to-close change
+    change = (data.c[0] - data.o[0]) / data.o[0] * 100;
+  } else {
+    // Close-to-close change of last two candles
+    const last = data.c.length - 1;
+    change = (data.c[last] - data.c[last - 1]) / data.c[last - 1] * 100;
+  }
+  return change;
+}
+
+// ── Main scan ──
+let scanning = false;
+
+async function runScan() {
+  if (scanning) return;
+  scanning = true;
+
+  const btn = document.getElementById('scanBtn');
+  btn.disabled = true;
+  btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:spin 1s linear infinite"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg> Calculating…`;
+
+  const resolution = getActiveTF();
+  const tfSec = TF_SECONDS[resolution] || 14400;
+  const now = Math.floor(Date.now() / 1000);
+  const from = now - tfSec * 4;
+
+  // Show progress
+  const progressWrap = document.getElementById('progressWrap');
+  const progressFill = document.getElementById('progressFill');
+  const progressPct  = document.getElementById('progressPct');
+  const progressCurrent = document.getElementById('progressCurrent');
+  progressWrap.style.display = 'block';
+  progressFill.style.width = '0%';
+  progressPct.textContent = '0%';
+  progressCurrent.textContent = '';
+
+  // Show skeleton while loading
+  document.getElementById('mainArea').innerHTML = `<div class="skeleton-bar"></div>`;
+
+  let done = 0;
+  const results = {};
+
+  function updateProgress(sym) {
+    done++;
+    const pct = Math.round(done / PAIRS.length * 100);
+    progressFill.style.width = pct + '%';
+    progressPct.textContent = pct + '%';
+    progressCurrent.textContent = sym ? `Fetched: ${sym.replace('OANDA:','').replace('_','/')}` : '';
+    document.getElementById('progressLabel').textContent = `Fetching pair data… (${done}/${PAIRS.length})`;
+  }
+
+  // Concurrency-limited parallel fetch (5 workers)
+  const CONCURRENCY = 5;
+  let idx = 0;
+  async function worker() {
+    while (idx < PAIRS.length) {
+      const pair = PAIRS[idx++];
+      try {
+        const change = await fetchPairChange(pair, resolution, from, now);
+        results[pair.sym] = { ...pair, change };
+      } catch {
+        results[pair.sym] = { ...pair, change: null };
+      }
+      updateProgress(pair.sym);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, PAIRS.length) }, worker));
+
+  progressWrap.style.display = 'none';
+  renderResults(results, resolution);
+
+  btn.disabled = false;
+  btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.63"/></svg> Calculate Strength`;
+  scanning = false;
+}
+
+// ── Compute currency strength scores ──
+function computeStrength(results) {
+  const sums   = {};
+  const counts = {};
+  CURRENCIES.forEach(c => { sums[c] = 0; counts[c] = 0; });
+
+  Object.values(results).forEach(({ base, quote, change }) => {
+    if (change === null || !isFinite(change)) return;
+    sums[base]  += change;
+    counts[base]++;
+    sums[quote] -= change;
+    counts[quote]++;
+  });
+
+  return CURRENCIES.map(c => ({
+    currency: c,
+    score:    counts[c] > 0 ? sums[c] / counts[c] : 0,
+    pairs:    counts[c],
+  })).sort((a, b) => b.score - a.score);
+}
+
+// ── Render ──
+function renderResults(results, resolution) {
+  const strength = computeStrength(results);
+  const tfLabel = TF_LABELS[resolution] || resolution;
+
+  const maxAbs = Math.max(...strength.map(s => Math.abs(s.score)), 0.001);
+
+  const validPairs = Object.values(results).filter(r => r.change !== null).length;
+  const posCount = strength.filter(s => s.score > 0).length;
+  const negCount = strength.filter(s => s.score < 0).length;
+  const now = new Date();
+  const updatedStr = now.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+
+  // Build strength rows
+  const rows = strength.map((item, i) => {
+    const pct = Math.abs(item.score) / maxAbs * 100;
+    const isPos = item.score > 0;
+    const isNeg = item.score < 0;
+    const scoreStr = item.score === 0
+      ? '±0.000'
+      : (isPos ? '+' : '') + item.score.toFixed(3) + '%';
+    const scoreClass = isPos ? 'pos' : isNeg ? 'neg' : 'zero';
+    const rankLabel = '#' + (i + 1);
+
+    const leftBar  = isNeg ? `<div class="strength-bar-inner neg" style="width:${pct}%"></div>` : '';
+    const rightBar = isPos ? `<div class="strength-bar-inner pos" style="width:${pct}%"></div>` : '';
+
+    return `
+      <div class="strength-row">
+        <div class="strength-rank">${rankLabel}</div>
+        <div class="strength-currency">${item.currency}</div>
+        <div class="strength-bar-wrap">
+          <div class="strength-bar-left">${leftBar}</div>
+          <div class="strength-bar-divider"></div>
+          <div class="strength-bar-right">${rightBar}</div>
+        </div>
+        <div class="strength-score ${scoreClass}">${scoreStr}</div>
+      </div>
+      ${i < strength.length - 1 ? '<div class="strength-row-divider"></div>' : ''}
+    `;
+  }).join('');
+
+  // Build pair grid (sorted by change)
+  const pairCards = Object.values(results)
+    .sort((a, b) => (b.change ?? -Infinity) - (a.change ?? -Infinity))
+    .map(({ sym, base, quote, change }) => {
+      const label = base + '/' + quote;
+      if (change === null) {
+        return `<div class="pair-card nodata"><div class="pair-name">${label}</div><div class="pair-change nodata">N/A</div></div>`;
+      }
+      const cls = change >= 0 ? 'pos' : 'neg';
+      const str = (change >= 0 ? '+' : '') + change.toFixed(3) + '%';
+      return `<div class="pair-card ${cls}"><div class="pair-name">${label}</div><div class="pair-change ${cls}">${str}</div></div>`;
+    }).join('');
+
+  document.getElementById('mainArea').innerHTML = `
+    <div class="summary-bar">
+      <div class="summary-stat">
+        <span class="summary-stat-val all">${validPairs}</span>
+        <span class="summary-stat-label">Pairs Fetched</span>
+      </div>
+      <div class="summary-stat">
+        <span class="summary-stat-val green">${posCount}</span>
+        <span class="summary-stat-label">Strengthening</span>
+      </div>
+      <div class="summary-stat">
+        <span class="summary-stat-val red">${negCount}</span>
+        <span class="summary-stat-label">Weakening</span>
+      </div>
+      <div class="summary-updated">Updated ${updatedStr} · ${tfLabel} timeframe</div>
+    </div>
+
+    <div class="strength-card">
+      <div class="strength-card-header">
+        <span class="strength-card-title">Currency Strength Ranking</span>
+        <span class="strength-tf-badge">${tfLabel}</span>
+      </div>
+      <div class="strength-list">${rows}</div>
+    </div>
+
+    <div class="pair-section-title">Pair Changes</div>
+    <div class="pair-grid">${pairCards}</div>
+  `;
+}
+  </script>
+
+  <script>
+  (function(){
+    var btn = document.getElementById('hamburger');
+    var nav = document.querySelector('.nav');
+    if (!btn || !nav) return;
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      btn.classList.toggle('open');
+      nav.classList.toggle('open');
+    });
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.header-inner')) {
+        btn.classList.remove('open');
+        nav.classList.remove('open');
+      }
+    });
+  })();
+  </script>
+</body>
+</html>
