@@ -359,24 +359,19 @@ function getActiveTF() {
 }
 
 // ── Fetch a single pair's candle data ──
-async function fetchPairChange(pair, resolution, from, to) {
+async function fetchPairChange(pair, resolution, periods, from, to) {
   const url = `${API_BASE}/forex/candle?symbol=${encodeURIComponent(pair.sym)}&resolution=${resolution}&from=${from}&to=${to}&token=${API_KEY}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error('HTTP ' + res.status);
   const data = await res.json();
 
-  if (!data || data.s !== 'ok' || !data.c || data.c.length < 1) return null;
+  if (!data || data.s !== 'ok' || !data.c || data.c.length < 2) return null;
 
-  let change;
-  if (data.c.length === 1) {
-    // Only one candle: open-to-close change
-    change = (data.c[0] - data.o[0]) / data.o[0] * 100;
-  } else {
-    // Close-to-close change of last two candles
-    const last = data.c.length - 1;
-    change = (data.c[last] - data.c[last - 1]) / data.c[last - 1] * 100;
-  }
-  return change;
+  // Compare close[last] to close[last - periods], using all agreed periods per TF.
+  // If fewer candles came back than expected (e.g. thin market), use what we have.
+  const last = data.c.length - 1;
+  const prev = Math.max(0, last - (periods - 1));
+  return (data.c[last] - data.c[prev]) / data.c[prev] * 100;
 }
 
 // ── Main scan ──
@@ -450,7 +445,7 @@ async function runScan() {
     while (idx < PAIRS.length) {
       const pair = PAIRS[idx++];
       try {
-        const change = await fetchPairChange(pair, resolution, from, now);
+        const change = await fetchPairChange(pair, resolution, periods, from, now);
         results[pair.sym] = { ...pair, change };
       } catch {
         results[pair.sym] = { ...pair, change: null };
@@ -585,11 +580,12 @@ function renderResults(results, resolution) {
         <div class="method-step">
           <div class="method-step-num">2</div>
           <div class="method-step-text">
-            <strong>% change is computed per pair</strong> using the most recent close against the
-            previous candle's close: <code>(close[last] − close[prev]) / close[prev] × 100</code>.
-            During active market hours <code>close[last]</code> is the current live price of the
-            ongoing candle; on weekends it is the last completed candle's close. Either way it
-            reflects the freshest available price movement for the selected timeframe.
+            <strong>% change is computed per pair</strong> by comparing the most recent close to the
+            close <em>N periods ago</em>: <code>(close[last] − close[last−N]) / close[last−N] × 100</code>,
+            where N is the agreed lookback per timeframe (15m = 20 periods = 5 h,
+            30m = 12 = 6 h, 1H = 10 = 10 h, 4H = 5 = 20 h, Daily = 4 = 4 days, Weekly = 4 = 4 weeks).
+            During active market hours <code>close[last]</code> is the current live price;
+            on weekends it is the last completed candle's close.
           </div>
         </div>
         <div class="method-step">
