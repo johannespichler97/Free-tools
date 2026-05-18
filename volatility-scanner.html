@@ -202,11 +202,19 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 .hamburger.open span:nth-child(1) { transform:translateY(7px) rotate(45deg); }
 .hamburger.open span:nth-child(2) { opacity:0; }
 .hamburger.open span:nth-child(3) { transform:translateY(-7px) rotate(-45deg); }
-@media(max-width:1480px) {
+@media(max-width:980px) {
   .hamburger { display:flex; }
   .header-inner { position:relative; flex-wrap:nowrap; }
   .nav { display:none; position:absolute; top:60px; left:0; right:0; z-index:99; flex-direction:column; gap:0; padding:6px 0; background:rgba(6,36,52,0.98); border-bottom:1px solid var(--border); backdrop-filter:blur(12px); }
   .nav.open { display:flex; }
+  .nav { align-items:stretch; }
+  .nav-dropdown { position:static; }
+  .dropdown-btn { padding:13px 22px; border-radius:0; font-size:14px; border-bottom:1px solid rgba(26,77,110,0.4); width:100%; justify-content:space-between; }
+  .nav-dropdown:hover .dropdown-menu { display:none; }
+  .nav-dropdown.open .dropdown-menu { display:block; }
+  .dropdown-menu { position:static; border:none; border-radius:0; padding:0; background:var(--bg-tertiary); box-shadow:none; backdrop-filter:none; min-width:0; }
+  .dropdown-item { padding:11px 32px; font-size:13px; border-bottom:1px solid rgba(26,77,110,0.3); }
+  .dropdown-item:last-child { border-bottom:none; }
   .nav-link { padding:13px 22px; border-radius:0; font-size:14px; border-bottom:1px solid rgba(26,77,110,0.4); }
   .nav-link:last-child { border-bottom:none; }
   .header-actions .btn-primary { display:none; }
@@ -229,15 +237,24 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
         </svg>
         <span class="logo-text">Market<strong>Analytics</strong></span>
       </a>
-      <nav class="nav">
+      <nav class="nav" id="mainNav">
         <a href="economic-calendar.html"    class="nav-link">Economic Calendar</a>
-        <a href="pattern-recognition.html"  class="nav-link">Pattern Recognition</a>
-        <a href="support-resistance.html"   class="nav-link">Support/Resistance</a>
+        <a href="trend-bias.html"           class="nav-link">Trend Bias</a>
         <a href="currency-strength.html"    class="nav-link">Currency Strength</a>
         <a href="volatility-scanner.html"   class="nav-link active">Volatility</a>
         <a href="correlation-matrix.html"   class="nav-link">Correlation</a>
-        <a href="trading-sessions.html"     class="nav-link">Trading Sessions</a>
-        <a href="position-size-calculator.html" class="nav-link">Position Size</a>
+        <div class="nav-dropdown" id="moreDropdown">
+          <button class="dropdown-btn" id="moreToolsBtn" onclick="toggleDropdown(event)">
+            More Tools
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><polyline points="2,3 5,7 8,3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div class="dropdown-menu" id="moreToolsMenu">
+            <a href="pattern-recognition.html"      class="dropdown-item">Pattern Recognition</a>
+            <a href="support-resistance.html"       class="dropdown-item">Support / Resistance</a>
+            <a href="trading-sessions.html"         class="dropdown-item">Trading Sessions</a>
+            <a href="position-size-calculator.html" class="dropdown-item">Position Size</a>
+          </div>
+        </div>
       </nav>
       <button class="hamburger" id="hamburger" aria-label="Open navigation">
         <span></span><span></span><span></span>
@@ -619,7 +636,7 @@ function renderResults(results, resolution, atrPeriod) {
   <script>
   (function(){
     var btn = document.getElementById('hamburger');
-    var nav = document.querySelector('.nav');
+    var nav = document.getElementById('mainNav');
     if (!btn || !nav) return;
     btn.addEventListener('click', function(e) {
       e.stopPropagation();
@@ -633,6 +650,17 @@ function renderResults(results, resolution, atrPeriod) {
       }
     });
   })();
+  </script>
+  <script>
+  function toggleDropdown(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    document.getElementById('moreDropdown').classList.toggle('open');
+  }
+  document.addEventListener('click', function(e) {
+    var dd = document.getElementById('moreDropdown');
+    if (dd && !dd.contains(e.target)) dd.classList.remove('open');
+  });
   </script>
 </body>
 </html>
