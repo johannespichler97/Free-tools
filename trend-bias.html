@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trend Bias | Market Analytics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-primary:    #062434;
+  --bg-secondary:  #0a2e44;
+  --bg-tertiary:   #0e3a54;
+  --bg-hover:      #123f5c;
+  --border:        #1a4d6e;
+  --text-primary:  #E6E9EB;
+  --text-secondary:#8ab8d0;
+  --text-muted:    #4d7a96;
+  --accent:        #2FA3E0;
+  --accent-2:      #51d7ce;
+  --accent-dim:    rgba(47,163,224,0.12);
+  --positive:      #3fb950;
+  --positive-bg:   rgba(63,185,80,0.10);
+  --negative:      #f85149;
+  --negative-bg:   rgba(248,81,73,0.10);
+  --warn:          #e3b341;
+  --warn-bg:       rgba(227,179,65,0.10);
+  --font:          'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono:     'JetBrains Mono', monospace;
+  --radius-sm:     6px;
+  --radius-md:     10px;
+  --radius-lg:     14px;
+}
+
+html { scroll-behavior: smooth; }
+body { font-family: var(--font); background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; font-size: 14px; line-height: 1.5; }
+
+@keyframes pulse   { 0%,100%{opacity:1} 50%{opacity:0.4} }
+@keyframes spin    { to{transform:rotate(360deg)} }
+@keyframes fadeIn  { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+@keyframes shimmer { 0%{background-position:-400px 0} 100%{background-position:400px 0} }
+
+/* ── HEADER ── */
+.header { position:sticky; top:0; z-index:200; background:rgba(6,36,52,0.97); backdrop-filter:blur(12px); border-bottom:1px solid var(--border); }
+.header-inner { max-width:1200px; margin:0 auto; padding:0 24px; height:60px; display:flex; align-items:center; gap:32px; }
+.logo { display:flex; align-items:center; gap:8px; text-decoration:none; color:var(--text-primary); font-size:16px; font-weight:700; white-space:nowrap; }
+.logo-text strong { color:var(--accent); }
+
+/* ── NAV ── */
+.nav { display:flex; gap:1px; flex:1; align-items:center; }
+.nav-link { text-decoration:none; color:var(--text-secondary); padding:6px 9px; border-radius:var(--radius-sm); font-size:12.5px; font-weight:500; transition:all .15s; white-space:nowrap; }
+.nav-link:hover { color:var(--text-primary); background:var(--bg-hover); }
+.nav-link.active { color:var(--accent); background:var(--accent-dim); }
+
+/* Dropdown */
+.nav-dropdown { position:relative; }
+.dropdown-btn { background:none; border:none; font-family:var(--font); cursor:pointer; display:flex; align-items:center; gap:5px; color:var(--text-secondary); padding:6px 9px; border-radius:var(--radius-sm); font-size:12.5px; font-weight:500; transition:all .15s; white-space:nowrap; }
+.dropdown-btn:hover { color:var(--text-primary); background:var(--bg-hover); }
+.dropdown-btn.active { color:var(--accent); background:var(--accent-dim); }
+.dropdown-btn svg { transition:transform .2s; }
+.nav-dropdown:hover .dropdown-btn svg,
+.nav-dropdown.open .dropdown-btn svg { transform:rotate(180deg); }
+.dropdown-menu { display:none; position:absolute; top:calc(100% + 6px); left:0; background:rgba(6,36,52,0.99); border:1px solid var(--border); border-radius:var(--radius-md); min-width:190px; padding:4px 0; z-index:300; backdrop-filter:blur(12px); box-shadow:0 8px 24px rgba(0,0,0,0.4); }
+.nav-dropdown:hover .dropdown-menu,
+.nav-dropdown.open .dropdown-menu { display:block; }
+.dropdown-item { display:block; padding:9px 16px; color:var(--text-secondary); text-decoration:none; font-size:12.5px; font-weight:500; transition:all .15s; white-space:nowrap; }
+.dropdown-item:hover { color:var(--text-primary); background:var(--bg-hover); }
+.dropdown-item.active { color:var(--accent); }
+
+.header-actions { display:flex; align-items:center; gap:12px; }
+.live-badge { font-size:11px; font-weight:600; color:var(--positive); letter-spacing:.05em; display:flex; align-items:center; gap:5px; }
+.live-dot { animation:pulse 2s infinite; }
+.btn-primary { background:linear-gradient(135deg,#51d7ce,#2FA3E0); color:#062434; border:none; padding:7px 18px; border-radius:20px; font-size:13px; font-weight:700; cursor:pointer; transition:opacity .15s; font-family:var(--font); }
+.btn-primary:hover { opacity:.88; }
+
+/* ── HAMBURGER ── */
+.hamburger { display:none; flex-direction:column; justify-content:center; gap:5px; background:none; border:none; padding:6px; cursor:pointer; border-radius:6px; transition:background .15s; margin-left:auto; }
+.hamburger:hover { background:var(--bg-hover); }
+.hamburger span { display:block; width:22px; height:2px; background:var(--text-primary); border-radius:1px; transition:all .25s; }
+.hamburger.open span:nth-child(1) { transform:translateY(7px) rotate(45deg); }
+.hamburger.open span:nth-child(2) { opacity:0; }
+.hamburger.open span:nth-child(3) { transform:translateY(-7px) rotate(-45deg); }
+
+@media(max-width:980px) {
+  .hamburger { display:flex; }
+  .header-inner { position:relative; flex-wrap:nowrap; }
+  .nav { display:none; position:absolute; top:60px; left:0; right:0; z-index:99; flex-direction:column; align-items:stretch; gap:0; padding:6px 0; background:rgba(6,36,52,0.98); border-bottom:1px solid var(--border); backdrop-filter:blur(12px); }
+  .nav.open { display:flex; }
+  .nav-link { padding:13px 22px; border-radius:0; font-size:14px; border-bottom:1px solid rgba(26,77,110,0.4); }
+  .nav-link:last-child { border-bottom:none; }
+  .nav-dropdown { position:static; }
+  .dropdown-btn { padding:13px 22px; border-radius:0; font-size:14px; border-bottom:1px solid rgba(26,77,110,0.4); width:100%; justify-content:space-between; }
+  .dropdown-menu { display:none; position:static; border:none; border-radius:0; padding:0; background:var(--bg-tertiary); box-shadow:none; backdrop-filter:none; }
+  .nav-dropdown.open .dropdown-menu { display:block; }
+  .nav-dropdown:hover .dropdown-menu { display:none; }
+  .nav-dropdown.open .dropdown-menu { display:block; }
+  .dropdown-item { padding:11px 32px; font-size:13px; border-bottom:1px solid rgba(26,77,110,0.3); }
+  .dropdown-item:last-child { border-bottom:none; }
+  .header-actions .btn-primary { display:none; }
+}
+
+/* ── HERO ── */
+.hero { background:linear-gradient(135deg,#062434 0%,#0a2e44 60%,#0d3550 100%); border-bottom:1px solid var(--border); padding:28px 24px; }
+.hero-inner { max-width:1200px; margin:0 auto; }
+.hero h1 { font-size:26px; font-weight:700; }
+.hero h1::after { content:''; display:block; width:40px; height:3px; background:linear-gradient(90deg,#51d7ce,#2FA3E0); border-radius:2px; margin-top:10px; }
+.hero p { color:var(--text-secondary); font-size:15px; margin-top:10px; }
+
+/* ── CONTROLS ── */
+.controls-bar { background:var(--bg-primary); border-bottom:1px solid var(--border); padding:12px 24px; }
+.controls-box { max-width:1248px; margin:0 auto; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); padding:16px 18px; display:flex; flex-direction:column; gap:14px; }
+.ctrl-row { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.ctrl-label { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.07em; white-space:nowrap; min-width:80px; }
+.ctrl-divider { border:none; border-top:1px solid var(--border); margin:0; }
+
+.asset-chips { display:flex; flex-wrap:wrap; gap:5px; flex:1; }
+.asset-chip { padding:4px 10px; border-radius:20px; font-size:12px; font-weight:600; cursor:pointer; transition:all .15s; border:1.5px solid var(--border); color:var(--text-muted); background:var(--bg-tertiary); user-select:none; white-space:nowrap; opacity:.55; }
+.asset-chip:hover { opacity:.85; border-color:var(--text-muted); }
+.asset-chip.active { opacity:1; border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
+.asset-chip.metal.active { border-color:var(--accent-2); color:var(--accent-2); background:rgba(81,215,206,0.10); }
+
+.chip-actions { display:flex; gap:6px; }
+.chip-action-btn { padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; cursor:pointer; border:1px solid var(--border); background:transparent; color:var(--text-muted); font-family:var(--font); transition:all .15s; }
+.chip-action-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+.tf-chips { display:flex; gap:5px; flex-wrap:wrap; }
+.tf-chip { padding:5px 14px; border-radius:20px; font-size:12px; font-weight:700; cursor:pointer; transition:all .15s; border:1.5px solid var(--border); color:var(--text-muted); background:var(--bg-tertiary); user-select:none; opacity:.55; }
+.tf-chip:hover { opacity:.85; }
+.tf-chip.active { opacity:1; border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
+
+.scan-row { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+.scan-counter { font-size:12px; color:var(--text-muted); }
+.scan-counter strong { color:var(--accent); }
+.btn-scan { background:linear-gradient(135deg,#51d7ce,#2FA3E0); color:#062434; border:none; padding:10px 28px; border-radius:20px; font-size:14px; font-weight:700; cursor:pointer; font-family:var(--font); transition:opacity .15s; display:flex; align-items:center; gap:8px; }
+.btn-scan:hover { opacity:.88; }
+.btn-scan:disabled { opacity:.45; cursor:not-allowed; }
+
+/* ── PROGRESS ── */
+.progress-wrap { max-width:1248px; margin:8px auto 0; padding:0 24px; display:none; }
+.progress-track { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); padding:14px 18px; }
+.progress-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+.progress-label { font-size:13px; color:var(--text-secondary); }
+.progress-pct { font-size:13px; font-weight:700; color:var(--accent); font-family:var(--font-mono); }
+.progress-bar { height:6px; background:var(--bg-tertiary); border-radius:3px; overflow:hidden; }
+.progress-fill { height:100%; background:linear-gradient(90deg,#51d7ce,#2FA3E0); border-radius:3px; transition:width .3s ease; width:0%; }
+.progress-current { font-size:11px; color:var(--text-muted); margin-top:7px; }
+
+/* ── MAIN ── */
+.main { max-width:1248px; margin:0 auto; padding:20px 24px 60px; }
+
+/* ── BIAS GRID ── */
+.bias-card { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; animation:fadeIn .25s ease; }
+.bias-table-wrap { overflow-x:auto; }
+.bias-table { width:100%; border-collapse:collapse; }
+.bias-table th { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--text-muted); padding:10px 14px; background:var(--bg-tertiary); border-bottom:1px solid var(--border); text-align:center; white-space:nowrap; }
+.bias-table th.col-pair { text-align:left; min-width:90px; }
+.bias-table td { padding:9px 14px; border-bottom:1px solid rgba(26,77,110,0.35); text-align:center; vertical-align:middle; }
+.bias-table tr:last-child td { border-bottom:none; }
+.bias-table tr:hover td { background:var(--bg-hover); }
+.pair-cell { font-family:var(--font-mono); font-size:13px; font-weight:700; color:var(--text-primary); text-align:left; }
+.pair-cell.metal { color:var(--accent-2); }
+
+.bias-cell { display:flex; flex-direction:column; align-items:center; gap:3px; min-width:76px; }
+.bias-score { font-family:var(--font-mono); font-size:14px; font-weight:700; }
+.bias-label { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; padding:2px 6px; border-radius:10px; white-space:nowrap; }
+
+/* Strong Bull */
+.b4  .bias-score { color:#3fb950; }
+.b4  .bias-label { background:rgba(63,185,80,0.15); color:#3fb950; border:1px solid rgba(63,185,80,0.3); }
+/* Bull */
+.b2  .bias-score { color:#8dd9a0; }
+.b2  .bias-label { background:rgba(141,217,160,0.12); color:#8dd9a0; border:1px solid rgba(141,217,160,0.25); }
+/* Neutral */
+.b0  .bias-score { color:var(--text-muted); }
+.b0  .bias-label { background:rgba(77,122,150,0.15); color:var(--text-muted); border:1px solid rgba(77,122,150,0.25); }
+/* Bear */
+.bm2 .bias-score { color:#f08080; }
+.bm2 .bias-label { background:rgba(240,128,128,0.12); color:#f08080; border:1px solid rgba(240,128,128,0.25); }
+/* Strong Bear */
+.bm4 .bias-score { color:#f85149; }
+.bm4 .bias-label { background:rgba(248,81,73,0.15); color:#f85149; border:1px solid rgba(248,81,73,0.3); }
+
+/* loading cell spinner */
+.cell-loading { display:inline-block; width:16px; height:16px; border:2px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .7s linear infinite; }
+.cell-err { font-size:11px; color:var(--text-muted); }
+
+/* State */
+.state-box { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:80px 24px; gap:14px; text-align:center; color:var(--text-muted); }
+.state-icon { font-size:44px; opacity:.3; }
+.state-title { font-size:17px; font-weight:600; color:var(--text-secondary); }
+.state-sub { font-size:13px; max-width:400px; line-height:1.6; }
+
+/* ── METHODOLOGY BOX ── */
+.method-card { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); padding:28px; margin-top:24px; }
+.method-card h2 { font-size:16px; font-weight:700; margin-bottom:20px; color:var(--text-primary); display:flex; align-items:center; gap:10px; }
+.method-card h2::after { content:''; flex:1; height:1px; background:var(--border); }
+.method-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+@media(max-width:700px){ .method-grid { grid-template-columns:1fr; } }
+.method-block { background:var(--bg-tertiary); border:1px solid var(--border); border-radius:var(--radius-md); padding:16px; }
+.method-block h3 { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--accent); margin-bottom:12px; }
+.method-text { font-size:12.5px; color:var(--text-secondary); line-height:1.7; }
+.method-formula { font-family:var(--font-mono); background:var(--bg-primary); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px 14px; font-size:12px; color:var(--text-primary); margin:10px 0; line-height:1.8; overflow-x:auto; }
+.method-table { width:100%; border-collapse:collapse; margin-top:10px; }
+.method-table th { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); padding:5px 8px; border-bottom:1px solid var(--border); text-align:left; }
+.method-table td { font-size:12px; padding:6px 8px; border-bottom:1px solid rgba(26,77,110,0.3); color:var(--text-secondary); font-family:var(--font-mono); }
+.method-table tr:last-child td { border-bottom:none; }
+.score-pill { display:inline-block; padding:1px 8px; border-radius:10px; font-size:11px; font-weight:700; }
+.score-pill.s4  { background:rgba(63,185,80,0.15);  color:#3fb950; }
+.score-pill.s2  { background:rgba(141,217,160,0.12);color:#8dd9a0; }
+.score-pill.s0  { background:rgba(77,122,150,0.15); color:var(--text-muted); }
+.score-pill.sm2 { background:rgba(240,128,128,0.12);color:#f08080; }
+.score-pill.sm4 { background:rgba(248,81,73,0.15);  color:#f85149; }
+.method-note { font-size:11.5px; color:var(--text-muted); line-height:1.6; margin-top:14px; border-top:1px solid var(--border); padding-top:14px; }
+
+/* ── FOOTER ── */
+.footer { background:var(--bg-secondary); border-top:1px solid var(--border); padding:24px; }
+.footer-inner { max-width:1200px; margin:0 auto; text-align:center; }
+.footer-disclaimer { font-size:12px; color:var(--text-muted); line-height:1.6; }
+.footer-copy { font-size:12px; color:var(--text-muted); margin-top:6px; }
+
+@media(max-width:640px) { .header-inner,.main,.controls-bar { padding-left:16px; padding-right:16px; } }
+  </style>
+</head>
+<body>
+
+  <header class="header">
+    <div class="header-inner">
+      <a href="economic-calendar.html" class="logo">
+        <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+          <defs><linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#51d7ce"/><stop offset="100%" stop-color="#2FA3E0"/></linearGradient></defs>
+          <circle cx="18" cy="18" r="16.5" stroke="url(#lg)" stroke-width="2" fill="none"/>
+          <rect x="8" y="20" width="4" height="8" rx="1" fill="url(#lg)"/>
+          <rect x="14" y="15" width="4" height="13" rx="1" fill="url(#lg)"/>
+          <rect x="20" y="11" width="4" height="17" rx="1" fill="url(#lg)"/>
+          <polyline points="22,9 27,9 27,14" stroke="url(#lg)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <line x1="14" y1="21" x2="27" y2="9" stroke="url(#lg)" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <span class="logo-text">Market<strong>Analytics</strong></span>
+      </a>
+      <nav class="nav" id="mainNav">
+        <a href="economic-calendar.html"    class="nav-link">Economic Calendar</a>
+        <a href="trend-bias.html"           class="nav-link active">Trend Bias</a>
+        <a href="currency-strength.html"    class="nav-link">Currency Strength</a>
+        <a href="volatility-scanner.html"   class="nav-link">Volatility</a>
+        <a href="correlation-matrix.html"   class="nav-link">Correlation</a>
+        <div class="nav-dropdown" id="moreDropdown">
+          <button class="dropdown-btn" id="moreToolsBtn" onclick="toggleDropdown(event)">
+            More Tools
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><polyline points="2,3 5,7 8,3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div class="dropdown-menu" id="moreToolsMenu">
+            <a href="pattern-recognition.html"      class="dropdown-item">Pattern Recognition</a>
+            <a href="support-resistance.html"       class="dropdown-item">Support / Resistance</a>
+            <a href="trading-sessions.html"         class="dropdown-item">Trading Sessions</a>
+            <a href="position-size-calculator.html" class="dropdown-item">Position Size</a>
+          </div>
+        </div>
+      </nav>
+      <button class="hamburger" id="hamburger" aria-label="Open navigation">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="header-actions">
+        <span class="live-badge"><span class="live-dot">&#9679;</span> LIVE</span>
+        <button class="btn-primary">Open Account</button>
+      </div>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-inner">
+      <h1>Trend Bias</h1>
+      <p>Multi-timeframe EMA stack scoring — four signals per instrument, ranked from Strong Bear to Strong Bull.</p>
+    </div>
+  </section>
+
+  <div class="controls-bar">
+    <div class="controls-box">
+
+      <div class="ctrl-row">
+        <span class="ctrl-label">Instruments</span>
+        <div class="chip-actions">
+          <button class="chip-action-btn" onclick="selectAllAssets()">Select All</button>
+          <button class="chip-action-btn" onclick="clearAssets()">Clear</button>
+        </div>
+      </div>
+      <div class="asset-chips" id="assetChips">
+        <span class="asset-chip active" data-sym="OANDA:EUR_USD">EURUSD</span>
+        <span class="asset-chip active" data-sym="OANDA:GBP_USD">GBPUSD</span>
+        <span class="asset-chip active" data-sym="OANDA:USD_JPY">USDJPY</span>
+        <span class="asset-chip active" data-sym="OANDA:AUD_USD">AUDUSD</span>
+        <span class="asset-chip active" data-sym="OANDA:USD_CAD">USDCAD</span>
+        <span class="asset-chip active" data-sym="OANDA:USD_CHF">USDCHF</span>
+        <span class="asset-chip active" data-sym="OANDA:NZD_USD">NZDUSD</span>
+        <span class="asset-chip active" data-sym="OANDA:EUR_JPY">EURJPY</span>
+        <span class="asset-chip active" data-sym="OANDA:GBP_JPY">GBPJPY</span>
+        <span class="asset-chip"        data-sym="OANDA:EUR_GBP">EURGBP</span>
+        <span class="asset-chip"        data-sym="OANDA:EUR_AUD">EURAUD</span>
+        <span class="asset-chip"        data-sym="OANDA:EUR_CAD">EURCAD</span>
+        <span class="asset-chip"        data-sym="OANDA:EUR_CHF">EURCHF</span>
+        <span class="asset-chip"        data-sym="OANDA:EUR_NZD">EURNZD</span>
+        <span class="asset-chip"        data-sym="OANDA:GBP_AUD">GBPAUD</span>
+        <span class="asset-chip"        data-sym="OANDA:GBP_CAD">GBPCAD</span>
+        <span class="asset-chip"        data-sym="OANDA:GBP_CHF">GBPCHF</span>
+        <span class="asset-chip"        data-sym="OANDA:GBP_NZD">GBPNZD</span>
+        <span class="asset-chip"        data-sym="OANDA:AUD_JPY">AUDJPY</span>
+        <span class="asset-chip"        data-sym="OANDA:CAD_JPY">CADJPY</span>
+        <span class="asset-chip"        data-sym="OANDA:NZD_JPY">NZDJPY</span>
+        <span class="asset-chip"        data-sym="OANDA:CHF_JPY">CHFJPY</span>
+        <span class="asset-chip"        data-sym="OANDA:AUD_CAD">AUDCAD</span>
+        <span class="asset-chip"        data-sym="OANDA:AUD_CHF">AUDCHF</span>
+        <span class="asset-chip"        data-sym="OANDA:AUD_NZD">AUDNZD</span>
+        <span class="asset-chip"        data-sym="OANDA:NZD_CAD">NZDCAD</span>
+        <span class="asset-chip"        data-sym="OANDA:NZD_CHF">NZDCHF</span>
+        <span class="asset-chip"        data-sym="OANDA:CAD_CHF">CADCHF</span>
+        <span class="asset-chip metal active" data-sym="OANDA:XAU_USD">XAUUSD</span>
+        <span class="asset-chip metal"        data-sym="OANDA:XAG_USD">XAGUSD</span>
+      </div>
+
+      <hr class="ctrl-divider" />
+
+      <div class="ctrl-row">
+        <span class="ctrl-label">Timeframes</span>
+        <div class="tf-chips" id="tfChips">
+          <span class="tf-chip active" data-res="15"  data-label="M15">M15</span>
+          <span class="tf-chip active" data-res="30"  data-label="M30">M30</span>
+          <span class="tf-chip active" data-res="60"  data-label="H1">H1</span>
+          <span class="tf-chip active" data-res="240" data-label="H4">H4</span>
+          <span class="tf-chip active" data-res="D"   data-label="D">Daily</span>
+          <span class="tf-chip active" data-res="W"   data-label="W">Weekly</span>
+        </div>
+      </div>
+
+      <hr class="ctrl-divider" />
+
+      <div class="scan-row">
+        <span class="scan-counter" id="scanCounter">
+          <strong id="cntAsset">10</strong> instruments &middot; <strong id="cntTf">6</strong> timeframes &middot; <strong id="cntCalls">60</strong> API calls
+        </span>
+        <button class="btn-scan" id="scanBtn" onclick="runScan()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/></svg>
+          Scan Trend Bias
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress-track">
+      <div class="progress-header">
+        <span class="progress-label" id="progressLabel">Fetching candles…</span>
+        <span class="progress-pct" id="progressPct">0%</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-current" id="progressCurrent">&nbsp;</div>
+    </div>
+  </div>
+
+  <div class="main" id="mainContent">
+    <div class="state-box" id="stateBox">
+      <div class="state-icon">📈</div>
+      <div class="state-title">Select instruments &amp; timeframes</div>
+      <div class="state-sub">Click <em>Scan Trend Bias</em> to compute EMA stack scores across all selected pairs and timeframes.</div>
+    </div>
+    <div id="biasResults" style="display:none"></div>
+  </div>
+
+  <!-- Methodology -->
+  <div class="main" style="padding-top:0">
+    <div class="method-card">
+      <h2>How the Score Is Calculated</h2>
+      <div class="method-grid">
+
+        <div class="method-block">
+          <h3>Exponential Moving Average (EMA)</h3>
+          <div class="method-text">
+            For a period <em>n</em>, the smoothing factor α and recursive formula are:
+          </div>
+          <div class="method-formula">
+α  =  2 / (n + 1)
+
+EMA<sub>n</sub>(t) = α · P<sub>t</sub>  +  (1 − α) · EMA<sub>n</sub>(t−1)
+
+Seed (t = n):
+EMA<sub>n</sub>(n) = (1/n) · Σ P<sub>i</sub>  for i = 1…n
+          </div>
+          <div class="method-text">
+            Three EMAs are computed per instrument: EMA<sub>20</sub>, EMA<sub>50</sub>, EMA<sub>200</sub>.<br/>
+            280 historical candles are fetched per request to ensure EMA<sub>200</sub> is fully warm with 80 bars of runway before the current bar.
+          </div>
+        </div>
+
+        <div class="method-block">
+          <h3>EMA₂₀ Slope (5-bar momentum)</h3>
+          <div class="method-text">
+            Rather than comparing the EMA to a fixed baseline, the slope measures the <em>direction of the EMA itself</em> over the last 5 completed bars:
+          </div>
+          <div class="method-formula">
+Slope₅ = EMA₂₀(t) − EMA₂₀(t−5)
+
+S₄ = +1  if  Slope₅ > 0
+S₄ = −1  if  Slope₅ ≤ 0
+          </div>
+          <div class="method-text">
+            A positive slope means the short-term average is accelerating upward — a precursor to trend continuation. A negative slope flags potential exhaustion even when price is still above the EMA.
+          </div>
+        </div>
+
+        <div class="method-block">
+          <h3>Four Binary Signals</h3>
+          <div class="method-formula">
+S₁ = +1  if  P<sub>t</sub>     &gt;  EMA₂₀(t),  else −1
+S₂ = +1  if  EMA₂₀(t) &gt;  EMA₅₀(t),  else −1
+S₃ = +1  if  EMA₅₀(t) &gt;  EMA₂₀₀(t), else −1
+S₄ = +1  if  EMA₂₀(t) &gt;  EMA₂₀(t−5), else −1
+
+Score = S₁ + S₂ + S₃ + S₄  ∈ {−4, −2, 0, +2, +4}
+          </div>
+          <div class="method-text">
+            Each signal is independently binary (±1), so the composite score is always even. All four signals aligned in the same direction yields the maximum magnitude (±4).
+          </div>
+        </div>
+
+        <div class="method-block">
+          <h3>Score → Bias Label</h3>
+          <table class="method-table">
+            <thead><tr><th>Score</th><th>Label</th><th>Interpretation</th></tr></thead>
+            <tbody>
+              <tr><td><span class="score-pill s4">+4</span></td><td>Strong Bull</td><td>All 4 signals bullish</td></tr>
+              <tr><td><span class="score-pill s2">+2</span></td><td>Bull</td><td>3 of 4 signals bullish</td></tr>
+              <tr><td><span class="score-pill s0">&nbsp;0</span></td><td>Neutral</td><td>2 bullish, 2 bearish</td></tr>
+              <tr><td><span class="score-pill sm2">−2</span></td><td>Bear</td><td>3 of 4 signals bearish</td></tr>
+              <tr><td><span class="score-pill sm4">−4</span></td><td>Strong Bear</td><td>All 4 signals bearish</td></tr>
+            </tbody>
+          </table>
+          <div class="method-note">
+            <strong>Data source:</strong> Finnhub.io · OANDA forex feed (<code>/api/v1/forex/candle</code>). Candles are fetched in real time on each scan. Rate limit: 60 req/min (free tier) — scans with many instruments use a 5-worker concurrency queue with automatic throttling.
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div class="footer-inner">
+      <p class="footer-disclaimer">For informational purposes only. Not financial advice. EMA stack scoring is a mechanical trend-following heuristic and does not account for fundamentals, news events, or market microstructure. Always use proper risk management.</p>
+      <p class="footer-copy">&copy; 2025 MarketAnalytics. Powered by Finnhub.io</p>
+    </div>
+  </footer>
+
+<script>
+const API_KEY = 'd4fevfpr01qkcvvhv6h0d4fevfpr01qkcvvhv6hg';
+
+// ── NAV ──────────────────────────────────────────────────────────────────────
+const hamburger = document.getElementById('hamburger');
+const mainNav   = document.getElementById('mainNav');
+hamburger.addEventListener('click', () => {
+  hamburger.classList.toggle('open');
+  mainNav.classList.toggle('open');
+});
+
+function toggleDropdown(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  const dd = document.getElementById('moreDropdown');
+  dd.classList.toggle('open');
+}
+document.addEventListener('click', (e) => {
+  const dd = document.getElementById('moreDropdown');
+  if (!dd.contains(e.target)) dd.classList.remove('open');
+});
+
+// ── CHIP STATE ──────────────────────────────────────────────────────────────
+document.querySelectorAll('.asset-chip').forEach(c => {
+  c.addEventListener('click', () => {
+    c.classList.toggle('active');
+    updateCounter();
+  });
+});
+document.querySelectorAll('.tf-chip').forEach(c => {
+  c.addEventListener('click', () => {
+    c.classList.toggle('active');
+    updateCounter();
+  });
+});
+
+function selectAllAssets() {
+  document.querySelectorAll('.asset-chip').forEach(c => c.classList.add('active'));
+  updateCounter();
+}
+function clearAssets() {
+  document.querySelectorAll('.asset-chip').forEach(c => c.classList.remove('active'));
+  updateCounter();
+}
+function getActiveAssets() {
+  return [...document.querySelectorAll('.asset-chip.active')].map(c => ({
+    sym: c.dataset.sym,
+    label: c.textContent.trim(),
+    isMetal: c.classList.contains('metal')
+  }));
+}
+function getActiveTFs() {
+  return [...document.querySelectorAll('.tf-chip.active')].map(c => ({
+    res: c.dataset.res,
+    label: c.dataset.label
+  }));
+}
+function updateCounter() {
+  const a = getActiveAssets().length;
+  const t = getActiveTFs().length;
+  document.getElementById('cntAsset').textContent = a;
+  document.getElementById('cntTf').textContent    = t;
+  document.getElementById('cntCalls').textContent = a * t;
+}
+updateCounter();
+
+// ── EMA CALCULATIONS ────────────────────────────────────────────────────────
+function calcEMAArray(closes, period) {
+  if (closes.length < period) return [];
+  const k = 2 / (period + 1);
+  let ema = 0;
+  for (let i = 0; i < period; i++) ema += closes[i];
+  ema /= period;
+  const arr = new Array(closes.length - period + 1);
+  arr[0] = ema;
+  for (let i = period; i < closes.length; i++) {
+    ema = closes[i] * k + ema * (1 - k);
+    arr[i - period + 1] = ema;
+  }
+  return arr;
+}
+
+function calcEMA(closes, period) {
+  const arr = calcEMAArray(closes, period);
+  return arr.length ? arr[arr.length - 1] : null;
+}
+
+function calcBias(closes) {
+  if (closes.length < 210) return null;
+  const ema20arr = calcEMAArray(closes, 20);
+  if (ema20arr.length < 7) return null;
+  const ema20    = ema20arr[ema20arr.length - 1];
+  const ema20lag = ema20arr[ema20arr.length - 6];
+  const ema50    = calcEMA(closes, 50);
+  const ema200   = calcEMA(closes, 200);
+  const price    = closes[closes.length - 1];
+  if (ema50 === null || ema200 === null) return null;
+  const s1 = price > ema20    ?  1 : -1;
+  const s2 = ema20 > ema50    ?  1 : -1;
+  const s3 = ema50 > ema200   ?  1 : -1;
+  const s4 = ema20 > ema20lag ?  1 : -1;
+  return s1 + s2 + s3 + s4;
+}
+
+// ── FETCH CANDLES ────────────────────────────────────────────────────────────
+function tfToSeconds(res) {
+  const map = { '15':15*60, '30':30*60, '60':60*60, '240':240*60, 'D':86400, 'W':7*86400 };
+  return map[res] || 3600;
+}
+
+async function fetchCandles(sym, res) {
+  const now  = Math.floor(Date.now() / 1000);
+  const span = tfToSeconds(res) * 290;
+  const from = now - span;
+  const url  = `https://finnhub.io/api/v1/forex/candle?symbol=${sym}&resolution=${res}&from=${from}&to=${now}&token=${API_KEY}`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const d = await r.json();
+  if (!d.c || d.c.length < 210) throw new Error('Insufficient candles');
+  return d.c;
+}
+
+// ── WORKER POOL ──────────────────────────────────────────────────────────────
+async function runPool(tasks, concurrency, onProgress) {
+  const results = new Array(tasks.length);
+  let idx = 0;
+  async function worker() {
+    while (idx < tasks.length) {
+      const i = idx++;
+      results[i] = await tasks[i]();
+      onProgress(i);
+    }
+  }
+  await Promise.all(Array.from({ length: concurrency }, worker));
+  return results;
+}
+
+// ── BIAS LABEL ───────────────────────────────────────────────────────────────
+function biasClass(score) {
+  if (score >=  4) return 'b4';
+  if (score >=  2) return 'b2';
+  if (score >=  0) return 'b0';
+  if (score >= -2) return 'bm2';
+  return 'bm4';
+}
+function biasLabel(score) {
+  if (score >=  4) return 'Strong Bull';
+  if (score >=  2) return 'Bull';
+  if (score >=  0) return 'Neutral';
+  if (score >= -2) return 'Bear';
+  return 'Strong Bear';
+}
+function fmtScore(score) {
+  return score > 0 ? `+${score}` : `${score}`;
+}
+
+// ── RENDER TABLE SKELETON ─────────────────────────────────────────────────────
+function buildGrid(assets, tfs) {
+  const wrap = document.getElementById('biasResults');
+  const tfHeaders = tfs.map(tf => `<th>${tf.label}</th>`).join('');
+  const rows = assets.map((a, ai) => {
+    const cells = tfs.map((tf, ti) =>
+      `<td id="cell-${ai}-${ti}"><div class="cell-loading"></div></td>`
+    ).join('');
+    const cls = a.isMetal ? ' metal' : '';
+    return `<tr><td class="pair-cell${cls}">${a.label}</td>${cells}</tr>`;
+  }).join('');
+
+  wrap.innerHTML = `
+    <div class="bias-card">
+      <div class="bias-table-wrap">
+        <table class="bias-table">
+          <thead><tr><th class="col-pair">Instrument</th>${tfHeaders}</tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>`;
+  wrap.style.display = 'block';
+  document.getElementById('stateBox').style.display = 'none';
+}
+
+function fillCell(ai, ti, score) {
+  const cell = document.getElementById(`cell-${ai}-${ti}`);
+  if (!cell) return;
+  if (score === null) {
+    cell.innerHTML = `<span class="cell-err">N/A</span>`;
+    return;
+  }
+  const cls = biasClass(score);
+  cell.innerHTML = `
+    <div class="bias-cell ${cls}">
+      <span class="bias-score">${fmtScore(score)}</span>
+      <span class="bias-label">${biasLabel(score)}</span>
+    </div>`;
+}
+
+// ── MAIN SCAN ────────────────────────────────────────────────────────────────
+async function runScan() {
+  const assets = getActiveAssets();
+  const tfs    = getActiveTFs();
+  if (!assets.length || !tfs.length) {
+    alert('Please select at least one instrument and one timeframe.');
+    return;
+  }
+
+  const btn = document.getElementById('scanBtn');
+  btn.disabled = true;
+  btn.innerHTML = `<div style="width:15px;height:15px;border:2px solid rgba(6,36,52,0.5);border-top-color:#062434;border-radius:50%;animation:spin .7s linear infinite"></div> Scanning…`;
+
+  const progressWrap = document.getElementById('progressWrap');
+  progressWrap.style.display = 'block';
+
+  buildGrid(assets, tfs);
+
+  const tasks = [];
+  const taskMeta = [];
+  assets.forEach((a, ai) => {
+    tfs.forEach((tf, ti) => {
+      taskMeta.push({ ai, ti, sym: a.sym, res: tf.res, label: a.label, tfLabel: tf.label });
+      tasks.push(async () => {
+        try {
+          const closes = await fetchCandles(a.sym, tf.res);
+          return calcBias(closes);
+        } catch {
+          return null;
+        }
+      });
+    });
+  });
+
+  let done = 0;
+  const total = tasks.length;
+
+  const results = await runPool(tasks, 5, (i) => {
+    done++;
+    const pct = Math.round(done / total * 100);
+    document.getElementById('progressFill').style.width  = pct + '%';
+    document.getElementById('progressPct').textContent   = pct + '%';
+    document.getElementById('progressLabel').textContent = `Fetching candles… (${done} / ${total})`;
+    document.getElementById('progressCurrent').textContent =
+      `Last: ${taskMeta[i].label} · ${taskMeta[i].tfLabel}`;
+    fillCell(taskMeta[i].ai, taskMeta[i].ti, results[i] !== undefined ? results[i] : null);
+  });
+
+  // fill remaining cells (pool fires onProgress before result is stored; fill all again)
+  results.forEach((score, i) => fillCell(taskMeta[i].ai, taskMeta[i].ti, score));
+
+  progressWrap.style.display = 'none';
+  btn.disabled = false;
+  btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/></svg> Scan Trend Bias`;
+}
+</script>
+</body>
+</html>

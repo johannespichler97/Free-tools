@@ -55,10 +55,24 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 .logo { display:flex; align-items:center; gap:8px; text-decoration:none; color:var(--text-primary); font-size:16px; font-weight:700; white-space:nowrap; }
 .logo-icon { color:var(--accent-2); font-size:18px; }
 .logo-text strong { color:var(--accent); }
-.nav { display:flex; gap:1px; flex:1; }
+.nav { display:flex; gap:1px; flex:1; align-items:center; }
 .nav-link { text-decoration:none; color:var(--text-secondary); padding:6px 9px; border-radius:var(--radius-sm); font-size:12.5px; font-weight:500; transition:all .15s; white-space:nowrap; }
 .nav-link:hover { color:var(--text-primary); background:var(--bg-hover); }
 .nav-link.active { color:var(--accent); background:var(--accent-dim); }
+/* Dropdown */
+.nav-dropdown { position:relative; }
+.dropdown-btn { background:none; border:none; font-family:var(--font); cursor:pointer; display:flex; align-items:center; gap:5px; color:var(--text-secondary); padding:6px 9px; border-radius:var(--radius-sm); font-size:12.5px; font-weight:500; transition:all .15s; white-space:nowrap; }
+.dropdown-btn:hover { color:var(--text-primary); background:var(--bg-hover); }
+.dropdown-btn.active { color:var(--accent); background:var(--accent-dim); }
+.dropdown-btn svg { transition:transform .2s; }
+.nav-dropdown:hover .dropdown-btn svg,
+.nav-dropdown.open .dropdown-btn svg { transform:rotate(180deg); }
+.dropdown-menu { display:none; position:absolute; top:calc(100% + 6px); left:0; background:rgba(6,36,52,0.99); border:1px solid var(--border); border-radius:var(--radius-md); min-width:190px; padding:4px 0; z-index:300; backdrop-filter:blur(12px); box-shadow:0 8px 24px rgba(0,0,0,0.4); }
+.nav-dropdown:hover .dropdown-menu,
+.nav-dropdown.open .dropdown-menu { display:block; }
+.dropdown-item { display:block; padding:9px 16px; color:var(--text-secondary); text-decoration:none; font-size:12.5px; font-weight:500; transition:all .15s; white-space:nowrap; }
+.dropdown-item:hover { color:var(--text-primary); background:var(--bg-hover); }
+.dropdown-item.active { color:var(--accent); }
 .header-actions { display:flex; align-items:center; gap:12px; }
 .live-badge { font-size:11px; font-weight:600; color:var(--positive); letter-spacing:.05em; display:flex; align-items:center; gap:5px; }
 .live-dot { animation:pulse 2s infinite; }
@@ -277,7 +291,7 @@ thead th.col-actual,thead th.col-forecast,thead th.col-previous { text-align:rig
 .hamburger.open span:nth-child(1) { transform:translateY(7px) rotate(45deg); }
 .hamburger.open span:nth-child(2) { opacity:0; }
 .hamburger.open span:nth-child(3) { transform:translateY(-7px) rotate(-45deg); }
-@media(max-width:1480px) {
+@media(max-width:980px) {
   .hamburger { display:flex; }
   .header-inner { position:relative; flex-wrap:nowrap; }
   .nav {
@@ -287,6 +301,14 @@ thead th.col-actual,thead th.col-forecast,thead th.col-previous { text-align:rig
     backdrop-filter:blur(12px);
   }
   .nav.open { display:flex; }
+  .nav { align-items:stretch; }
+  .nav-dropdown { position:static; }
+  .dropdown-btn { padding:13px 22px; border-radius:0; font-size:14px; border-bottom:1px solid rgba(26,77,110,0.4); width:100%; justify-content:space-between; }
+  .nav-dropdown:hover .dropdown-menu { display:none; }
+  .nav-dropdown.open .dropdown-menu { display:block; }
+  .dropdown-menu { position:static; border:none; border-radius:0; padding:0; background:var(--bg-tertiary); box-shadow:none; backdrop-filter:none; min-width:0; }
+  .dropdown-item { padding:11px 32px; font-size:13px; border-bottom:1px solid rgba(26,77,110,0.3); }
+  .dropdown-item:last-child { border-bottom:none; }
   .nav-link { padding:13px 22px; border-radius:0; font-size:14px; border-bottom:1px solid rgba(26,77,110,0.4); }
   .nav-link:last-child { border-bottom:none; }
   .header-actions { gap:8px; }
@@ -315,15 +337,24 @@ thead th.col-actual,thead th.col-forecast,thead th.col-previous { text-align:rig
         </svg>
         <span class="logo-text">Market<strong>Analytics</strong></span>
       </a>
-      <nav class="nav">
-        <a href="economic-calendar.html" class="nav-link active">Economic Calendar</a>
-        <a href="pattern-recognition.html" class="nav-link">Pattern Recognition</a>
-        <a href="support-resistance.html" class="nav-link">Support/Resistance</a>
-        <a href="currency-strength.html" class="nav-link">Currency Strength</a>
-        <a href="volatility-scanner.html" class="nav-link">Volatility</a>
-        <a href="correlation-matrix.html" class="nav-link">Correlation</a>
-        <a href="trading-sessions.html" class="nav-link">Trading Sessions</a>
-        <a href="position-size-calculator.html" class="nav-link">Position Size</a>
+      <nav class="nav" id="mainNav">
+        <a href="economic-calendar.html"    class="nav-link active">Economic Calendar</a>
+        <a href="trend-bias.html"           class="nav-link">Trend Bias</a>
+        <a href="currency-strength.html"    class="nav-link">Currency Strength</a>
+        <a href="volatility-scanner.html"   class="nav-link">Volatility</a>
+        <a href="correlation-matrix.html"   class="nav-link">Correlation</a>
+        <div class="nav-dropdown" id="moreDropdown">
+          <button class="dropdown-btn" id="moreToolsBtn" onclick="toggleDropdown(event)">
+            More Tools
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><polyline points="2,3 5,7 8,3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div class="dropdown-menu" id="moreToolsMenu">
+            <a href="pattern-recognition.html"      class="dropdown-item">Pattern Recognition</a>
+            <a href="support-resistance.html"       class="dropdown-item">Support / Resistance</a>
+            <a href="trading-sessions.html"         class="dropdown-item">Trading Sessions</a>
+            <a href="position-size-calculator.html" class="dropdown-item">Position Size</a>
+          </div>
+        </div>
       </nav>
       <button class="hamburger" id="hamburger" aria-label="Open navigation">
         <span></span><span></span><span></span>
@@ -1344,7 +1375,7 @@ setInterval(applyFilters, 30000);
   <script>
   (function(){
     var btn = document.getElementById('hamburger');
-    var nav = document.querySelector('.nav');
+    var nav = document.getElementById('mainNav');
     if (!btn || !nav) return;
     btn.addEventListener('click', function(e) {
       e.stopPropagation();
@@ -1358,6 +1389,15 @@ setInterval(applyFilters, 30000);
       }
     });
   })();
+  function toggleDropdown(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    document.getElementById('moreDropdown').classList.toggle('open');
+  }
+  document.addEventListener('click', function(e) {
+    var dd = document.getElementById('moreDropdown');
+    if (dd && !dd.contains(e.target)) dd.classList.remove('open');
+  });
   </script>
 </body>
 </html>
