@@ -564,7 +564,10 @@ function tfToSeconds(res) {
 
 async function fetchCandles(sym, res) {
   const now  = Math.floor(Date.now() / 1000);
-  const span = tfToSeconds(res) * 290;
+  // Multiply by 450 (not 290) to account for weekend gaps:
+  // forex trades ~5/7 of calendar time, so we need ~1.4× more calendar
+  // span to guarantee 210+ actual trading candles for every timeframe
+  const span = tfToSeconds(res) * 450;
   const from = now - span;
   const url  = `https://finnhub.io/api/v1/forex/candle?symbol=${sym}&resolution=${res}&from=${from}&to=${now}&token=${API_KEY}`;
   const ctrl  = new AbortController();
@@ -574,7 +577,7 @@ async function fetchCandles(sym, res) {
     clearTimeout(timer);
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const d = await r.json();
-    if (!d.c || d.c.length < 210) throw new Error('no data');
+    if (!d.c || d.c.length < 205) throw new Error('no data');
     return d.c;
   } catch(e) {
     clearTimeout(timer);
