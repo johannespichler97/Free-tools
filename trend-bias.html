@@ -337,7 +337,7 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 
       <div class="scan-row">
         <span class="scan-counter" id="scanCounter">
-          <strong id="cntAsset">10</strong> instruments &middot; <strong id="cntTf">6</strong> timeframes &middot; <strong id="cntCalls">60</strong> API calls &middot; <strong id="cntTime">~66s</strong>
+          <strong id="cntAsset">10</strong> instruments &middot; <strong id="cntTf">6</strong> timeframes &middot; <strong id="cntCalls">60</strong> API calls
         </span>
         <button class="btn-scan" id="scanBtn" onclick="runScan()">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/></svg>
@@ -512,12 +512,9 @@ function getActiveTFs() {
 function updateCounter() {
   const a = getActiveAssets().length;
   const t = getActiveTFs().length;
-  const calls = a * t;
   document.getElementById('cntAsset').textContent = a;
   document.getElementById('cntTf').textContent    = t;
-  document.getElementById('cntCalls').textContent = calls;
-  const sec = Math.ceil(calls * 1.1);
-  document.getElementById('cntTime').textContent  = sec < 60 ? `~${sec}s` : `~${Math.ceil(sec/60)}min`;
+  document.getElementById('cntCalls').textContent = a * t;
 }
 updateCounter();
 
@@ -564,8 +561,6 @@ function tfToSeconds(res) {
   const map = { '15':15*60, '30':30*60, '60':60*60, '240':240*60, 'D':86400, 'W':7*86400 };
   return map[res] || 3600;
 }
-
-const SLEEP = ms => new Promise(r => setTimeout(r, ms));
 
 async function fetchCandles(sym, res) {
   const now  = Math.floor(Date.now() / 1000);
@@ -659,14 +654,12 @@ async function runScan() {
   btn.disabled = true;
   btn.innerHTML = `<div style="width:15px;height:15px;border:2px solid rgba(6,36,52,0.5);border-top-color:#062434;border-radius:50%;animation:spin .7s linear infinite"></div> Scanning…`;
 
-  const progressWrap = document.getElementById('progressWrap');
-  progressWrap.style.display = 'block';
-  document.getElementById('progressFill').style.width = '0%';
-  document.getElementById('progressPct').textContent  = '0%';
+  document.getElementById('progressWrap').style.display = 'block';
+  document.getElementById('progressFill').style.width   = '0%';
+  document.getElementById('progressPct').textContent    = '0%';
 
   buildGrid(assets, tfs);
 
-  // Build flat task list: [{ ai, ti, sym, res, label, tfLabel }, ...]
   const taskMeta = [];
   assets.forEach((a, ai) => {
     tfs.forEach((tf, ti) => {
@@ -675,29 +668,34 @@ async function runScan() {
   });
 
   const total = taskMeta.length;
+  let done = 0;
+  let idx  = 0;
 
-  // Sequential loop — one API call at a time, 1 s gap between calls
-  // to stay safely within Finnhub's 60 req/min free-tier limit
-  for (let k = 0; k < total; k++) {
-    const m = taskMeta[k];
-    let score = null;
-    try {
-      const closes = await fetchCandles(m.sym, m.res);
-      score = calcBias(closes);
-    } catch { /* returns null → N/A */ }
+  // 5 concurrent workers — each grabs the next task, fetches, fills cell
+  // Score is kept as a local variable to avoid the const-TDZ pitfall
+  async function worker() {
+    while (idx < total) {
+      const k = idx++;
+      const m = taskMeta[k];
+      let score = null;
+      try {
+        const closes = await fetchCandles(m.sym, m.res);
+        score = calcBias(closes);
+      } catch {}
 
-    fillCell(m.ai, m.ti, score);
-
-    const pct = Math.round((k + 1) / total * 100);
-    document.getElementById('progressFill').style.width  = pct + '%';
-    document.getElementById('progressPct').textContent   = pct + '%';
-    document.getElementById('progressLabel').textContent = `Fetching candles… (${k + 1} / ${total})`;
-    document.getElementById('progressCurrent').textContent = `${m.label} · ${m.tfLabel}`;
-
-    if (k < total - 1) await SLEEP(1000); // 1 s spacing → ≤60 req/min
+      fillCell(m.ai, m.ti, score);
+      done++;
+      const pct = Math.round(done / total * 100);
+      document.getElementById('progressFill').style.width  = pct + '%';
+      document.getElementById('progressPct').textContent   = pct + '%';
+      document.getElementById('progressLabel').textContent = `Fetching candles… (${done} / ${total})`;
+      document.getElementById('progressCurrent').textContent = `${m.label} · ${m.tfLabel}`;
+    }
   }
 
-  progressWrap.style.display = 'none';
+  await Promise.all(Array.from({ length: 5 }, worker));
+
+  document.getElementById('progressWrap').style.display = 'none';
   btn.disabled = false;
   btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/></svg> Scan Trend Bias`;
 }
