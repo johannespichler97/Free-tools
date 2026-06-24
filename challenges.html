@@ -98,12 +98,63 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 .hero h1::after { content:''; display:block; width:40px; height:3px; background:linear-gradient(90deg,#51d7ce,#2FA3E0); border-radius:2px; margin-top:10px; }
 .hero p { color:var(--text-secondary); font-size:15px; margin-top:10px; }
 
-/* ── MAIN / PLACEHOLDER ── */
-.main { max-width:1248px; margin:0 auto; padding:60px 24px 100px; }
+/* ── MAIN ── */
+.main { max-width:1248px; margin:0 auto; padding:40px 24px 100px; }
 .state-box { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:100px 24px; gap:14px; text-align:center; color:var(--text-muted); background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); }
 .state-icon { font-size:48px; opacity:.3; }
 .state-title { font-size:19px; font-weight:600; color:var(--text-secondary); }
 .state-sub { font-size:13px; max-width:420px; line-height:1.6; }
+
+/* ── CHALLENGE CARD ── */
+.challenge-card { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; margin-bottom:28px; }
+.challenge-head { padding:22px 26px; border-bottom:1px solid var(--border); display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:14px; }
+.challenge-title-wrap { display:flex; flex-direction:column; gap:6px; }
+.challenge-title { font-size:19px; font-weight:700; display:flex; align-items:center; gap:10px; }
+.status-pill { font-size:11px; font-weight:700; letter-spacing:.04em; padding:4px 10px; border-radius:20px; text-transform:uppercase; }
+.status-pill.upcoming { background:rgba(47,163,224,0.15); color:var(--accent); }
+.challenge-dates { font-size:12.5px; color:var(--text-secondary); font-family:var(--font-mono); }
+.enter-btn { background:linear-gradient(135deg,#51d7ce,#2FA3E0); color:#062434; border:none; padding:10px 22px; border-radius:20px; font-size:13.5px; font-weight:700; cursor:pointer; transition:opacity .15s; font-family:var(--font); white-space:nowrap; }
+.enter-btn:hover { opacity:.88; }
+
+.challenge-body { padding:26px; display:grid; grid-template-columns:1.1fr 0.9fr; gap:28px; }
+@media(max-width:900px) { .challenge-body { grid-template-columns:1fr; } }
+
+.detail-block { margin-bottom:22px; }
+.detail-block:last-child { margin-bottom:0; }
+.detail-label { font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--accent-2); margin-bottom:8px; }
+.detail-text { font-size:13.5px; color:var(--text-secondary); line-height:1.7; }
+.detail-list { list-style:none; display:flex; flex-direction:column; gap:6px; }
+.detail-list li { font-size:13.5px; color:var(--text-secondary); display:flex; gap:8px; }
+.detail-list .dot { color:var(--accent); }
+
+.prize-list { display:flex; flex-direction:column; gap:8px; }
+.prize-row { display:flex; align-items:center; gap:12px; background:var(--bg-tertiary); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 14px; }
+.prize-rank { font-family:var(--font-mono); font-weight:700; font-size:13px; color:var(--accent); width:18px; }
+.prize-text { font-size:13.5px; color:var(--text-primary); }
+
+.formula-box { background:var(--bg-tertiary); border:1px solid var(--border); border-radius:var(--radius-sm); padding:14px 16px; font-family:var(--font-mono); font-size:12.5px; color:var(--accent-2); line-height:1.7; overflow-x:auto; white-space:nowrap; }
+
+.participants-wrap { padding:0 26px 26px; }
+.participants-table { width:100%; border-collapse:collapse; }
+.participants-table th { text-align:left; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--text-muted); padding:10px 14px; border-bottom:1px solid var(--border); }
+.participants-table td { font-size:13.5px; padding:11px 14px; border-bottom:1px solid rgba(26,77,110,0.4); color:var(--text-primary); }
+.participants-table tr:last-child td { border-bottom:none; }
+.acct-mono { font-family:var(--font-mono); color:var(--text-secondary); }
+.empty-row td { text-align:center; color:var(--text-muted); padding:28px 14px; }
+
+/* ── MODAL ── */
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(2,16,24,0.65); z-index:500; align-items:center; justify-content:center; padding:20px; }
+.modal-overlay.open { display:flex; }
+.modal-box { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); padding:26px; width:100%; max-width:380px; }
+.modal-title { font-size:17px; font-weight:700; margin-bottom:6px; }
+.modal-sub { font-size:12.5px; color:var(--text-secondary); margin-bottom:18px; line-height:1.6; }
+.modal-label { font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--text-secondary); display:block; margin-bottom:6px; }
+.modal-input { width:100%; background:var(--bg-tertiary); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; font-family:var(--font-mono); font-size:14px; color:var(--text-primary); }
+.modal-input:focus { outline:none; border-color:var(--accent); }
+.modal-actions { display:flex; gap:10px; margin-top:20px; }
+.modal-cancel { flex:1; background:var(--bg-tertiary); border:1px solid var(--border); color:var(--text-secondary); padding:10px; border-radius:20px; font-size:13.5px; font-weight:600; cursor:pointer; font-family:var(--font); }
+.modal-submit { flex:1; background:linear-gradient(135deg,#51d7ce,#2FA3E0); color:#062434; border:none; padding:10px; border-radius:20px; font-size:13.5px; font-weight:700; cursor:pointer; font-family:var(--font); }
+.modal-error { font-size:12px; color:#f87171; margin-top:8px; min-height:14px; }
 
 /* ── FOOTER ── */
 .footer { background:var(--bg-secondary); border-top:1px solid var(--border); padding:24px; }
@@ -163,15 +214,24 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
   <section class="hero">
     <div class="hero-inner">
       <h1>Challenges</h1>
-      <p>Coming soon.</p>
+      <p>Join regularly launched trading challenges. Highest percentage gain wins.</p>
     </div>
   </section>
 
-  <div class="main">
-    <div class="state-box">
-      <div class="state-icon">🚧</div>
-      <div class="state-title">Under construction</div>
-      <div class="state-sub">This page is being built. Check back soon.</div>
+  <div class="main" id="challengeList"></div>
+
+  <!-- ── ENTER CHALLENGE MODAL ── -->
+  <div class="modal-overlay" id="enterModal">
+    <div class="modal-box">
+      <div class="modal-title">Enter Challenge</div>
+      <div class="modal-sub">Enter your MT5 account number to register for this challenge. It will appear in the participants table below once submitted.</div>
+      <label class="modal-label" for="acctInput">Account Number</label>
+      <input type="text" id="acctInput" class="modal-input" placeholder="e.g. 50012345" inputmode="numeric" />
+      <div class="modal-error" id="modalError"></div>
+      <div class="modal-actions">
+        <button class="modal-cancel" onclick="closeModal()">Cancel</button>
+        <button class="modal-submit" onclick="submitEntry()">Submit</button>
+      </div>
     </div>
   </div>
 
@@ -199,6 +259,141 @@ document.addEventListener('click', (e) => {
   const dd = document.getElementById('moreDropdown');
   if (!dd.contains(e.target)) dd.classList.remove('open');
 });
+
+/* ── CHALLENGES (static for now — will be replaced once MT5 read access is connected) ── */
+const CHALLENGES = [
+  {
+    id: 'jul-2025-01',
+    name: 'July Gain Challenge #1',
+    startLabel: '28.07.2025 00:00 CET',
+    endLabel:   '02.08.2025 23:59 CET',
+    minDeposit: 500,
+    prizes: ['Placeholder 1', 'Placeholder 2', 'Placeholder 3'],
+  },
+];
+
+const STORAGE_KEY = 'challengeParticipants';
+
+function loadParticipants() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; }
+  catch { return {}; }
+}
+function saveParticipants(data) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function renderChallenges() {
+  const wrap = document.getElementById('challengeList');
+  const participants = loadParticipants();
+  wrap.innerHTML = CHALLENGES.map(c => {
+    const rows = participants[c.id] || [];
+    return `
+    <div class="challenge-card">
+      <div class="challenge-head">
+        <div class="challenge-title-wrap">
+          <div class="challenge-title">${c.name} <span class="status-pill upcoming">Upcoming</span></div>
+          <div class="challenge-dates">${c.startLabel} &rarr; ${c.endLabel}</div>
+        </div>
+        <button class="enter-btn" onclick="openModal('${c.id}')">Enter Challenge</button>
+      </div>
+
+      <div class="challenge-body">
+        <div>
+          <div class="detail-block">
+            <div class="detail-label">Requirements</div>
+            <div class="detail-text">$${c.minDeposit} minimum deposit.</div>
+          </div>
+
+          <div class="detail-block">
+            <div class="detail-label">How to Win</div>
+            <div class="detail-text">Highest percentage gain wins.</div>
+          </div>
+
+          <div class="detail-block">
+            <div class="detail-label">Notes</div>
+            <ul class="detail-list">
+              <li><span class="dot">&bull;</span> On the challenge start date you need a minimum equity of $${c.minDeposit}. If equity is below $${c.minDeposit} at the start time, you are automatically disqualified.</li>
+              <li><span class="dot">&bull;</span> Redeposits are allowed and will be factored into the gain calculation accordingly.</li>
+            </ul>
+          </div>
+
+          <div class="detail-block">
+            <div class="detail-label">How the Calculation Works</div>
+            <div class="formula-box">% Gain = ((Current Equity − (Start Equity + Redeposits)) / (Start Equity + Redeposits)) × 100</div>
+          </div>
+        </div>
+
+        <div>
+          <div class="detail-block">
+            <div class="detail-label">Prizes</div>
+            <div class="prize-list">
+              ${c.prizes.map((p, i) => `
+                <div class="prize-row">
+                  <span class="prize-rank">#${i + 1}</span>
+                  <span class="prize-text">${p}</span>
+                </div>`).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="participants-wrap">
+        <div class="detail-label" style="margin-bottom:10px;">Participants (${rows.length})</div>
+        <table class="participants-table">
+          <thead><tr><th>#</th><th>Account Number</th><th>Entered</th></tr></thead>
+          <tbody>
+            ${rows.length ? rows.map((r, i) => `
+              <tr><td>${i + 1}</td><td class="acct-mono">${r.account}</td><td>${r.entered}</td></tr>
+            `).join('') : `<tr class="empty-row"><td colspan="3">No participants yet. Be the first to enter.</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+let activeChallengeId = null;
+
+function openModal(challengeId) {
+  activeChallengeId = challengeId;
+  document.getElementById('acctInput').value = '';
+  document.getElementById('modalError').textContent = '';
+  document.getElementById('enterModal').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('enterModal').classList.remove('open');
+}
+document.getElementById('enterModal').addEventListener('click', (e) => {
+  if (e.target.id === 'enterModal') closeModal();
+});
+
+function submitEntry() {
+  const input = document.getElementById('acctInput');
+  const acct = input.value.trim();
+  const errEl = document.getElementById('modalError');
+
+  if (!/^[0-9]{4,12}$/.test(acct)) {
+    errEl.textContent = 'Please enter a valid MT5 account number.';
+    return;
+  }
+
+  const participants = loadParticipants();
+  const list = participants[activeChallengeId] || [];
+
+  if (list.some(r => r.account === acct)) {
+    errEl.textContent = 'This account is already registered for this challenge.';
+    return;
+  }
+
+  list.push({ account: acct, entered: new Date().toLocaleDateString('en-GB') });
+  participants[activeChallengeId] = list;
+  saveParticipants(participants);
+
+  closeModal();
+  renderChallenges();
+}
+
+renderChallenges();
 </script>
 </body>
 </html>
