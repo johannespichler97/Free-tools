@@ -340,11 +340,19 @@ function renderChallenges() {
       <div class="participants-wrap">
         <div class="detail-label" style="margin-bottom:10px;">Participants (${rows.length})</div>
         <table class="participants-table">
-          <thead><tr><th>#</th><th>Account Number</th><th>Entered</th></tr></thead>
+          <thead><tr><th>#</th><th>Account Number</th><th>Entered</th><th>Start Equity</th><th>Redeposit</th><th>Current Equity</th><th>Percentage Gain</th></tr></thead>
           <tbody>
             ${rows.length ? rows.map((r, i) => `
-              <tr><td>${i + 1}</td><td class="acct-mono">${r.account}</td><td>${r.entered}</td></tr>
-            `).join('') : `<tr class="empty-row"><td colspan="3">No participants yet. Be the first to enter.</td></tr>`}
+              <tr>
+                <td>${i + 1}</td>
+                <td class="acct-mono">${r.account}</td>
+                <td>${r.entered}</td>
+                <td class="acct-mono">${r.startEquity != null ? '$' + r.startEquity.toFixed(2) : '—'}</td>
+                <td class="acct-mono">${r.redeposit != null ? '$' + r.redeposit.toFixed(2) : '—'}</td>
+                <td class="acct-mono">${r.currentEquity != null ? '$' + r.currentEquity.toFixed(2) : '—'}</td>
+                <td class="acct-mono">${r.gainPct != null ? r.gainPct.toFixed(2) + '%' : '—'}</td>
+              </tr>
+            `).join('') : `<tr class="empty-row"><td colspan="7">No participants yet. Be the first to enter.</td></tr>`}
           </tbody>
         </table>
       </div>
@@ -385,7 +393,14 @@ function submitEntry() {
     return;
   }
 
-  list.push({ account: acct, entered: new Date().toLocaleDateString('en-GB') });
+  list.push({
+    account: acct,
+    entered: new Date().toLocaleDateString('en-GB'),
+    startEquity: null,
+    redeposit: null,
+    currentEquity: null,
+    gainPct: null,
+  });
   participants[activeChallengeId] = list;
   saveParticipants(participants);
 
