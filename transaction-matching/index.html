@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ReconMatch — Transaction Matching Platform</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:           #0b0e14;
+  --bg-panel:     #111520;
+  --bg-panel-2:   #161b29;
+  --bg-hover:     #1c2233;
+  --border:       #262d40;
+  --border-soft:  #1c2232;
+  --text:         #e7eaf2;
+  --text-dim:     #9aa3b8;
+  --text-faint:   #5b6478;
+  --accent:       #7c7ff2;
+  --accent-2:     #f5a524;
+  --accent-dim:   rgba(124,127,242,0.14);
+  --success:      #35c98b;
+  --success-dim:  rgba(53,201,139,0.12);
+  --danger:       #f0576b;
+  --danger-dim:   rgba(240,87,107,0.12);
+  --font:         -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono:    ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+  --radius-sm:    6px;
+  --radius-md:    10px;
+  --radius-lg:    14px;
+}
+
+html { scroll-behavior: smooth; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; line-height: 1.5; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.45} }
+
+/* ── HEADER ── */
+.header { position: sticky; top: 0; z-index: 200; background: rgba(11,14,20,0.96); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); }
+.header-inner { max-width: 1280px; margin: 0 auto; padding: 0 24px; height: 60px; display: flex; align-items: center; gap: 14px; }
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text); }
+.brand-mark { width: 32px; height: 32px; border-radius: 9px; background: linear-gradient(135deg, var(--accent), #4d51d8); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.brand-mark svg { display: block; }
+.brand-text { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
+.brand-text strong { color: var(--accent); }
+.brand-tag { margin-left: 2px; padding: 3px 9px; border-radius: 20px; background: var(--bg-panel-2); border: 1px solid var(--border); color: var(--text-faint); font-size: 11px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; }
+.header-spacer { flex: 1; }
+.header-note { font-size: 12px; color: var(--text-faint); display: flex; align-items: center; gap: 6px; }
+.header-note .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-2); animation: pulse 2.2s infinite; }
+
+/* ── HERO ── */
+.hero { border-bottom: 1px solid var(--border); padding: 34px 24px 30px; background: radial-gradient(1100px 320px at 15% -20%, rgba(124,127,242,0.16), transparent); }
+.hero-inner { max-width: 1280px; margin: 0 auto; }
+.hero h1 { font-size: 25px; font-weight: 700; letter-spacing: -0.01em; }
+.hero p { color: var(--text-dim); font-size: 14.5px; margin-top: 8px; max-width: 640px; line-height: 1.6; }
+
+/* ── MAIN ── */
+.main { max-width: 1280px; margin: 0 auto; padding: 32px 24px 100px; }
+
+/* ── OVERVIEW ── */
+.section-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 14px; }
+.section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-dim); }
+.section-badge { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: 3px 8px; border-radius: 20px; background: var(--bg-panel-2); border: 1px solid var(--border); color: var(--text-faint); }
+
+.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 36px; }
+@media(max-width: 860px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+@media(max-width: 480px) { .kpi-grid { grid-template-columns: 1fr; } }
+.kpi-card { background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px 20px; }
+.kpi-label { font-size: 12px; color: var(--text-dim); font-weight: 500; }
+.kpi-value { font-size: 26px; font-weight: 700; font-family: var(--font-mono); color: var(--text-faint); margin-top: 8px; }
+.kpi-sub { font-size: 11.5px; color: var(--text-faint); margin-top: 6px; }
+
+/* ── TABS ── */
+.tabbar { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+.tab-btn { appearance: none; background: none; border: none; font-family: var(--font); cursor: pointer; color: var(--text-dim); padding: 11px 18px; font-size: 13.5px; font-weight: 600; border-radius: var(--radius-sm) var(--radius-sm) 0 0; position: relative; top: 1px; transition: color .15s, background .15s; }
+.tab-btn:hover { color: var(--text); background: var(--bg-hover); }
+.tab-btn.active { color: var(--accent); border-bottom: 2px solid var(--accent); }
+.tab-btn .tab-count { display: inline-block; margin-left: 7px; font-family: var(--font-mono); font-size: 11px; background: var(--bg-panel-2); color: var(--text-faint); padding: 1px 7px; border-radius: 20px; }
+.tab-btn.active .tab-count { color: var(--accent); background: var(--accent-dim); }
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ── DROPZONE ── */
+.dropzone { border: 1.5px dashed var(--border); border-radius: var(--radius-lg); background: var(--bg-panel); padding: 34px 24px; text-align: center; cursor: pointer; transition: border-color .15s, background .15s; margin-bottom: 20px; }
+.dropzone:hover, .dropzone.dragover { border-color: var(--accent); background: var(--accent-dim); }
+.dropzone-icon { font-size: 30px; opacity: .7; margin-bottom: 10px; }
+.dropzone-title { font-size: 14.5px; font-weight: 600; color: var(--text); }
+.dropzone-sub { font-size: 12.5px; color: var(--text-faint); margin-top: 6px; }
+.dropzone input[type=file] { display: none; }
+
+.tab-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 10px; }
+.tab-toolbar-note { font-size: 12px; color: var(--text-faint); max-width: 560px; line-height: 1.55; }
+.clear-all-btn { background: var(--bg-panel-2); border: 1px solid var(--border); color: var(--text-dim); padding: 7px 14px; border-radius: 20px; font-size: 12.5px; font-weight: 600; cursor: pointer; font-family: var(--font); white-space: nowrap; }
+.clear-all-btn:hover { color: var(--text); border-color: var(--text-faint); }
+
+/* ── EMPTY STATE ── */
+.state-box { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 24px; gap: 10px; text-align: center; color: var(--text-faint); background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.state-icon { font-size: 34px; opacity: .35; }
+.state-title { font-size: 15px; font-weight: 600; color: var(--text-dim); }
+.state-sub { font-size: 12.5px; max-width: 380px; line-height: 1.6; }
+
+/* ── BATCH CARD (one uploaded file = one card) ── */
+.batch-card { background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 18px; }
+.batch-head { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.batch-info { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.file-icon { width: 30px; height: 30px; border-radius: 8px; background: var(--bg-panel-2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: var(--text-dim); flex-shrink: 0; }
+.file-icon.csv  { color: #35c98b; }
+.file-icon.xlsx { color: #35c98b; }
+.file-icon.pdf  { color: #f0576b; }
+.batch-text { min-width: 0; }
+.file-name { font-size: 13.5px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 360px; }
+.file-meta { font-size: 11.5px; color: var(--text-faint); margin-top: 2px; font-family: var(--font-mono); }
+.batch-status { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.status-pill { font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 3px 9px; border-radius: 20px; }
+.status-pill.parsing { background: var(--accent-dim); color: var(--accent); }
+.status-pill.success { background: var(--success-dim); color: var(--success); }
+.status-pill.error   { background: var(--danger-dim); color: var(--danger); }
+.spinner { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--accent-dim); border-top-color: var(--accent); animation: spin .7s linear infinite; display: inline-block; }
+.remove-btn { background: none; border: 1px solid var(--border); color: var(--text-faint); width: 26px; height: 26px; border-radius: 7px; cursor: pointer; font-size: 13px; line-height: 1; display: flex; align-items: center; justify-content: center; }
+.remove-btn:hover { color: var(--danger); border-color: var(--danger); }
+
+.error-box { padding: 16px 18px; font-size: 12.5px; color: var(--danger); background: var(--danger-dim); }
+
+/* ── TABLE ── */
+.table-scroll { overflow-x: auto; }
+.tx-table { width: 100%; border-collapse: collapse; min-width: 640px; }
+.tx-table th { text-align: left; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--text-faint); padding: 9px 14px; border-bottom: 1px solid var(--border); background: var(--bg-panel-2); white-space: nowrap; position: sticky; top: 0; }
+.tx-table td { font-size: 12.5px; padding: 9px 14px; border-bottom: 1px solid var(--border-soft); color: var(--text); white-space: nowrap; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+.tx-table tr:last-child td { border-bottom: none; }
+.tx-table tr:hover td { background: var(--bg-hover); }
+.tx-table td.num { font-family: var(--font-mono); color: var(--text-dim); }
+.tx-table td.row-idx { color: var(--text-faint); font-family: var(--font-mono); }
+.tx-table-footnote { padding: 10px 18px 14px; font-size: 11.5px; color: var(--text-faint); border-top: 1px solid var(--border-soft); display: flex; align-items: center; gap: 6px; }
+
+/* ── FOOTER ── */
+.footer { border-top: 1px solid var(--border); padding: 22px 24px; margin-top: 20px; }
+.footer-inner { max-width: 1280px; margin: 0 auto; text-align: center; }
+.footer-text { font-size: 11.5px; color: var(--text-faint); }
+
+@media(max-width: 640px) {
+  .header-inner, .hero-inner, .main, .footer-inner { padding-left: 16px; padding-right: 16px; }
+  .header-note { display: none; }
+}
+</style>
+</head>
+<body>
+
+  <header class="header">
+    <div class="header-inner">
+      <div class="brand">
+        <span class="brand-mark">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+            <path d="M4 7h11M4 7l3-3M4 7l3 3" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M20 17H9M20 17l-3-3M20 17l-3 3" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <span class="brand-text">Recon<strong>Match</strong></span>
+        <span class="brand-tag">Beta</span>
+      </div>
+      <div class="header-spacer"></div>
+      <div class="header-note"><span class="dot"></span> Matching-Engine noch nicht aktiv</div>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-inner">
+      <h1>Transaction Matching Platform</h1>
+      <p>Lade Bank-/PSP-Auszüge und MT5-Transaktionen hoch (PDF, CSV oder XLSX). Die Plattform zerlegt sie in einzelne Transaktionen und listet sie tabellarisch auf. Der automatische Abgleich zwischen beiden Seiten folgt in einem späteren Schritt.</p>
+    </div>
+  </section>
+
+  <div class="main">
+
+    <!-- ── OVERVIEW (placeholder) ── -->
+    <div class="section-head">
+      <span class="section-title">Übersicht</span>
+      <span class="section-badge">Platzhalter</span>
+    </div>
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Transaktionen gesamt</div>
+        <div class="kpi-value">—</div>
+        <div class="kpi-sub">Bald verfügbar</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Gematcht</div>
+        <div class="kpi-value">—</div>
+        <div class="kpi-sub">Bald verfügbar</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Offen</div>
+        <div class="kpi-value">—</div>
+        <div class="kpi-sub">Bald verfügbar</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Match-Rate</div>
+        <div class="kpi-value">—</div>
+        <div class="kpi-sub">Bald verfügbar</div>
+      </div>
+    </div>
+
+    <!-- ── TABS ── -->
+    <div class="tabbar" role="tablist">
+      <button class="tab-btn active" id="tabBtn-bank" role="tab" aria-selected="true" onclick="switchTab('bank')">
+        Bank / PSP Transaktionen <span class="tab-count" id="tabCount-bank">0</span>
+      </button>
+      <button class="tab-btn" id="tabBtn-mt5" role="tab" aria-selected="false" onclick="switchTab('mt5')">
+        MT5 Transaktionen <span class="tab-count" id="tabCount-mt5">0</span>
+      </button>
+    </div>
+
+    <!-- ── BANK / PSP PANEL ── -->
+    <div class="tab-panel active" id="tabPanel-bank">
+      <div class="dropzone" id="dropzone-bank" onclick="document.getElementById('fileInput-bank').click()">
+        <div class="dropzone-icon">📄</div>
+        <div class="dropzone-title">Dateien hierher ziehen oder klicken zum Auswählen</div>
+        <div class="dropzone-sub">PDF-Kontoauszüge, CSV oder XLSX von Bank / PSP · mehrere Dateien möglich</div>
+        <input type="file" id="fileInput-bank" multiple accept=".pdf,.csv,.xlsx,.xls" />
+      </div>
+      <div class="tab-toolbar" id="toolbar-bank" style="display:none;">
+        <div class="tab-toolbar-note">Jede hochgeladene Datei wird als eigene Tabelle unten angezeigt. Der Abgleich mit MT5-Transaktionen folgt später.</div>
+        <button class="clear-all-btn" onclick="clearTab('bank')">Alle entfernen</button>
+      </div>
+      <div id="fileList-bank"></div>
+      <div class="state-box" id="emptyState-bank">
+        <div class="state-icon">🏦</div>
+        <div class="state-title">Noch keine Bank-/PSP-Dateien hochgeladen</div>
+        <div class="state-sub">Lade PDF-, CSV- oder XLSX-Auszüge hoch, um die einzelnen Transaktionen zu extrahieren und aufzulisten.</div>
+      </div>
+    </div>
+
+    <!-- ── MT5 PANEL ── -->
+    <div class="tab-panel" id="tabPanel-mt5">
+      <div class="dropzone" id="dropzone-mt5" onclick="document.getElementById('fileInput-mt5').click()">
+        <div class="dropzone-icon">📄</div>
+        <div class="dropzone-title">Dateien hierher ziehen oder klicken zum Auswählen</div>
+        <div class="dropzone-sub">MT5-Kontoauszüge als PDF, CSV oder XLSX · mehrere Dateien möglich</div>
+        <input type="file" id="fileInput-mt5" multiple accept=".pdf,.csv,.xlsx,.xls" />
+      </div>
+      <div class="tab-toolbar" id="toolbar-mt5" style="display:none;">
+        <div class="tab-toolbar-note">Jede hochgeladene Datei wird als eigene Tabelle unten angezeigt. Der Abgleich mit Bank-/PSP-Transaktionen folgt später.</div>
+        <button class="clear-all-btn" onclick="clearTab('mt5')">Alle entfernen</button>
+      </div>
+      <div id="fileList-mt5"></div>
+      <div class="state-box" id="emptyState-mt5">
+        <div class="state-icon">📈</div>
+        <div class="state-title">Noch keine MT5-Dateien hochgeladen</div>
+        <div class="state-sub">Lade PDF-, CSV- oder XLSX-Auszüge aus MT5 hoch, um die einzelnen Ein- und Auszahlungen zu extrahieren und aufzulisten.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer class="footer">
+    <div class="footer-inner">
+      <p class="footer-text">ReconMatch · internes Werkzeug zum Abgleich von Bank-/PSP- und MT5-Transaktionen. Matching-Engine in Entwicklung.</p>
+    </div>
+  </footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+/* Guard against the CDN libraries failing to load (blocked network, ad
+   blocker, offline). A thrown error here would otherwise abort this whole
+   script and break CSV parsing too, even though CSV doesn't need either
+   library. */
+if (typeof pdfjsLib !== 'undefined') {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+/* ── STATE ──────────────────────────────────────────────────────
+   Each tab holds a list of "batches" — one batch per uploaded file.
+   A batch has its own dynamically-detected columns + rows, because
+   different banks/PSPs (and MT5 exports) rarely share one schema.
+   There is intentionally no cross-batch merging or matching yet —
+   that's the job of the matching engine, built in a later step. */
+const state = {
+  bank: { files: [] },
+  mt5:  { files: [] },
+};
+
+let idCounter = 0;
+function genId() { return 'f' + (++idCounter) + '_' + Date.now().toString(36); }
+
+/* ── TAB SWITCHING ── */
+function switchTab(key) {
+  ['bank', 'mt5'].forEach(k => {
+    document.getElementById('tabBtn-' + k).classList.toggle('active', k === key);
+    document.getElementById('tabBtn-' + k).setAttribute('aria-selected', k === key ? 'true' : 'false');
+    document.getElementById('tabPanel-' + k).classList.toggle('active', k === key);
+  });
+}
+
+/* ── DROPZONE WIRING ── */
+['bank', 'mt5'].forEach(key => {
+  const zone  = document.getElementById('dropzone-' + key);
+  const input = document.getElementById('fileInput-' + key);
+
+  input.addEventListener('change', (e) => {
+    handleFiles(key, e.target.files);
+    input.value = '';
+  });
+
+  zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('dragover'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+  zone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    zone.classList.remove('dragover');
+    handleFiles(key, e.dataTransfer.files);
+  });
+});
+
+function getExt(name) {
+  const m = /\.([a-z0-9]+)$/i.exec(name);
+  return m ? m[1].toLowerCase() : '';
+}
+function humanSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+/* ── FILE HANDLING ── */
+async function handleFiles(tabKey, fileList) {
+  const files = Array.from(fileList);
+  for (const file of files) {
+    const ext = getExt(file.name);
+    const batch = {
+      id: genId(),
+      name: file.name,
+      size: file.size,
+      ext,
+      status: 'parsing',
+      error: null,
+      headers: [],
+      rows: [],
+    };
+    if (!['csv', 'xlsx', 'xls', 'pdf'].includes(ext)) {
+      batch.status = 'error';
+      batch.error = 'Nicht unterstütztes Dateiformat. Erlaubt: PDF, CSV, XLSX.';
+      state[tabKey].files.unshift(batch);
+      renderTab(tabKey);
+      continue;
+    }
+    state[tabKey].files.unshift(batch);
+    renderTab(tabKey);
+
+    try {
+      if (ext === 'csv') {
+        const text = await file.text();
+        const aoa = parseCSV(text);
+        assignHeadersAndRows(batch, aoa);
+      } else if (ext === 'xlsx' || ext === 'xls') {
+        const aoa = await parseXLSX(file);
+        assignHeadersAndRows(batch, aoa);
+      } else if (ext === 'pdf') {
+        const lines = await parsePDF(file);
+        const txs = extractTransactionsFromLines(lines);
+        if (txs.length) {
+          batch.headers = ['Seite', 'Datum', 'Betrag', 'Text (Rohzeile)'];
+          batch.rows = txs.map(t => [String(t.page), t.date, t.amount, t.text]);
+          batch.note = 'Heuristisch aus PDF-Text extrahiert — wird mit der Matching-Engine verfeinert.';
+        } else {
+          batch.headers = ['Seite', 'Text (Rohzeile)'];
+          batch.rows = lines.map(l => [String(l.page), l.text]);
+          batch.note = 'Konnte kein Datums-/Betragsmuster erkennen — Rohtext wird angezeigt.';
+        }
+      }
+      batch.status = 'success';
+    } catch (e) {
+      batch.status = 'error';
+      batch.error = 'Datei konnte nicht gelesen werden: ' + (e && e.message ? e.message : e);
+    }
+    renderTab(tabKey);
+  }
+}
+
+function assignHeadersAndRows(batch, aoa) {
+  const rows = (aoa || []).filter(r => Array.isArray(r) && r.some(c => String(c ?? '').trim() !== ''));
+  if (!rows.length) { batch.headers = []; batch.rows = []; return; }
+  const headerRow = rows[0].map((h, i) => {
+    const label = String(h ?? '').trim();
+    return label || ('Spalte ' + (i + 1));
+  });
+  const width = headerRow.length;
+  batch.headers = headerRow;
+  batch.rows = rows.slice(1).map(r => {
+    const cells = [];
+    for (let i = 0; i < width; i++) cells.push(String(r[i] ?? '').trim());
+    return cells;
+  });
+}
+
+function removeFile(tabKey, id) {
+  state[tabKey].files = state[tabKey].files.filter(f => f.id !== id);
+  renderTab(tabKey);
+}
+function clearTab(tabKey) {
+  state[tabKey].files = [];
+  renderTab(tabKey);
+}
+
+/* ── CSV PARSER (handles quoted fields, auto-detects , ; \t) ── */
+function parseCSV(text) {
+  const firstLine = (text.split(/\r\n|\n|\r/)[0] || '');
+  const counts = {
+    ',':  (firstLine.match(/,/g)  || []).length,
+    ';':  (firstLine.match(/;/g)  || []).length,
+    '\t': (firstLine.match(/\t/g) || []).length,
+  };
+  const delimiter = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0] || ',';
+
+  const rows = [];
+  let row = [], field = '', inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (text[i + 1] === '"') { field += '"'; i++; }
+        else { inQuotes = false; }
+      } else field += c;
+    } else if (c === '"') {
+      inQuotes = true;
+    } else if (c === delimiter) {
+      row.push(field); field = '';
+    } else if (c === '\n' || c === '\r') {
+      if (c === '\r' && text[i + 1] === '\n') i++;
+      row.push(field); field = '';
+      rows.push(row); row = [];
+    } else {
+      field += c;
+    }
+  }
+  if (field !== '' || row.length) { row.push(field); rows.push(row); }
+  return rows;
+}
+
+/* ── XLSX PARSER (SheetJS) — first sheet, raw array-of-arrays ── */
+async function parseXLSX(file) {
+  if (typeof XLSX === 'undefined') throw new Error('XLSX-Bibliothek konnte nicht geladen werden (Netzwerk?). Bitte Seite neu laden.');
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, { type: 'array' });
+  const sheet = wb.Sheets[wb.SheetNames[0]];
+  return XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: '' });
+}
+
+/* ── PDF TEXT EXTRACTION (pdf.js) — groups text items into lines by y-position ── */
+async function parsePDF(file) {
+  if (typeof pdfjsLib === 'undefined') throw new Error('PDF-Bibliothek konnte nicht geladen werden (Netzwerk?). Bitte Seite neu laden.');
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+  const lines = [];
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const page = await pdf.getPage(p);
+    const content = await page.getTextContent();
+    const byY = new Map();
+    content.items.forEach(item => {
+      const y = Math.round(item.transform[5]);
+      if (!byY.has(y)) byY.set(y, []);
+      byY.get(y).push(item);
+    });
+    const ys = [...byY.keys()].sort((a, b) => b - a);
+    ys.forEach(y => {
+      const items = byY.get(y).sort((a, b) => a.transform[4] - b.transform[4]);
+      const text = items.map(i => i.str).join(' ').replace(/\s+/g, ' ').trim();
+      if (text) lines.push({ page: p, text });
+    });
+  }
+  return lines;
+}
+
+/* ── HEURISTIC TRANSACTION EXTRACTION FROM PDF LINES ──
+   Best-effort placeholder: keeps a line if it contains a date and/or
+   an amount pattern. Will be replaced/refined once real sample
+   statements are available and the matching engine is built. */
+const DATE_RE   = /\b(\d{1,2}[.\/-]\d{1,2}[.\/-]\d{2,4}|\d{4}-\d{2}-\d{2})\b/;
+const AMOUNT_RE = /[+-]?\d{1,3}(?:[.,]\d{3})*[.,]\d{2}\b/g;
+
+function extractTransactionsFromLines(lines) {
+  const out = [];
+  lines.forEach((l, idx) => {
+    const dateMatch = l.text.match(DATE_RE);
+    const amounts = l.text.match(AMOUNT_RE) || [];
+    if (!dateMatch && !amounts.length) return;
+    out.push({
+      idx,
+      page: l.page,
+      date: dateMatch ? dateMatch[0] : '',
+      amount: amounts.length ? amounts[amounts.length - 1] : '',
+      text: l.text,
+    });
+  });
+  return out;
+}
+
+/* ── RENDERING ── */
+function isNumericLike(v) {
+  return /^[+-]?\d{1,3}([.,]\d{3})*([.,]\d{1,2})?$/.test(String(v).trim());
+}
+
+function renderTab(tabKey) {
+  const files = state[tabKey].files;
+  document.getElementById('tabCount-' + tabKey).textContent = files.reduce((n, f) => n + (f.rows ? f.rows.length : 0), 0);
+  document.getElementById('emptyState-' + tabKey).style.display = files.length ? 'none' : 'flex';
+  document.getElementById('toolbar-' + tabKey).style.display = files.length ? 'flex' : 'none';
+
+  const listEl = document.getElementById('fileList-' + tabKey);
+  listEl.innerHTML = files.map(f => renderBatchCard(tabKey, f)).join('');
+}
+
+function renderBatchCard(tabKey, f) {
+  const iconLabel = f.ext === 'pdf' ? 'PDF' : f.ext === 'csv' ? 'CSV' : (f.ext === 'xlsx' || f.ext === 'xls') ? 'XLS' : f.ext.slice(0, 4).toUpperCase();
+  const statusHtml = f.status === 'parsing'
+    ? `<span class="status-pill parsing"><span class="spinner"></span></span>`
+    : f.status === 'error'
+      ? `<span class="status-pill error">Fehler</span>`
+      : `<span class="status-pill success">${f.rows.length} Zeilen</span>`;
+
+  let bodyHtml = '';
+  if (f.status === 'error') {
+    bodyHtml = `<div class="error-box">${escapeHtml(f.error)}</div>`;
+  } else if (f.status === 'success') {
+    if (!f.rows.length) {
+      bodyHtml = `<div class="error-box" style="color:var(--text-faint);background:transparent;">Keine Transaktionen in dieser Datei erkannt.</div>`;
+    } else {
+      bodyHtml = `
+        <div class="table-scroll">
+          <table class="tx-table">
+            <thead><tr><th>#</th>${f.headers.map(h => `<th>${escapeHtml(h)}</th>`).join('')}</tr></thead>
+            <tbody>
+              ${f.rows.map((r, i) => `
+                <tr>
+                  <td class="row-idx">${i + 1}</td>
+                  ${r.map(c => `<td class="${isNumericLike(c) ? 'num' : ''}" title="${escapeHtml(c)}">${escapeHtml(c) || '&mdash;'}</td>`).join('')}
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+        ${f.note ? `<div class="tx-table-footnote">ℹ️ ${escapeHtml(f.note)}</div>` : ''}
+      `;
+    }
+  }
+
+  return `
+    <div class="batch-card">
+      <div class="batch-head">
+        <div class="batch-info">
+          <span class="file-icon ${f.ext}">${iconLabel}</span>
+          <div class="batch-text">
+            <div class="file-name">${escapeHtml(f.name)}</div>
+            <div class="file-meta">${humanSize(f.size)}</div>
+          </div>
+        </div>
+        <div class="batch-status">
+          ${statusHtml}
+          <button class="remove-btn" title="Entfernen" onclick="removeFile('${tabKey}','${f.id}')">✕</button>
+        </div>
+      </div>
+      ${bodyHtml}
+    </div>
+  `;
+}
+
+function escapeHtml(v) {
+  return String(v ?? '').replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[c]));
+}
+
+renderTab('bank');
+renderTab('mt5');
+</script>
+</body>
+</html>
