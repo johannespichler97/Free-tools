@@ -176,6 +176,15 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .match-candidate-empty { font-size: 12.5px; color: var(--text-faint); padding: 20px 8px; text-align: center; }
 .modal-close-btn { width: 100%; margin-top: 16px; background: none; border: 1px solid var(--border); color: var(--text-dim); padding: 9px; border-radius: 20px; font-size: 12.5px; font-weight: 600; cursor: pointer; font-family: var(--font); }
 .modal-close-btn:hover { color: var(--text); }
+.match-current-auto { font-size: 11.5px; color: var(--accent-2); margin-top: 8px; font-weight: 600; }
+
+/* ── AUTO-MATCH BUTTON / TOAST ── */
+.auto-match-btn { background: var(--accent-dim); border: 1px solid transparent; color: var(--accent); padding: 7px 14px; border-radius: 20px; font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: var(--font); white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+.auto-match-btn:hover { opacity: .85; }
+
+.toast { position: fixed; bottom: 24px; right: 24px; background: var(--bg-panel-2); border: 1px solid var(--success); color: var(--text); padding: 12px 18px; border-radius: var(--radius-md); font-size: 13px; font-weight: 600; box-shadow: 0 8px 24px rgba(0,0,0,0.4); opacity: 0; transform: translateY(8px); transition: opacity .25s, transform .25s; z-index: 600; max-width: 340px; }
+.toast.neutral { border-color: var(--border); }
+.toast.show { opacity: 1; transform: translateY(0); }
 
 /* ── FOOTER ── */
 .footer { border-top: 1px solid var(--border); padding: 22px 24px; margin-top: 20px; }
@@ -203,14 +212,14 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
         <span class="brand-tag">Beta</span>
       </div>
       <div class="header-spacer"></div>
-      <div class="header-note"><span class="dot"></span> Matching-Engine noch nicht aktiv</div>
+      <div class="header-note"><span class="dot"></span> Matching-Engine: Unipayment-Regel aktiv</div>
     </div>
   </header>
 
   <section class="hero">
     <div class="hero-inner">
       <h1>Transaction Matching Platform</h1>
-      <p>Lade Bank-/PSP-Auszüge und MT5-Transaktionen hoch (PDF, CSV oder XLSX). Die Plattform zerlegt sie in einzelne Transaktionen und listet sie tabellarisch auf. Der automatische Abgleich zwischen beiden Seiten folgt in einem späteren Schritt.</p>
+      <p>Lade Bank-/PSP-Auszüge und MT5-Transaktionen hoch (PDF, CSV oder XLSX). Die Plattform zerlegt sie in einzelne Transaktionen und listet sie tabellarisch auf. Die automatische Matching-Engine gleicht Unipayment-Transaktionen bereits selbstständig ab (Bank-OrderId ↔ MT5-Kommentar); weitere PSPs und Regeln folgen Schritt für Schritt.</p>
     </div>
   </section>
 
@@ -263,8 +272,11 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
         <input type="file" id="fileInput-bank" multiple accept=".pdf,.csv,.xlsx,.xls" />
       </div>
       <div class="tab-toolbar" id="toolbar-bank" style="display:none;">
-        <div class="tab-toolbar-note">Jede hochgeladene Datei wird als eigene Tabelle unten angezeigt. Über die Match-Spalte lässt sich jede Transaktion manuell mit einer MT5-Transaktion verknüpfen oder ohne Gegenbuchung genehmigen — die automatische Matching-Engine folgt später.</div>
-        <button class="clear-all-btn" onclick="clearTab('bank')">Alle entfernen</button>
+        <div class="tab-toolbar-note">Jede hochgeladene Datei wird als eigene Tabelle unten angezeigt. Unipayment-Transaktionen werden automatisch mit MT5 abgeglichen (OrderId ↔ Kommentar); alles andere lässt sich über die Match-Spalte manuell zuweisen oder ohne Gegenbuchung genehmigen.</div>
+        <div style="display:flex; gap:8px; flex-shrink:0;">
+          <button class="auto-match-btn" onclick="triggerManualAutoMatch()">⚡ Automatisch matchen</button>
+          <button class="clear-all-btn" onclick="clearTab('bank')">Alle entfernen</button>
+        </div>
       </div>
       <div id="fileList-bank"></div>
       <div class="state-box" id="emptyState-bank">
@@ -283,8 +295,11 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
         <input type="file" id="fileInput-mt5" multiple accept=".pdf,.csv,.xlsx,.xls" />
       </div>
       <div class="tab-toolbar" id="toolbar-mt5" style="display:none;">
-        <div class="tab-toolbar-note">Jede hochgeladene Datei wird als eigene Tabelle unten angezeigt. Über die Match-Spalte lässt sich jede Transaktion manuell mit einer Bank-/PSP-Transaktion verknüpfen oder ohne Gegenbuchung genehmigen — die automatische Matching-Engine folgt später.</div>
-        <button class="clear-all-btn" onclick="clearTab('mt5')">Alle entfernen</button>
+        <div class="tab-toolbar-note">Jede hochgeladene Datei wird als eigene Tabelle unten angezeigt. Kommentare wie "Unipayment:11034-27160" werden automatisch mit der passenden Bank-OrderId abgeglichen; alles andere lässt sich über die Match-Spalte manuell zuweisen oder ohne Gegenbuchung genehmigen.</div>
+        <div style="display:flex; gap:8px; flex-shrink:0;">
+          <button class="auto-match-btn" onclick="triggerManualAutoMatch()">⚡ Automatisch matchen</button>
+          <button class="clear-all-btn" onclick="clearTab('mt5')">Alle entfernen</button>
+        </div>
       </div>
       <div id="fileList-mt5"></div>
       <div class="state-box" id="emptyState-mt5">
@@ -461,6 +476,7 @@ async function handleFiles(tabKey, fileList) {
     }
     renderTab(tabKey);
   }
+  runAutoMatchingWithToast();
 }
 
 function makeTransaction(tabKey, cells) {
@@ -657,13 +673,36 @@ function extractTransactionsFromLines(lines) {
   return out;
 }
 
-/* ── MATCHING (manual only — no auto-matching engine yet) ──
+/* ── MATCHING ──
    State machine per transaction:
-     unmatched  --(pick a candidate)-->  matched  --(remove match)--> unmatched
-     unmatched  --(approve, no match)--> approved --(remove approval)--> unmatched
+     unmatched  --(auto rule or manual pick)-->  matched  --(remove match)--> unmatched
+     unmatched  --(approve, no match)-->          approved --(remove approval)--> unmatched
    A "matched" transaction always has a match ref pointing at its
    counterpart, which points right back — matching is always set and
-   cleared on both sides together via clearMatchLink(). */
+   cleared on both sides together via linkTransactions() / clearMatchLink().
+   match.source is 'manual' or 'auto:<rule name>', so the UI can show
+   which matches the engine made vs. a person. */
+function pairKey(tabA, txIdA, tabB, txIdB) {
+  const a = tabA + ':' + txIdA, b = tabB + ':' + txIdB;
+  return a < b ? a + '|' + b : b + '|' + a;
+}
+/* Pairs a person explicitly unmatched after an auto-match — the engine
+   won't propose that same pair again on a later run. */
+const rejectedMatchPairs = new Set();
+
+function linkTransactions(tabA, fileIdA, txIdA, tabB, fileIdB, txIdB, source) {
+  const a = findTx(tabA, fileIdA, txIdA);
+  const b = findTx(tabB, fileIdB, txIdB);
+  if (!a || !b) return false;
+  if (a.tx.match) clearMatchLink(a.tx);
+  if (b.tx.match) clearMatchLink(b.tx);
+  a.tx.status = 'matched';
+  a.tx.match = { tab: tabB, txId: b.tx.txId, source };
+  b.tx.status = 'matched';
+  b.tx.match = { tab: tabA, txId: a.tx.txId, source };
+  return true;
+}
+
 let matchModalCtx = null; // { tabKey, fileId, txId } of the row the modal is open for
 
 function openMatchModal(tabKey, fileId, txId) {
@@ -692,10 +731,14 @@ function renderMatchModal(filterText) {
   const { file, tx } = found;
   const otherTab = TAB_META[tabKey].otherTab;
 
+  const autoNote = (tx.status === 'matched' && tx.match && String(tx.match.source).startsWith('auto'))
+    ? `<div class="match-current-auto">⚡ Automatisch zugeordnet (Regel: ${escapeHtml(String(tx.match.source).replace('auto:', ''))})</div>`
+    : '';
   document.getElementById('matchModalCurrent').innerHTML = `
     <div class="match-current-id">${tx.txId}</div>
     <div class="match-current-source">${escapeHtml(file.source)}</div>
     <div class="match-current-detail">${escapeHtml(txPreviewText(file, tx)) || '—'}</div>
+    ${autoNote}
   `;
 
   let actionsHtml = '';
@@ -746,19 +789,8 @@ function onMatchSearchInput(value) {
 function pickMatch(otherFileId, otherTxId) {
   if (!matchModalCtx) return;
   const { tabKey, fileId, txId } = matchModalCtx;
-  const subject = findTx(tabKey, fileId, txId);
   const otherTabKey = TAB_META[tabKey].otherTab;
-  const target = findTx(otherTabKey, otherFileId, otherTxId);
-  if (!subject || !target) return;
-
-  if (subject.tx.match) clearMatchLink(subject.tx);
-  if (target.tx.match) clearMatchLink(target.tx);
-
-  subject.tx.status = 'matched';
-  subject.tx.match = { tab: otherTabKey, txId: target.tx.txId };
-  target.tx.status = 'matched';
-  target.tx.match = { tab: tabKey, txId: subject.tx.txId };
-
+  linkTransactions(tabKey, fileId, txId, otherTabKey, otherFileId, otherTxId, 'manual');
   closeMatchModal();
   renderTab('bank'); renderTab('mt5');
 }
@@ -783,8 +815,14 @@ function unapproveCurrent() {
 }
 function unmatchCurrent() {
   if (!matchModalCtx) return;
+  const { tabKey } = matchModalCtx;
   const found = findTx(matchModalCtx.tabKey, matchModalCtx.fileId, matchModalCtx.txId);
   if (!found) return;
+  // Remember an explicitly-rejected auto-match so the engine doesn't just
+  // re-propose it on the next upload/run.
+  if (found.tx.match && String(found.tx.match.source).startsWith('auto')) {
+    rejectedMatchPairs.add(pairKey(tabKey, found.tx.txId, found.tx.match.tab, found.tx.match.txId));
+  }
   clearMatchLink(found.tx);
   closeMatchModal();
   renderTab('bank'); renderTab('mt5');
@@ -812,6 +850,130 @@ function jumpToMatch(targetTab, targetTxId) {
     rowEl.classList.add('flash-highlight');
     setTimeout(() => rowEl.classList.remove('flash-highlight'), 1600);
   });
+}
+
+/* ── AUTOMATIC MATCHING ENGINE ──
+   Rule-based and built up incrementally, one PSP/pattern at a time. Each
+   rule collects candidate transactions from both tabs and a comparable
+   key from each; two candidates auto-match when their keys agree. Only
+   'unmatched' transactions are ever touched, so manual matches, manual
+   approvals, and earlier auto-matches are never overwritten — and a
+   pair a person explicitly unmatched is skipped via rejectedMatchPairs.
+
+   Rule 1 — Unipayment: the Bank/PSP file's "OrderId" column is compared
+   against the order reference embedded in the MT5 transaction's
+   "Comment" column, e.g. a comment of "Unipayment:11034-27160" carries
+   the order reference "11034-27160". */
+function findColumnIndex(headers, normalizedName) {
+  return headers.map(normalizeHeaderKey).indexOf(normalizedName);
+}
+
+function extractUnipaymentOrderIdFromComment(comment) {
+  const m = /unipayment\s*[:\-_#]?\s*([a-z0-9-]+)/i.exec(String(comment ?? ''));
+  return m ? m[1].trim() : null;
+}
+
+function valuesLooselyMatch(a, b) {
+  const x = String(a ?? '').trim().toLowerCase();
+  const y = String(b ?? '').trim().toLowerCase();
+  if (!x || !y) return false;
+  return x === y || x.includes(y) || y.includes(x);
+}
+
+const MATCH_RULES = [
+  {
+    name: 'unipayment',
+    /* Bank/PSP side: files recognized as Unipayment (by source name) with
+       an OrderId column, restricted to still-unmatched rows. */
+    collectBankCandidates() {
+      const out = [];
+      state.bank.files.forEach(f => {
+        if (!/unipayment/i.test(f.source)) return;
+        const orderIdIdx = findColumnIndex(f.headers, 'orderid');
+        if (orderIdIdx === -1) return;
+        f.transactions.forEach(tx => {
+          if (tx.status !== 'unmatched') return;
+          const orderId = tx.cells[orderIdIdx];
+          if (String(orderId ?? '').trim()) out.push({ file: f, tx, key: orderId });
+        });
+      });
+      return out;
+    },
+    /* MT5 side: any file with a Comment column whose value names
+       Unipayment and carries an order reference. */
+    collectMt5Candidates() {
+      const out = [];
+      state.mt5.files.forEach(f => {
+        const commentIdx = findColumnIndex(f.headers, 'comment');
+        if (commentIdx === -1) return;
+        f.transactions.forEach(tx => {
+          if (tx.status !== 'unmatched') return;
+          const extracted = extractUnipaymentOrderIdFromComment(tx.cells[commentIdx]);
+          if (extracted) out.push({ file: f, tx, key: extracted });
+        });
+      });
+      return out;
+    },
+  },
+];
+
+function runAutoMatching() {
+  let matchedCount = 0;
+  MATCH_RULES.forEach(rule => {
+    const bankCandidates = rule.collectBankCandidates();
+    const mt5Candidates = rule.collectMt5Candidates();
+    mt5Candidates.forEach(m => {
+      if (m.tx.status !== 'unmatched') return; // matched earlier in this same pass
+      const hit = bankCandidates.find(b =>
+        b.tx.status === 'unmatched' &&
+        valuesLooselyMatch(b.key, m.key) &&
+        !rejectedMatchPairs.has(pairKey('bank', b.tx.txId, 'mt5', m.tx.txId))
+      );
+      if (hit) {
+        linkTransactions('bank', hit.file.id, hit.tx.txId, 'mt5', m.file.id, m.tx.txId, 'auto:' + rule.name);
+        matchedCount++;
+      }
+    });
+  });
+  return matchedCount;
+}
+
+function showToast(message, tone) {
+  // Only ever show one toast at a time, so quick successive events (e.g.
+  // two file drops seconds apart) don't stack overlapping banners.
+  document.querySelectorAll('.toast').forEach(el => el.remove());
+  const el = document.createElement('div');
+  el.className = 'toast' + (tone === 'neutral' ? ' neutral' : '');
+  el.textContent = message;
+  document.body.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+  setTimeout(() => {
+    el.classList.remove('show');
+    setTimeout(() => el.remove(), 300);
+  }, 3400);
+}
+
+/* Runs the engine and always renders + reports back — used after every
+   upload and by the "Automatisch matchen" buttons. Silent (no toast) when
+   called automatically with nothing new to match, so uploads that can't
+   possibly match yet (e.g. only one side has files so far) stay quiet. */
+function runAutoMatchingWithToast() {
+  const matched = runAutoMatching();
+  renderTab('bank'); renderTab('mt5');
+  if (matched > 0) {
+    showToast(`⚡ ${matched} Transaktion${matched === 1 ? '' : 'en'} automatisch zugeordnet (Unipayment).`);
+  }
+  return matched;
+}
+
+/* The "Automatisch matchen" buttons always confirm something happened,
+   even when there was nothing new to match — unlike the silent post-
+   upload run above, a button click is an explicit request for feedback. */
+function triggerManualAutoMatch() {
+  const matched = runAutoMatchingWithToast();
+  if (matched === 0) {
+    showToast('Keine neuen automatischen Matches gefunden.', 'neutral');
+  }
 }
 
 /* ── RENDERING ── */
