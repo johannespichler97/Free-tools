@@ -457,16 +457,27 @@ async function handleFiles(tabKey, fileList) {
         assignHeadersAndRows(tabKey, batch, psp.aoa);
         if (psp.notes.length) batch.note = psp.notes.join(' ');
       } else if (ext === 'pdf') {
-        const lines = await parsePDF(file);
-        const txs = extractTransactionsFromLines(lines);
-        if (txs.length) {
-          batch.headers = ['Seite', 'Datum', 'Betrag', 'Text (Rohzeile)'];
-          batch.transactions = txs.map(t => makeTransaction(tabKey, [String(t.page), t.date, t.amount, t.text]));
-          batch.note = 'Heuristisch aus PDF-Text extrahiert — wird mit der Matching-Engine verfeinert.';
+        const rawItems = await parsePdfItems(file);
+        const bankParser = PDF_BANK_PARSERS.find(p => p.detect(batch.source, rawItems));
+        const structured = bankParser ? bankParser.parse(rawItems) : null;
+        if (structured && structured.rows.length) {
+          batch.headers = structured.headers;
+          batch.transactions = structured.rows.map(r => makeTransaction(tabKey, r));
+          batch.note = `Strukturiert aus dem erkannten ${bankParser.label} PDF-Format extrahiert.`;
         } else {
-          batch.headers = ['Seite', 'Text (Rohzeile)'];
-          batch.transactions = lines.map(l => makeTransaction(tabKey, [String(l.page), l.text]));
-          batch.note = 'Konnte kein Datums-/Betragsmuster erkennen — Rohtext wird angezeigt.';
+          // Not a recognized statement layout (or its table wasn't found) —
+          // fall back to the generic date/amount line heuristic.
+          const lines = pdfItemsToLines(rawItems);
+          const txs = extractTransactionsFromLines(lines);
+          if (txs.length) {
+            batch.headers = ['Seite', 'Datum', 'Betrag', 'Text (Rohzeile)'];
+            batch.transactions = txs.map(t => makeTransaction(tabKey, [String(t.page), t.date, t.amount, t.text]));
+            batch.note = 'Heuristisch aus PDF-Text extrahiert — wird mit der Matching-Engine verfeinert.';
+          } else {
+            batch.headers = ['Seite', 'Text (Rohzeile)'];
+            batch.transactions = lines.map(l => makeTransaction(tabKey, [String(l.page), l.text]));
+            batch.note = 'Konnte kein Datums-/Betragsmuster erkennen — Rohtext wird angezeigt.';
+          }
         }
       }
       batch.status = 'success';
@@ -701,29 +712,50 @@ async function parseXLSX(file) {
   return XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: '' });
 }
 
-/* ── PDF TEXT EXTRACTION (pdf.js) — groups text items into lines by y-position ── */
-async function parsePDF(file) {
+/* ── PDF TEXT EXTRACTION (pdf.js) ──
+   parsePdfItems() is the one place that talks to pdf.js: it returns every
+   text item with its page and x/y position, unflattened. Everything else
+   builds on top of that:
+     - pdfItemsToLines() flattens items into one string per visual row
+       (same page + rounded y, left-to-right) — good enough for the
+       generic date/amount heuristic below, but loses column boundaries.
+     - groupPdfRowsByColumns() (further down, next to PDF_BANK_PARSERS)
+       keeps x-position and buckets each row into columns instead, which
+       is what real multi-column bank statements need. */
+async function parsePdfItems(file) {
   if (typeof pdfjsLib === 'undefined') throw new Error('PDF-Bibliothek konnte nicht geladen werden (Netzwerk?). Bitte Seite neu laden.');
   const buf = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
-  const lines = [];
+  const items = [];
   for (let p = 1; p <= pdf.numPages; p++) {
     const page = await pdf.getPage(p);
     const content = await page.getTextContent();
-    const byY = new Map();
     content.items.forEach(item => {
-      const y = Math.round(item.transform[5]);
-      if (!byY.has(y)) byY.set(y, []);
-      byY.get(y).push(item);
-    });
-    const ys = [...byY.keys()].sort((a, b) => b - a);
-    ys.forEach(y => {
-      const items = byY.get(y).sort((a, b) => a.transform[4] - b.transform[4]);
-      const text = items.map(i => i.str).join(' ').replace(/\s+/g, ' ').trim();
-      if (text) lines.push({ page: p, text });
+      if (item.str.trim() === '') return;
+      items.push({ page: p, x: item.transform[4], y: Math.round(item.transform[5]), str: item.str });
     });
   }
-  return lines;
+  return items;
+}
+
+function pdfItemsToLines(items) {
+  const byRow = new Map();
+  items.forEach(it => {
+    const key = it.page + ':' + it.y;
+    if (!byRow.has(key)) byRow.set(key, { page: it.page, y: it.y, items: [] });
+    byRow.get(key).items.push(it);
+  });
+  return [...byRow.values()]
+    .sort((a, b) => a.page - b.page || b.y - a.y)
+    .map(row => ({
+      page: row.page,
+      text: row.items.slice().sort((a, b) => a.x - b.x).map(i => i.str).join(' ').replace(/\s+/g, ' ').trim(),
+    }))
+    .filter(l => l.text);
+}
+
+async function parsePDF(file) {
+  return pdfItemsToLines(await parsePdfItems(file));
 }
 
 /* ── HEURISTIC TRANSACTION EXTRACTION FROM PDF LINES ──
@@ -749,6 +781,166 @@ function extractTransactionsFromLines(lines) {
   });
   return out;
 }
+
+/* ── BANK/PSP-SPECIFIC PDF STATEMENT PARSERS ──
+   The generic heuristic above is a per-line date/amount guess — fine as
+   a fallback, but real statement PDFs lay fields out in columns that a
+   single flattened line can't untangle (an IBAN, a fee and a reference
+   ID can all sit at the same line height, in different columns, and get
+   smashed into one "Rohzeile" string). For statement layouts we
+   recognize, a dedicated parser below reconstructs the real columns
+   using each text item's x-position — keyed off the table's own header
+   row, so it's not guessing at fixed pixel positions — which is far more
+   reliable. Falls back to the generic heuristic for anything not
+   recognized here (see handleFiles()). Add a new bank/PSP by adding an
+   entry to PDF_BANK_PARSERS; nothing else needs to change. */
+
+/* Groups raw PDF items into visual rows (same page + rounded y, in
+   reading order) and buckets each row's items into columns using
+   `boundaries` — the midpoint x between each pair of adjacent column
+   header positions. A row's column is empty ('') if nothing landed
+   there. */
+function groupPdfRowsByColumns(items, boundaries) {
+  const byRow = new Map();
+  items.forEach(it => {
+    const key = it.page + ':' + it.y;
+    if (!byRow.has(key)) byRow.set(key, { page: it.page, y: it.y, items: [] });
+    byRow.get(key).items.push(it);
+  });
+  const columnIndexForX = x => {
+    let idx = 0;
+    for (let i = 0; i < boundaries.length; i++) if (x >= boundaries[i]) idx = i + 1;
+    return idx;
+  };
+  return [...byRow.values()]
+    .sort((a, b) => a.page - b.page || b.y - a.y)
+    .map(row => {
+      const cols = new Array(boundaries.length + 1).fill('');
+      row.items.slice().sort((a, b) => a.x - b.x).forEach(it => {
+        const c = columnIndexForX(it.x);
+        cols[c] = (cols[c] + ' ' + it.str).trim();
+      });
+      return { page: row.page, y: row.y, cols };
+    });
+}
+
+const PDF_BANK_PARSERS = [
+  {
+    name: 'narvi',
+    label: 'Narvi',
+    detect(sourceName, items) {
+      return /narvi/i.test(sourceName) || items.some(it => /narvi/i.test(it.str));
+    },
+    /* Narvi's transaction table has 4 columns — Date | Debtor/creditor |
+       Details | Amount — but each transaction spans several visual rows
+       (name, address line(s), IBAN, BIC stack vertically in the
+       Debtor/creditor column; Title/ID in Details; the main amount, an
+       optional Fee, and a net credited/debited amount stack in Amount).
+       A new transaction starts wherever the Date column reads
+       "D Mon YYYY" (e.g. "4 Aug 2026"); everything up to the next such
+       row belongs to it. */
+    parse(items) {
+      const headerLabels = ['Date', 'Debtor/creditor', 'Details', 'Amount'];
+      const byRow = new Map();
+      items.forEach(it => {
+        const key = it.page + ':' + it.y;
+        if (!byRow.has(key)) byRow.set(key, []);
+        byRow.get(key).push(it);
+      });
+      let headerRow = null;
+      for (const rowItems of byRow.values()) {
+        const strs = rowItems.map(it => it.str.trim());
+        if (headerLabels.every(l => strs.includes(l))) { headerRow = rowItems; break; }
+      }
+      if (!headerRow) return null; // not a Narvi-shaped table — fall back to the generic heuristic
+
+      const headerXs = headerLabels.map(label => {
+        const found = headerRow.find(it => it.str.trim() === label);
+        return found ? found.x : null;
+      });
+      if (headerXs.some(x => x === null)) return null;
+      const boundaries = [0, 1, 2].map(i => (headerXs[i] + headerXs[i + 1]) / 2);
+
+      // Page headers/footers repeat between transactions (every page break
+      // re-prints "Account statement", "Generated: ...", "narvi.com", the
+      // EMI disclaimer, and a "N/M" page number) and, being full-width or
+      // right-aligned text, land inside whichever transaction block is
+      // still "open" at that point in reading order. Drop them before
+      // block-splitting so they can never leak into a transaction's
+      // fields — this must NOT match the bare "Narvi Payments Oy AB" that
+      // also legitimately appears as a debtor name (Narvi's own monthly
+      // fee row), so it's excluded on purpose.
+      const BOILERPLATE_ROW_RE = [
+        /^Account statement$/i,
+        /^Generated:/i,
+        /^narvi\.com$/i,
+        /^Narvi Payments Oy Ab is an Authorized/i,
+        /^\d{1,3}\/\d{1,3}$/,
+        /^TRANSACTIONS$/i,
+      ];
+      const rows = groupPdfRowsByColumns(items, boundaries)
+        .filter(row => !row.cols.some(c => c && BOILERPLATE_ROW_RE.some(re => re.test(c))));
+      const DATE_COL_RE = /^\d{1,2} [A-Za-z]{3} \d{4}$/;
+      const TZ_COL_RE = /^[A-Z]{2,5}$/; // CEST, CET, UTC, ...
+
+      const blocks = [];
+      rows.forEach(row => {
+        if (DATE_COL_RE.test(row.cols[0])) blocks.push([]);
+        if (blocks.length) blocks[blocks.length - 1].push(row);
+      });
+
+      const IBAN_RE = /^([A-Z]{2}\d{2}[A-Z0-9]{4,30}|\d{10,25})$/;
+      const BIC_RE = /^[A-Z0-9]{8,11}$/;
+      const MAIN_AMOUNT_RE = /^[+-][\d.,]+\s*EUR$/;
+      const PLAIN_AMOUNT_RE = /^[\d.,]+\s*EUR$/;
+
+      const dataRows = blocks.filter(b => b.length).map(block => {
+        // Belt-and-braces: only ever fold recognizable date/timezone
+        // fragments into the date, even though BOILERPLATE_ROW_RE above
+        // should already keep anything else out of column 0.
+        const date = block
+          .map(r => r.cols[0])
+          .filter(v => v && (DATE_COL_RE.test(v) || TZ_COL_RE.test(v)))
+          .join(' '); // "4 Aug 2026" + "CEST"
+
+        const debtorLines = block.map(r => r.cols[1]).filter(Boolean);
+        const name = debtorLines[0] || '';
+        let iban = '', bic = '';
+        const addressLines = [];
+        debtorLines.slice(1).forEach(line => {
+          if (!iban && IBAN_RE.test(line)) { iban = line; return; }
+          if (iban && !bic && BIC_RE.test(line)) { bic = line; return; }
+          addressLines.push(line);
+        });
+
+        let title = '', refId = '';
+        block.forEach(r => {
+          const d = r.cols[2];
+          if (!d) return;
+          if (/^Title:/i.test(d)) title = d.replace(/^Title:\s*/i, '').trim();
+          else if (/^ID:/i.test(d)) refId = d.replace(/^ID:\s*/i, '').trim();
+        });
+
+        let amount = '', fee = '', netType = '', netAmount = '';
+        block.forEach(r => {
+          const a = r.cols[3];
+          if (!a) return;
+          if (!amount && MAIN_AMOUNT_RE.test(a)) amount = a;
+          else if (/^Fee:/i.test(a)) fee = a.replace(/^Fee:\s*/i, '').trim();
+          else if (/^(Net credited|Debited):?$/i.test(a)) netType = a.replace(/:$/, '');
+          else if (!netAmount && PLAIN_AMOUNT_RE.test(a)) netAmount = a;
+        });
+
+        return [date, name, addressLines.join(', '), iban, bic, title, refId, amount, fee, netType, netAmount];
+      });
+
+      return {
+        headers: ['Datum', 'Name', 'Adresse', 'IBAN', 'BIC', 'Titel', 'Referenz-ID', 'Betrag', 'Gebühr', 'Netto-Typ', 'Netto-Betrag'],
+        rows: dataRows,
+      };
+    },
+  },
+];
 
 /* ── MATCHING ──
    State machine per transaction:
