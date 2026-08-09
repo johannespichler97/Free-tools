@@ -212,14 +212,14 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
         <span class="brand-tag">Beta</span>
       </div>
       <div class="header-spacer"></div>
-      <div class="header-note"><span class="dot"></span> Matching-Engine: Unipayment-Regel aktiv</div>
+      <div class="header-note"><span class="dot"></span> Matching-Engine: Unipayment &amp; Alphapo aktiv</div>
     </div>
   </header>
 
   <section class="hero">
     <div class="hero-inner">
       <h1>Transaction Matching Platform</h1>
-      <p>Lade Bank-/PSP-Auszüge und MT5-Transaktionen hoch (PDF, CSV oder XLSX). Die Plattform zerlegt sie in einzelne Transaktionen und listet sie tabellarisch auf. Die automatische Matching-Engine gleicht Unipayment-Transaktionen bereits selbstständig ab (Bank-OrderId ↔ MT5-Kommentar); weitere PSPs und Regeln folgen Schritt für Schritt.</p>
+      <p>Lade Bank-/PSP-Auszüge und MT5-Transaktionen hoch (PDF, CSV oder XLSX). Die Plattform zerlegt sie in einzelne Transaktionen und listet sie tabellarisch auf. Die automatische Matching-Engine gleicht Unipayment- (OrderId) und Alphapo-Transaktionen (TRANSACTION_ID) bereits selbstständig mit dem MT5-Kommentar ab; weitere PSPs und Regeln folgen Schritt für Schritt.</p>
     </div>
   </section>
 
@@ -272,7 +272,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
         <input type="file" id="fileInput-bank" multiple accept=".pdf,.csv,.xlsx,.xls" />
       </div>
       <div class="tab-toolbar" id="toolbar-bank" style="display:none;">
-        <div class="tab-toolbar-note">Jede hochgeladene Datei wird als eigene Tabelle unten angezeigt. Unipayment-Transaktionen werden automatisch mit MT5 abgeglichen (OrderId ↔ Kommentar); alles andere lässt sich über die Match-Spalte manuell zuweisen oder ohne Gegenbuchung genehmigen.</div>
+        <div class="tab-toolbar-note">Jede hochgeladene Datei wird als eigene Tabelle unten angezeigt. Unipayment- (OrderId) und Alphapo-Transaktionen (TRANSACTION_ID) werden automatisch mit MT5 abgeglichen; alles andere lässt sich über die Match-Spalte manuell zuweisen oder ohne Gegenbuchung genehmigen.</div>
         <div style="display:flex; gap:8px; flex-shrink:0;">
           <button class="auto-match-btn" onclick="triggerManualAutoMatch()">⚡ Automatisch matchen</button>
           <button class="clear-all-btn" onclick="clearTab('bank')">Alle entfernen</button>
@@ -295,7 +295,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
         <input type="file" id="fileInput-mt5" multiple accept=".pdf,.csv,.xlsx,.xls" />
       </div>
       <div class="tab-toolbar" id="toolbar-mt5" style="display:none;">
-        <div class="tab-toolbar-note">Jede hochgeladene Datei wird als eigene Tabelle unten angezeigt. Kommentare wie "Unipayment:11034-27160" werden automatisch mit der passenden Bank-OrderId abgeglichen; alles andere lässt sich über die Match-Spalte manuell zuweisen oder ohne Gegenbuchung genehmigen.</div>
+        <div class="tab-toolbar-note">Jede hochgeladene Datei wird als eigene Tabelle unten angezeigt. Kommentare wie "Unipayment:11034-27160" oder "Alphapo:183572775" werden automatisch mit der passenden Bank-Transaktion abgeglichen; alles andere lässt sich über die Match-Spalte manuell zuweisen oder ohne Gegenbuchung genehmigen.</div>
         <div style="display:flex; gap:8px; flex-shrink:0;">
           <button class="auto-match-btn" onclick="triggerManualAutoMatch()">⚡ Automatisch matchen</button>
           <button class="clear-all-btn" onclick="clearTab('mt5')">Alle entfernen</button>
@@ -449,13 +449,13 @@ async function handleFiles(tabKey, fileList) {
     try {
       if (ext === 'csv') {
         const text = await file.text();
-        const uni = applyUnipaymentRules(tabKey, batch.source, parseCSV(text));
-        assignHeadersAndRows(tabKey, batch, uni.aoa);
-        if (uni.notes.length) batch.note = uni.notes.join(' ');
+        const psp = applyPspRules(tabKey, batch.source, parseCSV(text));
+        assignHeadersAndRows(tabKey, batch, psp.aoa);
+        if (psp.notes.length) batch.note = psp.notes.join(' ');
       } else if (ext === 'xlsx' || ext === 'xls') {
-        const uni = applyUnipaymentRules(tabKey, batch.source, await parseXLSX(file));
-        assignHeadersAndRows(tabKey, batch, uni.aoa);
-        if (uni.notes.length) batch.note = uni.notes.join(' ');
+        const psp = applyPspRules(tabKey, batch.source, await parseXLSX(file));
+        assignHeadersAndRows(tabKey, batch, psp.aoa);
+        if (psp.notes.length) batch.note = psp.notes.join(' ');
       } else if (ext === 'pdf') {
         const lines = await parsePDF(file);
         const txs = extractTransactionsFromLines(lines);
@@ -483,47 +483,89 @@ function makeTransaction(tabKey, cells) {
   return { txId: genTxId(tabKey), cells, status: 'unmatched', match: null };
 }
 
-/* ── UNIPAYMENT-SPECIFIC RULES ──
-   Recognized by the file/source name containing "unipayment". Applied to
-   the raw parsed table (array-of-arrays), before transactions/IDs exist,
-   so filtered-out rows never consume a transaction ID:
-     1. Only rows with Status "Complete" are kept.
-     2. The CreateTime column is moved to the front of the header/cell
-        order so it renders right after the fixed ID/Source/Match columns.
-   Header names are matched loosely (case/space/underscore-insensitive)
-   so "Create Time", "create_time", "CreateTime" etc. all resolve. */
+/* ── PSP-SPECIFIC UPLOAD RULES ──
+   Each recognized PSP gets a config entry: how to recognize its files
+   (by source/file name), which column to filter on, and which column to
+   pull forward so it renders right after the fixed ID/Source/Match
+   columns. Adding a new PSP is adding an entry here — no other code
+   needs to change. Applied to the raw parsed table (array-of-arrays),
+   before transactions/IDs exist, so filtered-out rows never consume a
+   transaction ID. Header names are matched loosely (case/space/
+   underscore-insensitive) so "Create Time", "create_time", "CreateTime"
+   all resolve the same way.
+   matchColumn is the column later used to auto-match against MT5 (see
+   the AUTOMATIC MATCHING ENGINE section below). */
+const PSP_RULES = [
+  {
+    name: 'unipayment',
+    sourceRegex: /unipayment/i,
+    reorderColumn: 'createtime',
+    reorderColumnLabel: 'CreateTime',
+    filters: [
+      { column: 'status', label: 'Status', equals: 'complete' },
+    ],
+    matchColumn: 'orderid',
+    matchColumnLabel: 'OrderId',
+  },
+  {
+    name: 'alphapo',
+    sourceRegex: /alphapo/i,
+    reorderColumn: 'date',
+    reorderColumnLabel: 'DATE',
+    filters: [
+      { column: 'type', label: 'TYPE', oneOf: ['deposit', 'withdrawal'] },
+      { column: 'status', label: 'STATUS', equals: 'confirmed' },
+    ],
+    matchColumn: 'transactionid',
+    matchColumnLabel: 'TRANSACTION_ID',
+  },
+];
+
 function normalizeHeaderKey(h) {
   return String(h ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
-function applyUnipaymentRules(tabKey, sourceName, aoa) {
+function applyPspRules(tabKey, sourceName, aoa) {
   const notes = [];
-  if (tabKey !== 'bank' || !/unipayment/i.test(sourceName) || !aoa || !aoa.length) {
-    return { aoa, notes };
-  }
+  if (tabKey !== 'bank' || !aoa || !aoa.length) return { aoa, notes };
+  const rule = PSP_RULES.find(r => r.sourceRegex.test(sourceName));
+  if (!rule) return { aoa, notes };
 
   const headerRow = aoa[0];
   const keys = headerRow.map(normalizeHeaderKey);
-  const statusIdx = keys.indexOf('status');
-  const createTimeIdx = keys.indexOf('createtime');
   let dataRows = aoa.slice(1);
 
-  if (statusIdx !== -1) {
+  (rule.filters || []).forEach(f => {
+    const idx = keys.indexOf(f.column);
+    if (idx === -1) {
+      notes.push(`Keine Spalte "${f.label}" gefunden — Filter konnte nicht angewendet werden.`);
+      return;
+    }
     const before = dataRows.length;
-    dataRows = dataRows.filter(r => String(r[statusIdx] ?? '').trim().toLowerCase() === 'complete');
+    dataRows = dataRows.filter(r => {
+      const v = String(r[idx] ?? '').trim().toLowerCase();
+      if (f.equals) return v === f.equals;
+      if (f.oneOf) return f.oneOf.includes(v);
+      return true;
+    });
     const removed = before - dataRows.length;
-    if (removed > 0) notes.push(`${removed} Zeile(n) ohne Status "Complete" ausgeblendet.`);
-  } else {
-    notes.push('Keine Spalte "Status" gefunden — Filterung auf "Complete" konnte nicht angewendet werden.');
-  }
+    if (removed > 0) notes.push(`${removed} Zeile(n) durch Filter "${f.label}" ausgeblendet.`);
+  });
 
   let newHeaderRow = headerRow;
-  if (createTimeIdx !== -1) {
-    const order = [createTimeIdx, ...headerRow.map((_, i) => i).filter(i => i !== createTimeIdx)];
-    newHeaderRow = order.map(i => headerRow[i]);
-    dataRows = dataRows.map(r => order.map(i => r[i]));
-  } else {
-    notes.push('Keine Spalte "CreateTime" gefunden.');
+  if (rule.reorderColumn) {
+    const reorderIdx = keys.indexOf(rule.reorderColumn);
+    if (reorderIdx !== -1) {
+      const order = [reorderIdx, ...headerRow.map((_, i) => i).filter(i => i !== reorderIdx)];
+      newHeaderRow = order.map(i => headerRow[i]);
+      dataRows = dataRows.map(r => order.map(i => r[i]));
+    } else {
+      notes.push(`Keine Spalte "${rule.reorderColumnLabel}" gefunden.`);
+    }
+  }
+
+  if (rule.matchColumn && keys.indexOf(rule.matchColumn) === -1) {
+    notes.push(`Keine Spalte "${rule.matchColumnLabel}" gefunden — automatisches Matching für diese Datei nicht möglich.`);
   }
 
   return { aoa: [newHeaderRow, ...dataRows], notes };
@@ -860,16 +902,20 @@ function jumpToMatch(targetTab, targetTxId) {
    approvals, and earlier auto-matches are never overwritten — and a
    pair a person explicitly unmatched is skipped via rejectedMatchPairs.
 
-   Rule 1 — Unipayment: the Bank/PSP file's "OrderId" column is compared
-   against the order reference embedded in the MT5 transaction's
-   "Comment" column, e.g. a comment of "Unipayment:11034-27160" carries
-   the order reference "11034-27160". */
+   Rules are derived straight from PSP_RULES (defined earlier, next to
+   the upload/filter rules) — each PSP there gets a matching rule here
+   for free: its Bank/PSP file's matchColumn (e.g. Unipayment's OrderId,
+   Alphapo's TRANSACTION_ID) is compared against the order reference
+   embedded in the MT5 transaction's "Comment" column, e.g. a comment of
+   "Unipayment:11034-27160" or "Alphapo:183572775" carries the order
+   reference after the PSP name. */
 function findColumnIndex(headers, normalizedName) {
   return headers.map(normalizeHeaderKey).indexOf(normalizedName);
 }
 
-function extractUnipaymentOrderIdFromComment(comment) {
-  const m = /unipayment\s*[:\-_#]?\s*([a-z0-9-]+)/i.exec(String(comment ?? ''));
+function extractOrderRefFromComment(comment, pspName) {
+  const re = new RegExp(pspName + '\\s*[:\\-_#]?\\s*([a-z0-9-]+)', 'i');
+  const m = re.exec(String(comment ?? ''));
   return m ? m[1].trim() : null;
 }
 
@@ -880,42 +926,40 @@ function valuesLooselyMatch(a, b) {
   return x === y || x.includes(y) || y.includes(x);
 }
 
-const MATCH_RULES = [
-  {
-    name: 'unipayment',
-    /* Bank/PSP side: files recognized as Unipayment (by source name) with
-       an OrderId column, restricted to still-unmatched rows. */
-    collectBankCandidates() {
-      const out = [];
-      state.bank.files.forEach(f => {
-        if (!/unipayment/i.test(f.source)) return;
-        const orderIdIdx = findColumnIndex(f.headers, 'orderid');
-        if (orderIdIdx === -1) return;
-        f.transactions.forEach(tx => {
-          if (tx.status !== 'unmatched') return;
-          const orderId = tx.cells[orderIdIdx];
-          if (String(orderId ?? '').trim()) out.push({ file: f, tx, key: orderId });
-        });
+const MATCH_RULES = PSP_RULES.map(rule => ({
+  name: rule.name,
+  /* Bank/PSP side: files recognized as this PSP (by source name) with
+     the configured matchColumn, restricted to still-unmatched rows. */
+  collectBankCandidates() {
+    const out = [];
+    state.bank.files.forEach(f => {
+      if (!rule.sourceRegex.test(f.source)) return;
+      const idx = findColumnIndex(f.headers, rule.matchColumn);
+      if (idx === -1) return;
+      f.transactions.forEach(tx => {
+        if (tx.status !== 'unmatched') return;
+        const key = tx.cells[idx];
+        if (String(key ?? '').trim()) out.push({ file: f, tx, key });
       });
-      return out;
-    },
-    /* MT5 side: any file with a Comment column whose value names
-       Unipayment and carries an order reference. */
-    collectMt5Candidates() {
-      const out = [];
-      state.mt5.files.forEach(f => {
-        const commentIdx = findColumnIndex(f.headers, 'comment');
-        if (commentIdx === -1) return;
-        f.transactions.forEach(tx => {
-          if (tx.status !== 'unmatched') return;
-          const extracted = extractUnipaymentOrderIdFromComment(tx.cells[commentIdx]);
-          if (extracted) out.push({ file: f, tx, key: extracted });
-        });
-      });
-      return out;
-    },
+    });
+    return out;
   },
-];
+  /* MT5 side: any file with a Comment column whose value names this PSP
+     and carries an order reference. */
+  collectMt5Candidates() {
+    const out = [];
+    state.mt5.files.forEach(f => {
+      const commentIdx = findColumnIndex(f.headers, 'comment');
+      if (commentIdx === -1) return;
+      f.transactions.forEach(tx => {
+        if (tx.status !== 'unmatched') return;
+        const extracted = extractOrderRefFromComment(tx.cells[commentIdx], rule.name);
+        if (extracted) out.push({ file: f, tx, key: extracted });
+      });
+    });
+    return out;
+  },
+}));
 
 function runAutoMatching() {
   let matchedCount = 0;
