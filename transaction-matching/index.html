@@ -212,14 +212,14 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
         <span class="brand-tag">Beta</span>
       </div>
       <div class="header-spacer"></div>
-      <div class="header-note"><span class="dot"></span> Matching-Engine: Unipayment &amp; Alphapo aktiv</div>
+      <div class="header-note"><span class="dot"></span> Matching-Engine: Unipayment, Alphapo &amp; Uniwire aktiv</div>
     </div>
   </header>
 
   <section class="hero">
     <div class="hero-inner">
       <h1>Transaction Matching Platform</h1>
-      <p>Lade Bank-/PSP-Auszüge und MT5-Transaktionen hoch (PDF, CSV oder XLSX). Die Plattform zerlegt sie in einzelne Transaktionen und listet sie tabellarisch auf. Die automatische Matching-Engine gleicht Unipayment- (OrderId) und Alphapo-Transaktionen (TRANSACTION_ID) bereits selbstständig mit dem MT5-Kommentar ab; weitere PSPs und Regeln folgen Schritt für Schritt.</p>
+      <p>Lade Bank-/PSP-Auszüge und MT5-Transaktionen hoch (PDF, CSV oder XLSX). Die Plattform zerlegt sie in einzelne Transaktionen und listet sie tabellarisch auf. Die automatische Matching-Engine gleicht Unipayment- (OrderId), Alphapo- (TRANSACTION_ID) und Uniwire-Transaktionen (uuid, per Teilstring) bereits selbstständig mit dem MT5-Kommentar ab; weitere PSPs und Regeln folgen Schritt für Schritt.</p>
     </div>
   </section>
 
@@ -272,7 +272,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
         <input type="file" id="fileInput-bank" multiple accept=".pdf,.csv,.xlsx,.xls" />
       </div>
       <div class="tab-toolbar" id="toolbar-bank" style="display:none;">
-        <div class="tab-toolbar-note">Jede hochgeladene Datei wird als eigene Tabelle unten angezeigt. Unipayment- (OrderId) und Alphapo-Transaktionen (TRANSACTION_ID) werden automatisch mit MT5 abgeglichen; alles andere lässt sich über die Match-Spalte manuell zuweisen oder ohne Gegenbuchung genehmigen.</div>
+        <div class="tab-toolbar-note">Jede hochgeladene Datei wird als eigene Tabelle unten angezeigt. Unipayment- (OrderId), Alphapo- (TRANSACTION_ID) und Uniwire-Transaktionen (uuid) werden automatisch mit MT5 abgeglichen; alles andere lässt sich über die Match-Spalte manuell zuweisen oder ohne Gegenbuchung genehmigen.</div>
         <div style="display:flex; gap:8px; flex-shrink:0;">
           <button class="auto-match-btn" onclick="triggerManualAutoMatch()">⚡ Automatisch matchen</button>
           <button class="clear-all-btn" onclick="clearTab('bank')">Alle entfernen</button>
@@ -295,7 +295,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
         <input type="file" id="fileInput-mt5" multiple accept=".pdf,.csv,.xlsx,.xls" />
       </div>
       <div class="tab-toolbar" id="toolbar-mt5" style="display:none;">
-        <div class="tab-toolbar-note">Jede hochgeladene Datei wird als eigene Tabelle unten angezeigt. Kommentare wie "Unipayment:11034-27160" oder "Alphapo:183572775" werden automatisch mit der passenden Bank-Transaktion abgeglichen; alles andere lässt sich über die Match-Spalte manuell zuweisen oder ohne Gegenbuchung genehmigen.</div>
+        <div class="tab-toolbar-note">Jede hochgeladene Datei wird als eigene Tabelle unten angezeigt. Kommentare wie "Unipayment:11034-27160", "Alphapo:183572775" oder "Uniwire:71b55428-de1d-4f4e-ab_" werden automatisch mit der passenden Bank-Transaktion abgeglichen; alles andere lässt sich über die Match-Spalte manuell zuweisen oder ohne Gegenbuchung genehmigen.</div>
         <div style="display:flex; gap:8px; flex-shrink:0;">
           <button class="auto-match-btn" onclick="triggerManualAutoMatch()">⚡ Automatisch matchen</button>
           <button class="clear-all-btn" onclick="clearTab('mt5')">Alle entfernen</button>
@@ -519,6 +519,20 @@ const PSP_RULES = [
     matchColumn: 'transactionid',
     matchColumnLabel: 'TRANSACTION_ID',
   },
+  {
+    name: 'uniwire',
+    sourceRegex: /uniwire/i,
+    /* Uniwire exports always carry one trailing summary/total row with no
+       DATE value — notEmpty on 'date' drops it before it ever becomes a
+       transaction. No reorderColumn: unlike Unipayment/Alphapo, moving
+       DATE next to Match wasn't requested for Uniwire. */
+    filters: [
+      { column: 'date', label: 'DATE', notEmpty: true },
+      { column: 'status', label: 'Status', equals: 'complete' },
+    ],
+    matchColumn: 'uuid',
+    matchColumnLabel: 'uuid',
+  },
 ];
 
 function normalizeHeaderKey(h) {
@@ -543,13 +557,19 @@ function applyPspRules(tabKey, sourceName, aoa) {
     }
     const before = dataRows.length;
     dataRows = dataRows.filter(r => {
-      const v = String(r[idx] ?? '').trim().toLowerCase();
+      const raw = String(r[idx] ?? '').trim();
+      if (f.notEmpty) return raw !== '';
+      const v = raw.toLowerCase();
       if (f.equals) return v === f.equals;
       if (f.oneOf) return f.oneOf.includes(v);
       return true;
     });
     const removed = before - dataRows.length;
-    if (removed > 0) notes.push(`${removed} Zeile(n) durch Filter "${f.label}" ausgeblendet.`);
+    if (removed > 0) {
+      notes.push(f.notEmpty
+        ? `${removed} Zeile(n) ohne "${f.label}" entfernt (z. B. Summenzeile).`
+        : `${removed} Zeile(n) durch Filter "${f.label}" ausgeblendet.`);
+    }
   });
 
   let newHeaderRow = headerRow;
@@ -905,10 +925,17 @@ function jumpToMatch(targetTab, targetTxId) {
    Rules are derived straight from PSP_RULES (defined earlier, next to
    the upload/filter rules) — each PSP there gets a matching rule here
    for free: its Bank/PSP file's matchColumn (e.g. Unipayment's OrderId,
-   Alphapo's TRANSACTION_ID) is compared against the order reference
-   embedded in the MT5 transaction's "Comment" column, e.g. a comment of
-   "Unipayment:11034-27160" or "Alphapo:183572775" carries the order
-   reference after the PSP name. */
+   Alphapo's TRANSACTION_ID, Uniwire's uuid) is compared against the
+   order reference embedded in the MT5 transaction's "Comment" column,
+   e.g. "Unipayment:11034-27160" or "Alphapo:183572775" carries the
+   order reference right after the PSP name.
+
+   Matching itself is a loose contains-or-equal comparison (see
+   valuesLooselyMatch below), which is what makes Uniwire work: its MT5
+   comment ("Uniwire:71b55428-de1d-4f4e-ab_") carries a truncated
+   fragment of the full uuid, not the whole thing, so an exact-match
+   would never hit — checking whether the full uuid *contains* the
+   fragment does. */
 function findColumnIndex(headers, normalizedName) {
   return headers.map(normalizeHeaderKey).indexOf(normalizedName);
 }
