@@ -212,14 +212,14 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
         <span class="brand-tag">Beta</span>
       </div>
       <div class="header-spacer"></div>
-      <div class="header-note"><span class="dot"></span> Matching-Engine: Unipayment, Alphapo, Uniwire &amp; T365 aktiv</div>
+      <div class="header-note"><span class="dot"></span> Matching-Engine: Unipayment, Alphapo, Uniwire, T365 &amp; Narvi aktiv</div>
     </div>
   </header>
 
   <section class="hero">
     <div class="hero-inner">
       <h1>Transaction Matching Platform</h1>
-      <p>Lade Bank-/PSP-Auszüge und MT5-Transaktionen hoch (PDF, CSV oder XLSX). Die Plattform zerlegt sie in einzelne Transaktionen und listet sie tabellarisch auf. Die automatische Matching-Engine gleicht Unipayment- (OrderId), Alphapo- (TRANSACTION_ID), Uniwire- (uuid, per Teilstring) und T365-Transaktionen (id) bereits selbstständig mit dem MT5-Kommentar ab; weitere PSPs und Regeln folgen Schritt für Schritt.</p>
+      <p>Lade Bank-/PSP-Auszüge und MT5-Transaktionen hoch (PDF, CSV oder XLSX). Die Plattform zerlegt sie in einzelne Transaktionen und listet sie tabellarisch auf. Die automatische Matching-Engine gleicht Unipayment- (OrderId), Alphapo- (TRANSACTION_ID), Uniwire- (uuid, per Teilstring), T365- (id) und Narvi-Transaktionen (Referenz-ID) bereits selbstständig mit dem MT5-Kommentar ab; weitere PSPs und Regeln folgen Schritt für Schritt.</p>
     </div>
   </section>
 
@@ -272,7 +272,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
         <input type="file" id="fileInput-bank" multiple accept=".pdf,.csv,.xlsx,.xls" />
       </div>
       <div class="tab-toolbar" id="toolbar-bank" style="display:none;">
-        <div class="tab-toolbar-note">Jede hochgeladene Datei wird als eigene Tabelle unten angezeigt. Unipayment- (OrderId), Alphapo- (TRANSACTION_ID), Uniwire- (uuid) und T365-Transaktionen (id) werden automatisch mit MT5 abgeglichen; alles andere lässt sich über die Match-Spalte manuell zuweisen oder ohne Gegenbuchung genehmigen.</div>
+        <div class="tab-toolbar-note">Jede hochgeladene Datei wird als eigene Tabelle unten angezeigt. Unipayment- (OrderId), Alphapo- (TRANSACTION_ID), Uniwire- (uuid), T365- (id) und Narvi-Transaktionen (Referenz-ID) werden automatisch mit MT5 abgeglichen; alles andere lässt sich über die Match-Spalte manuell zuweisen oder ohne Gegenbuchung genehmigen.</div>
         <div style="display:flex; gap:8px; flex-shrink:0;">
           <button class="auto-match-btn" onclick="triggerManualAutoMatch()">⚡ Automatisch matchen</button>
           <button class="clear-all-btn" onclick="clearTab('bank')">Alle entfernen</button>
@@ -295,7 +295,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
         <input type="file" id="fileInput-mt5" multiple accept=".pdf,.csv,.xlsx,.xls" />
       </div>
       <div class="tab-toolbar" id="toolbar-mt5" style="display:none;">
-        <div class="tab-toolbar-note">Jede hochgeladene Datei wird als eigene Tabelle unten angezeigt. Kommentare wie "Unipayment:11034-27160", "Alphapo:183572775", "Uniwire:71b55428-de1d-4f4e-ab_" oder "Transact365:13553-20105" werden automatisch mit der passenden Bank-Transaktion abgeglichen; alles andere lässt sich über die Match-Spalte manuell zuweisen oder ohne Gegenbuchung genehmigen.</div>
+        <div class="tab-toolbar-note">Jede hochgeladene Datei wird als eigene Tabelle unten angezeigt. Kommentare wie "Unipayment:11034-27160", "Alphapo:183572775", "Uniwire:71b55428-de1d-4f4e-ab_", "Transact365:13553-20105" oder "CRM_Deposit:1WG4SF5CMPF3VMA6" werden automatisch mit der passenden Bank-Transaktion abgeglichen; alles andere lässt sich über die Match-Spalte manuell zuweisen oder ohne Gegenbuchung genehmigen.</div>
         <div style="display:flex; gap:8px; flex-shrink:0;">
           <button class="auto-match-btn" onclick="triggerManualAutoMatch()">⚡ Automatisch matchen</button>
           <button class="clear-all-btn" onclick="clearTab('mt5')">Alle entfernen</button>
@@ -558,6 +558,19 @@ const PSP_RULES = [
        the PSP's short name — collectMt5Candidates() below falls back to
        this field instead of `name` when searching comments. */
     commentPrefix: 'transact365',
+  },
+  {
+    name: 'narvi',
+    sourceRegex: /narvi/i,
+    /* No filters/reorderColumn: Narvi only ever arrives as a PDF, parsed
+       by PDF_BANK_PARSERS above straight into its final column layout —
+       applyPspRules() (CSV/XLSX only) never runs for it. This entry
+       exists purely to plug Narvi into the matching engine below. */
+    filters: [],
+    matchColumn: 'referenzid', // the "Referenz-ID" column PDF_BANK_PARSERS produces
+    matchColumnLabel: 'Referenz-ID',
+    /* MT5 comment reads "CRM_Deposit:1WG4SF5CMPF3VMA6", not "Narvi:...". */
+    commentPrefix: 'CRM_Deposit',
   },
 ];
 
