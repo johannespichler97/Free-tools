@@ -212,14 +212,14 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
         <span class="brand-tag">Beta</span>
       </div>
       <div class="header-spacer"></div>
-      <div class="header-note"><span class="dot"></span> Matching-Engine: Unipayment, Alphapo &amp; Uniwire aktiv</div>
+      <div class="header-note"><span class="dot"></span> Matching-Engine: Unipayment, Alphapo, Uniwire &amp; T365 aktiv</div>
     </div>
   </header>
 
   <section class="hero">
     <div class="hero-inner">
       <h1>Transaction Matching Platform</h1>
-      <p>Lade Bank-/PSP-Auszüge und MT5-Transaktionen hoch (PDF, CSV oder XLSX). Die Plattform zerlegt sie in einzelne Transaktionen und listet sie tabellarisch auf. Die automatische Matching-Engine gleicht Unipayment- (OrderId), Alphapo- (TRANSACTION_ID) und Uniwire-Transaktionen (uuid, per Teilstring) bereits selbstständig mit dem MT5-Kommentar ab; weitere PSPs und Regeln folgen Schritt für Schritt.</p>
+      <p>Lade Bank-/PSP-Auszüge und MT5-Transaktionen hoch (PDF, CSV oder XLSX). Die Plattform zerlegt sie in einzelne Transaktionen und listet sie tabellarisch auf. Die automatische Matching-Engine gleicht Unipayment- (OrderId), Alphapo- (TRANSACTION_ID), Uniwire- (uuid, per Teilstring) und T365-Transaktionen (id) bereits selbstständig mit dem MT5-Kommentar ab; weitere PSPs und Regeln folgen Schritt für Schritt.</p>
     </div>
   </section>
 
@@ -272,7 +272,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
         <input type="file" id="fileInput-bank" multiple accept=".pdf,.csv,.xlsx,.xls" />
       </div>
       <div class="tab-toolbar" id="toolbar-bank" style="display:none;">
-        <div class="tab-toolbar-note">Jede hochgeladene Datei wird als eigene Tabelle unten angezeigt. Unipayment- (OrderId), Alphapo- (TRANSACTION_ID) und Uniwire-Transaktionen (uuid) werden automatisch mit MT5 abgeglichen; alles andere lässt sich über die Match-Spalte manuell zuweisen oder ohne Gegenbuchung genehmigen.</div>
+        <div class="tab-toolbar-note">Jede hochgeladene Datei wird als eigene Tabelle unten angezeigt. Unipayment- (OrderId), Alphapo- (TRANSACTION_ID), Uniwire- (uuid) und T365-Transaktionen (id) werden automatisch mit MT5 abgeglichen; alles andere lässt sich über die Match-Spalte manuell zuweisen oder ohne Gegenbuchung genehmigen.</div>
         <div style="display:flex; gap:8px; flex-shrink:0;">
           <button class="auto-match-btn" onclick="triggerManualAutoMatch()">⚡ Automatisch matchen</button>
           <button class="clear-all-btn" onclick="clearTab('bank')">Alle entfernen</button>
@@ -295,7 +295,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
         <input type="file" id="fileInput-mt5" multiple accept=".pdf,.csv,.xlsx,.xls" />
       </div>
       <div class="tab-toolbar" id="toolbar-mt5" style="display:none;">
-        <div class="tab-toolbar-note">Jede hochgeladene Datei wird als eigene Tabelle unten angezeigt. Kommentare wie "Unipayment:11034-27160", "Alphapo:183572775" oder "Uniwire:71b55428-de1d-4f4e-ab_" werden automatisch mit der passenden Bank-Transaktion abgeglichen; alles andere lässt sich über die Match-Spalte manuell zuweisen oder ohne Gegenbuchung genehmigen.</div>
+        <div class="tab-toolbar-note">Jede hochgeladene Datei wird als eigene Tabelle unten angezeigt. Kommentare wie "Unipayment:11034-27160", "Alphapo:183572775", "Uniwire:71b55428-de1d-4f4e-ab_" oder "Transact365:13553-20105" werden automatisch mit der passenden Bank-Transaktion abgeglichen; alles andere lässt sich über die Match-Spalte manuell zuweisen oder ohne Gegenbuchung genehmigen.</div>
         <div style="display:flex; gap:8px; flex-shrink:0;">
           <button class="auto-match-btn" onclick="triggerManualAutoMatch()">⚡ Automatisch matchen</button>
           <button class="clear-all-btn" onclick="clearTab('mt5')">Alle entfernen</button>
@@ -532,6 +532,21 @@ const PSP_RULES = [
     ],
     matchColumn: 'uuid',
     matchColumnLabel: 'uuid',
+  },
+  {
+    name: 't365',
+    sourceRegex: /transact365|t365/i,
+    reorderColumn: 'date',
+    reorderColumnLabel: 'Date',
+    filters: [
+      { column: 'status', label: 'Status', equals: 'success' },
+    ],
+    matchColumn: 'id',
+    matchColumnLabel: 'id',
+    /* The MT5 comment prefix ("Transact365:13553-20105") doesn't match
+       the PSP's short name — collectMt5Candidates() below falls back to
+       this field instead of `name` when searching comments. */
+    commentPrefix: 'transact365',
   },
 ];
 
@@ -972,15 +987,18 @@ const MATCH_RULES = PSP_RULES.map(rule => ({
     return out;
   },
   /* MT5 side: any file with a Comment column whose value names this PSP
-     and carries an order reference. */
+     and carries an order reference. Most PSPs' comment prefix is just
+     their name, but a few (T365 → "Transact365:...") don't match — those
+     set commentPrefix explicitly instead. */
   collectMt5Candidates() {
     const out = [];
+    const prefix = rule.commentPrefix || rule.name;
     state.mt5.files.forEach(f => {
       const commentIdx = findColumnIndex(f.headers, 'comment');
       if (commentIdx === -1) return;
       f.transactions.forEach(tx => {
         if (tx.status !== 'unmatched') return;
-        const extracted = extractOrderRefFromComment(tx.cells[commentIdx], rule.name);
+        const extracted = extractOrderRefFromComment(tx.cells[commentIdx], prefix);
         if (extracted) out.push({ file: f, tx, key: extracted });
       });
     });
