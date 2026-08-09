@@ -135,8 +135,8 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .tx-table td.tx-id { font-family: var(--font-mono); color: var(--text-dim); font-weight: 700; }
 .tx-table-footnote { padding: 10px 18px 14px; font-size: 11.5px; color: var(--text-faint); border-top: 1px solid var(--border-soft); display: flex; align-items: center; gap: 6px; }
 
-@keyframes flashRow { from { background: var(--accent-dim); } to { background: transparent; } }
-.tx-table tr.flash-highlight td { animation: flashRow 1.6s ease; }
+@keyframes flashRow { 0%, 80% { background: var(--accent-dim); } 100% { background: transparent; } }
+.tx-table tr.flash-highlight td { animation: flashRow 5s ease; }
 
 /* ── MATCH CELL ── */
 .match-cell { display: flex; align-items: center; gap: 6px; }
@@ -840,7 +840,7 @@ function clearMatchLink(tx) {
 }
 
 /* Switches to the counterpart's tab and scrolls its row into view with a
-   brief highlight — the "click through to the matching transaction" link. */
+   5-second highlight — the "click through to the matching transaction" link. */
 function jumpToMatch(targetTab, targetTxId) {
   switchTab(targetTab);
   requestAnimationFrame(() => {
@@ -848,7 +848,7 @@ function jumpToMatch(targetTab, targetTxId) {
     if (!rowEl) return;
     rowEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
     rowEl.classList.add('flash-highlight');
-    setTimeout(() => rowEl.classList.remove('flash-highlight'), 1600);
+    setTimeout(() => rowEl.classList.remove('flash-highlight'), 5000);
   });
 }
 
