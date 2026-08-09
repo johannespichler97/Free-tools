@@ -434,9 +434,13 @@ async function handleFiles(tabKey, fileList) {
     try {
       if (ext === 'csv') {
         const text = await file.text();
-        assignHeadersAndRows(tabKey, batch, parseCSV(text));
+        const uni = applyUnipaymentRules(tabKey, batch.source, parseCSV(text));
+        assignHeadersAndRows(tabKey, batch, uni.aoa);
+        if (uni.notes.length) batch.note = uni.notes.join(' ');
       } else if (ext === 'xlsx' || ext === 'xls') {
-        assignHeadersAndRows(tabKey, batch, await parseXLSX(file));
+        const uni = applyUnipaymentRules(tabKey, batch.source, await parseXLSX(file));
+        assignHeadersAndRows(tabKey, batch, uni.aoa);
+        if (uni.notes.length) batch.note = uni.notes.join(' ');
       } else if (ext === 'pdf') {
         const lines = await parsePDF(file);
         const txs = extractTransactionsFromLines(lines);
@@ -461,6 +465,52 @@ async function handleFiles(tabKey, fileList) {
 
 function makeTransaction(tabKey, cells) {
   return { txId: genTxId(tabKey), cells, status: 'unmatched', match: null };
+}
+
+/* ── UNIPAYMENT-SPECIFIC RULES ──
+   Recognized by the file/source name containing "unipayment". Applied to
+   the raw parsed table (array-of-arrays), before transactions/IDs exist,
+   so filtered-out rows never consume a transaction ID:
+     1. Only rows with Status "Complete" are kept.
+     2. The CreateTime column is moved to the front of the header/cell
+        order so it renders right after the fixed ID/Source/Match columns.
+   Header names are matched loosely (case/space/underscore-insensitive)
+   so "Create Time", "create_time", "CreateTime" etc. all resolve. */
+function normalizeHeaderKey(h) {
+  return String(h ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function applyUnipaymentRules(tabKey, sourceName, aoa) {
+  const notes = [];
+  if (tabKey !== 'bank' || !/unipayment/i.test(sourceName) || !aoa || !aoa.length) {
+    return { aoa, notes };
+  }
+
+  const headerRow = aoa[0];
+  const keys = headerRow.map(normalizeHeaderKey);
+  const statusIdx = keys.indexOf('status');
+  const createTimeIdx = keys.indexOf('createtime');
+  let dataRows = aoa.slice(1);
+
+  if (statusIdx !== -1) {
+    const before = dataRows.length;
+    dataRows = dataRows.filter(r => String(r[statusIdx] ?? '').trim().toLowerCase() === 'complete');
+    const removed = before - dataRows.length;
+    if (removed > 0) notes.push(`${removed} Zeile(n) ohne Status "Complete" ausgeblendet.`);
+  } else {
+    notes.push('Keine Spalte "Status" gefunden — Filterung auf "Complete" konnte nicht angewendet werden.');
+  }
+
+  let newHeaderRow = headerRow;
+  if (createTimeIdx !== -1) {
+    const order = [createTimeIdx, ...headerRow.map((_, i) => i).filter(i => i !== createTimeIdx)];
+    newHeaderRow = order.map(i => headerRow[i]);
+    dataRows = dataRows.map(r => order.map(i => r[i]));
+  } else {
+    notes.push('Keine Spalte "CreateTime" gefunden.');
+  }
+
+  return { aoa: [newHeaderRow, ...dataRows], notes };
 }
 
 function assignHeadersAndRows(tabKey, batch, aoa) {
@@ -806,7 +856,7 @@ function renderBatchCard(tabKey, f) {
     bodyHtml = `<div class="error-box">${escapeHtml(f.error)}</div>`;
   } else if (f.status === 'success') {
     if (!f.transactions.length) {
-      bodyHtml = `<div class="error-box" style="color:var(--text-faint);background:transparent;">Keine Transaktionen in dieser Datei erkannt.</div>`;
+      bodyHtml = `<div class="error-box" style="color:var(--text-faint);background:transparent;">Keine Transaktionen in dieser Datei erkannt.${f.note ? ' ' + escapeHtml(f.note) : ''}</div>`;
     } else {
       bodyHtml = `
         <div class="table-scroll">
