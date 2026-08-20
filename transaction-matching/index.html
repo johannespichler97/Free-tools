@@ -433,6 +433,7 @@ async function handleFiles(tabKey, fileList) {
       status: 'parsing',
       error: null,
       source: deriveSourceName(file.name),
+      pspName: null, // set below if the file's content is recognized as a known PSP
       headers: [],
       transactions: [],
     };
@@ -449,20 +450,24 @@ async function handleFiles(tabKey, fileList) {
     try {
       if (ext === 'csv') {
         const text = await file.text();
-        const psp = applyPspRules(tabKey, batch.source, parseCSV(text));
+        const psp = applyPspRules(tabKey, parseCSV(text));
         assignHeadersAndRows(tabKey, batch, psp.aoa);
+        if (psp.pspName) { batch.pspName = psp.pspName; batch.source = psp.pspLabel; }
         if (psp.notes.length) batch.note = psp.notes.join(' ');
       } else if (ext === 'xlsx' || ext === 'xls') {
-        const psp = applyPspRules(tabKey, batch.source, await parseXLSX(file));
+        const psp = applyPspRules(tabKey, await parseXLSX(file));
         assignHeadersAndRows(tabKey, batch, psp.aoa);
+        if (psp.pspName) { batch.pspName = psp.pspName; batch.source = psp.pspLabel; }
         if (psp.notes.length) batch.note = psp.notes.join(' ');
       } else if (ext === 'pdf') {
         const rawItems = await parsePdfItems(file);
-        const bankParser = PDF_BANK_PARSERS.find(p => p.detect(batch.source, rawItems));
+        const bankParser = PDF_BANK_PARSERS.find(p => p.detect(rawItems));
         const structured = bankParser ? bankParser.parse(rawItems) : null;
         if (structured && structured.rows.length) {
           batch.headers = structured.headers;
           batch.transactions = structured.rows.map(r => makeTransaction(tabKey, r));
+          batch.pspName = bankParser.name;
+          batch.source = bankParser.label;
           batch.note = `Strukturiert aus dem erkannten ${bankParser.label} PDF-Format extrahiert.`;
         } else {
           // Not a recognized statement layout (or its table wasn't found) —
@@ -496,14 +501,16 @@ function makeTransaction(tabKey, cells) {
 
 /* ── PSP-SPECIFIC UPLOAD RULES ──
    Each recognized PSP gets a config entry: how to recognize its files
-   (by source/file name), which column to filter on, and which column to
-   pull forward so it renders right after the fixed ID/Source/Match
-   columns. Adding a new PSP is adding an entry here — no other code
-   needs to change. Applied to the raw parsed table (array-of-arrays),
-   before transactions/IDs exist, so filtered-out rows never consume a
-   transaction ID. Header names are matched loosely (case/space/
-   underscore-insensitive) so "Create Time", "create_time", "CreateTime"
-   all resolve the same way.
+   (by a "header signature" — a set of column names that only that PSP's
+   export has, never the filename), which column to filter on, and which
+   column to pull forward so it renders right after the fixed ID/Source/
+   Match columns. Adding a new PSP is adding an entry here — no other
+   code needs to change. Applied to the raw parsed table (array-of-
+   arrays), before transactions/IDs exist, so filtered-out rows never
+   consume a transaction ID. Header names are matched loosely (case/
+   space/underscore-insensitive) so "Create Time", "create_time",
+   "CreateTime" all resolve the same way — headerSignature entries use
+   that same normalized form.
 
    `matchRules` drives the AUTOMATIC MATCHING ENGINE further down — most
    PSPs need only one (a bank column compared against an MT5 comment
@@ -555,10 +562,14 @@ function lastUnderscoreSuffixKey() {
   };
 }
 
+/* All present (AND, not OR) => that PSP. Each list is deliberately built
+   from column names distinctive enough that no other recognized PSP's
+   export could plausibly satisfy it — see matchesHeaderSignature(). */
 const PSP_RULES = [
   {
     name: 'unipayment',
-    sourceRegex: /unipayment/i,
+    label: 'Unipayment',
+    headerSignature: ['appid', 'orderid', 'paycurrency', 'createtime'],
     reorderColumn: 'createtime',
     reorderColumnLabel: 'CreateTime',
     filters: [
@@ -570,7 +581,8 @@ const PSP_RULES = [
   },
   {
     name: 'alphapo',
-    sourceRegex: /alphapo/i,
+    label: 'Alphapo',
+    headerSignature: ['entryid', 'transactionid', 'miningfeeamount', 'riskscorescorechain'],
     reorderColumn: 'date',
     reorderColumnLabel: 'DATE',
     filters: [
@@ -594,7 +606,8 @@ const PSP_RULES = [
   },
   {
     name: 'uniwire',
-    sourceRegex: /uniwire/i,
+    label: 'Uniwire',
+    headerSignature: ['uuid', 'zeroconffee', 'integratorfee'],
     /* Uniwire exports always carry one trailing summary/total row with no
        DATE value — notEmpty on 'date' drops it before it ever becomes a
        transaction. No reorderColumn: unlike Unipayment/Alphapo, moving
@@ -609,7 +622,8 @@ const PSP_RULES = [
   },
   {
     name: 't365',
-    sourceRegex: /transact365|t365/i,
+    label: 'T365',
+    headerSignature: ['merchantid', 'midid', 'sendpostback', 'checkstatus'],
     reorderColumn: 'date',
     reorderColumnLabel: 'Date',
     filters: [
@@ -623,11 +637,12 @@ const PSP_RULES = [
   },
   {
     name: 'narvi',
-    sourceRegex: /narvi/i,
-    /* No filters/reorderColumn: Narvi only ever arrives as a PDF, parsed
-       by PDF_BANK_PARSERS above straight into its final column layout —
-       applyPspRules() (CSV/XLSX only) never runs for it. This entry
-       exists purely to plug Narvi into the matching engine below. */
+    label: 'Narvi',
+    /* No headerSignature/filters/reorderColumn: Narvi only ever arrives
+       as a PDF, recognized and parsed by PDF_BANK_PARSERS above straight
+       into its final column layout — applyPspRules() (CSV/XLSX only)
+       never runs for it. This entry exists purely to plug Narvi into the
+       matching engine below. */
     filters: [],
     matchRules: [
       {
@@ -657,14 +672,25 @@ function normalizeHeaderKey(h) {
   return String(h ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
-function applyPspRules(tabKey, sourceName, aoa) {
+/* True when every column in `signature` is present among `headerKeys`
+   (already-normalized column names) — an AND match, not OR, which is
+   what makes short signatures safe to use: T365 alone has BOTH
+   "merchantid" and "sendpostback", so requiring both rules out every
+   other PSP even though some share one or the other term generically. */
+function matchesHeaderSignature(headerKeys, signature) {
+  return signature.every(col => headerKeys.includes(col));
+}
+
+function applyPspRules(tabKey, aoa) {
   const notes = [];
-  if (tabKey !== 'bank' || !aoa || !aoa.length) return { aoa, notes };
-  const rule = PSP_RULES.find(r => r.sourceRegex.test(sourceName));
-  if (!rule) return { aoa, notes };
+  const none = { aoa, notes, pspName: null, pspLabel: null };
+  if (tabKey !== 'bank' || !aoa || !aoa.length) return none;
 
   const headerRow = aoa[0];
   const keys = headerRow.map(normalizeHeaderKey);
+  const rule = PSP_RULES.find(r => r.headerSignature && matchesHeaderSignature(keys, r.headerSignature));
+  if (!rule) return none;
+
   let dataRows = aoa.slice(1);
 
   (rule.filters || []).forEach(f => {
@@ -708,7 +734,7 @@ function applyPspRules(tabKey, sourceName, aoa) {
     }
   });
 
-  return { aoa: [newHeaderRow, ...dataRows], notes };
+  return { aoa: [newHeaderRow, ...dataRows], notes, pspName: rule.name, pspLabel: rule.label };
 }
 
 function assignHeadersAndRows(tabKey, batch, aoa) {
@@ -922,8 +948,10 @@ const PDF_BANK_PARSERS = [
   {
     name: 'narvi',
     label: 'Narvi',
-    detect(sourceName, items) {
-      return /narvi/i.test(sourceName) || items.some(it => /narvi/i.test(it.str));
+    detect(items) {
+      // Purely content-based: the statement's own text (letterhead,
+      // footer disclaimer) names Narvi — the filename is never consulted.
+      return items.some(it => /narvi/i.test(it.str));
     },
     /* Narvi's transaction table has 4 columns — Date | Debtor/creditor |
        Details | Amount — but each transaction spans several visual rows
@@ -1258,12 +1286,13 @@ function valuesLooselyMatch(a, b) {
 const MATCH_RULES = PSP_RULES.flatMap(rule =>
   (rule.matchRules || []).map(mr => ({
     name: rule.name + (rule.matchRules.length > 1 ? ':' + mr.id : ''),
-    /* Bank/PSP side: files recognized as this PSP (by source name),
-       restricted to still-unmatched rows with a non-empty key. */
+    /* Bank/PSP side: files recognized as this PSP (by content — see
+       applyPspRules()/PDF_BANK_PARSERS, which set f.pspName at upload
+       time), restricted to still-unmatched rows with a non-empty key. */
     collectBankCandidates() {
       const out = [];
       state.bank.files.forEach(f => {
-        if (!rule.sourceRegex.test(f.source)) return;
+        if (f.pspName !== rule.name) return;
         f.transactions.forEach(tx => {
           if (tx.status !== 'unmatched') return;
           const key = mr.bankKey(f, tx);
