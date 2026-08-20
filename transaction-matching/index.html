@@ -219,7 +219,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
   <section class="hero">
     <div class="hero-inner">
       <h1>Transaction Matching Platform</h1>
-      <p>Lade Bank-/PSP-Auszüge und MT5-Transaktionen hoch (PDF, CSV oder XLSX). Die Plattform zerlegt sie in einzelne Transaktionen und listet sie tabellarisch auf. Die automatische Matching-Engine gleicht Unipayment- (OrderId), Alphapo- (TRANSACTION_ID), Uniwire- (uuid, per Teilstring), T365- (id) und Narvi-Transaktionen (Einzahlung: Referenz-ID, Auszahlung: Nummer aus dem Titel) bereits selbstständig mit dem MT5-Kommentar ab; weitere PSPs und Regeln folgen Schritt für Schritt.</p>
+      <p>Lade Bank-/PSP-Auszüge und MT5-Transaktionen hoch (PDF, CSV oder XLSX). Die Plattform zerlegt sie in einzelne Transaktionen und listet sie tabellarisch auf. Die automatische Matching-Engine gleicht Unipayment- (OrderId), Alphapo- (Einzahlung: TRANSACTION_ID, Auszahlung: Nummer aus NOTE), Uniwire- (uuid, per Teilstring), T365- (id) und Narvi-Transaktionen (Einzahlung: Referenz-ID, Auszahlung: Nummer aus dem Titel) bereits selbstständig mit dem MT5-Kommentar ab; weitere PSPs und Regeln folgen Schritt für Schritt.</p>
     </div>
   </section>
 
@@ -272,7 +272,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
         <input type="file" id="fileInput-bank" multiple accept=".pdf,.csv,.xlsx,.xls" />
       </div>
       <div class="tab-toolbar" id="toolbar-bank" style="display:none;">
-        <div class="tab-toolbar-note">Jede hochgeladene Datei wird als eigene Tabelle unten angezeigt. Unipayment- (OrderId), Alphapo- (TRANSACTION_ID), Uniwire- (uuid), T365- (id) und Narvi-Transaktionen (Einzahlungen über Referenz-ID, Auszahlungen über die Nummer im Titel) werden automatisch mit MT5 abgeglichen; alles andere lässt sich über die Match-Spalte manuell zuweisen oder ohne Gegenbuchung genehmigen.</div>
+        <div class="tab-toolbar-note">Jede hochgeladene Datei wird als eigene Tabelle unten angezeigt. Unipayment- (OrderId), Alphapo- (Einzahlung: TRANSACTION_ID, Auszahlung: Nummer aus NOTE), Uniwire- (uuid), T365- (id) und Narvi-Transaktionen (Einzahlung: Referenz-ID, Auszahlung: Nummer im Titel) werden automatisch mit MT5 abgeglichen; alles andere lässt sich über die Match-Spalte manuell zuweisen oder ohne Gegenbuchung genehmigen.</div>
         <div style="display:flex; gap:8px; flex-shrink:0;">
           <button class="auto-match-btn" onclick="triggerManualAutoMatch()">⚡ Automatisch matchen</button>
           <button class="clear-all-btn" onclick="clearTab('bank')">Alle entfernen</button>
@@ -523,6 +523,37 @@ function columnKey(columnName) {
 function prefixCommentKey(prefix) {
   return comment => extractOrderRefFromComment(comment, prefix);
 }
+/* Withdrawal matching, shared by Narvi and Alphapo: the bank side names a
+   reference number after a literal "from" at the end of some text field
+   (Narvi's Titel, Alphapo's NOTE); requireType, if given, additionally
+   restricts this to rows whose TYPE column equals it (Alphapo's TYPE is
+   explicitly checked so a deposit's NOTE can never accidentally match). */
+function fromSuffixKey(columnName, requireType) {
+  return (file, tx) => {
+    const idx = findColumnIndex(file.headers, columnName);
+    if (idx === -1) return null;
+    if (requireType) {
+      const typeIdx = findColumnIndex(file.headers, 'type');
+      if (typeIdx === -1) return null;
+      if (String(tx.cells[typeIdx] ?? '').trim().toLowerCase() !== requireType) return null;
+    }
+    const m = /from\s+(\S+)\s*$/i.exec(String(tx.cells[idx] ?? ''));
+    return m ? m[1].trim() : null;
+  };
+}
+/* MT5 side of the same withdrawal comments, e.g. "F_Automatic_Withdraw_
+   12554" — these aren't PSP-name-prefixed like deposit comments, so this
+   isn't built on prefixCommentKey/extractOrderRefFromComment: it just
+   takes whatever follows the LAST underscore. */
+function lastUnderscoreSuffixKey() {
+  return comment => {
+    const s = String(comment ?? '').trim();
+    const cut = s.lastIndexOf('_');
+    if (cut === -1) return null;
+    const rest = s.slice(cut + 1).trim();
+    return rest || null;
+  };
+}
 
 const PSP_RULES = [
   {
@@ -548,6 +579,17 @@ const PSP_RULES = [
     ],
     matchRules: [
       { id: 'transactionid', label: 'TRANSACTION_ID', column: 'transactionid', bankKey: columnKey('transactionid'), mt5Key: prefixCommentKey('alphapo') },
+      {
+        // Withdrawals also pay out via the same "F_Automatic_Withdraw_…"
+        // MT5 comments Narvi uses — Alphapo's own reference sits in NOTE,
+        // e.g. "Jakub Makselan ACC1783031075696 from 12554". Restricted to
+        // TYPE "withdrawal" rows only, so a deposit's NOTE never matches.
+        id: 'withdrawal',
+        label: 'NOTE "from …" (Auszahlung)',
+        column: 'note',
+        bankKey: fromSuffixKey('note', 'withdrawal'),
+        mt5Key: lastUnderscoreSuffixKey(),
+      },
     ],
   },
   {
@@ -604,19 +646,8 @@ const PSP_RULES = [
         id: 'withdrawal',
         label: 'Titel "from …" (Auszahlung)',
         column: 'titel',
-        bankKey(file, tx) {
-          const idx = findColumnIndex(file.headers, 'titel');
-          if (idx === -1) return null;
-          const m = /from\s+(\S+)\s*$/i.exec(String(tx.cells[idx] ?? ''));
-          return m ? m[1].trim() : null;
-        },
-        mt5Key(comment) {
-          const s = String(comment ?? '').trim();
-          const cut = s.lastIndexOf('_');
-          if (cut === -1) return null;
-          const rest = s.slice(cut + 1).trim();
-          return rest || null;
-        },
+        bankKey: fromSuffixKey('titel'), // no TYPE column on Narvi — the "from …" shape alone identifies a withdrawal
+        mt5Key: lastUnderscoreSuffixKey(),
       },
     ],
   },
