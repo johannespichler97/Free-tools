@@ -219,7 +219,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
   <section class="hero">
     <div class="hero-inner">
       <h1>Transaction Matching Platform</h1>
-      <p>Lade Bank-/PSP-Auszüge und MT5-Transaktionen hoch (PDF, CSV oder XLSX). Die Plattform zerlegt sie in einzelne Transaktionen und listet sie tabellarisch auf. Die automatische Matching-Engine gleicht Unipayment- (OrderId), Alphapo- (TRANSACTION_ID), Uniwire- (uuid, per Teilstring), T365- (id) und Narvi-Transaktionen (Referenz-ID) bereits selbstständig mit dem MT5-Kommentar ab; weitere PSPs und Regeln folgen Schritt für Schritt.</p>
+      <p>Lade Bank-/PSP-Auszüge und MT5-Transaktionen hoch (PDF, CSV oder XLSX). Die Plattform zerlegt sie in einzelne Transaktionen und listet sie tabellarisch auf. Die automatische Matching-Engine gleicht Unipayment- (OrderId), Alphapo- (TRANSACTION_ID), Uniwire- (uuid, per Teilstring), T365- (id) und Narvi-Transaktionen (Einzahlung: Referenz-ID, Auszahlung: Nummer aus dem Titel) bereits selbstständig mit dem MT5-Kommentar ab; weitere PSPs und Regeln folgen Schritt für Schritt.</p>
     </div>
   </section>
 
@@ -272,7 +272,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
         <input type="file" id="fileInput-bank" multiple accept=".pdf,.csv,.xlsx,.xls" />
       </div>
       <div class="tab-toolbar" id="toolbar-bank" style="display:none;">
-        <div class="tab-toolbar-note">Jede hochgeladene Datei wird als eigene Tabelle unten angezeigt. Unipayment- (OrderId), Alphapo- (TRANSACTION_ID), Uniwire- (uuid), T365- (id) und Narvi-Transaktionen (Referenz-ID) werden automatisch mit MT5 abgeglichen; alles andere lässt sich über die Match-Spalte manuell zuweisen oder ohne Gegenbuchung genehmigen.</div>
+        <div class="tab-toolbar-note">Jede hochgeladene Datei wird als eigene Tabelle unten angezeigt. Unipayment- (OrderId), Alphapo- (TRANSACTION_ID), Uniwire- (uuid), T365- (id) und Narvi-Transaktionen (Einzahlungen über Referenz-ID, Auszahlungen über die Nummer im Titel) werden automatisch mit MT5 abgeglichen; alles andere lässt sich über die Match-Spalte manuell zuweisen oder ohne Gegenbuchung genehmigen.</div>
         <div style="display:flex; gap:8px; flex-shrink:0;">
           <button class="auto-match-btn" onclick="triggerManualAutoMatch()">⚡ Automatisch matchen</button>
           <button class="clear-all-btn" onclick="clearTab('bank')">Alle entfernen</button>
@@ -295,7 +295,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
         <input type="file" id="fileInput-mt5" multiple accept=".pdf,.csv,.xlsx,.xls" />
       </div>
       <div class="tab-toolbar" id="toolbar-mt5" style="display:none;">
-        <div class="tab-toolbar-note">Jede hochgeladene Datei wird als eigene Tabelle unten angezeigt. Kommentare wie "Unipayment:11034-27160", "Alphapo:183572775", "Uniwire:71b55428-de1d-4f4e-ab_", "Transact365:13553-20105" oder "CRM_Deposit:1WG4SF5CMPF3VMA6" werden automatisch mit der passenden Bank-Transaktion abgeglichen; alles andere lässt sich über die Match-Spalte manuell zuweisen oder ohne Gegenbuchung genehmigen.</div>
+        <div class="tab-toolbar-note">Jede hochgeladene Datei wird als eigene Tabelle unten angezeigt. Kommentare wie "Unipayment:11034-27160", "Alphapo:183572775", "Uniwire:71b55428-de1d-4f4e-ab_", "Transact365:13553-20105", "CRM_Deposit:1WG4SF5CMPF3VMA6" (Narvi-Einzahlung) oder "F_Automatic_Withdraw_8829" (Narvi-Auszahlung, Nummer nach dem letzten "_") werden automatisch mit der passenden Bank-Transaktion abgeglichen; alles andere lässt sich über die Match-Spalte manuell zuweisen oder ohne Gegenbuchung genehmigen.</div>
         <div style="display:flex; gap:8px; flex-shrink:0;">
           <button class="auto-match-btn" onclick="triggerManualAutoMatch()">⚡ Automatisch matchen</button>
           <button class="clear-all-btn" onclick="clearTab('mt5')">Alle entfernen</button>
@@ -504,8 +504,26 @@ function makeTransaction(tabKey, cells) {
    transaction ID. Header names are matched loosely (case/space/
    underscore-insensitive) so "Create Time", "create_time", "CreateTime"
    all resolve the same way.
-   matchColumn is the column later used to auto-match against MT5 (see
-   the AUTOMATIC MATCHING ENGINE section below). */
+
+   `matchRules` drives the AUTOMATIC MATCHING ENGINE further down — most
+   PSPs need only one (a bank column compared against an MT5 comment
+   carrying the PSP's name as a prefix), built with columnKey()/
+   prefixCommentKey() below. A PSP can list more than one when different
+   transaction kinds are matched differently (Narvi: deposits via
+   Referenz-ID, withdrawals via a different field/comment shape
+   entirely). */
+function columnKey(columnName) {
+  return (file, tx) => {
+    const idx = findColumnIndex(file.headers, columnName);
+    if (idx === -1) return null;
+    const v = tx.cells[idx];
+    return String(v ?? '').trim() ? v : null;
+  };
+}
+function prefixCommentKey(prefix) {
+  return comment => extractOrderRefFromComment(comment, prefix);
+}
+
 const PSP_RULES = [
   {
     name: 'unipayment',
@@ -515,8 +533,9 @@ const PSP_RULES = [
     filters: [
       { column: 'status', label: 'Status', equals: 'complete' },
     ],
-    matchColumn: 'orderid',
-    matchColumnLabel: 'OrderId',
+    matchRules: [
+      { id: 'orderid', label: 'OrderId', column: 'orderid', bankKey: columnKey('orderid'), mt5Key: prefixCommentKey('unipayment') },
+    ],
   },
   {
     name: 'alphapo',
@@ -527,8 +546,9 @@ const PSP_RULES = [
       { column: 'type', label: 'TYPE', oneOf: ['deposit', 'withdrawal'] },
       { column: 'status', label: 'STATUS', equals: 'confirmed' },
     ],
-    matchColumn: 'transactionid',
-    matchColumnLabel: 'TRANSACTION_ID',
+    matchRules: [
+      { id: 'transactionid', label: 'TRANSACTION_ID', column: 'transactionid', bankKey: columnKey('transactionid'), mt5Key: prefixCommentKey('alphapo') },
+    ],
   },
   {
     name: 'uniwire',
@@ -541,8 +561,9 @@ const PSP_RULES = [
       { column: 'date', label: 'DATE', notEmpty: true },
       { column: 'status', label: 'Status', equals: 'complete' },
     ],
-    matchColumn: 'uuid',
-    matchColumnLabel: 'uuid',
+    matchRules: [
+      { id: 'uuid', label: 'uuid', column: 'uuid', bankKey: columnKey('uuid'), mt5Key: prefixCommentKey('uniwire') },
+    ],
   },
   {
     name: 't365',
@@ -552,12 +573,11 @@ const PSP_RULES = [
     filters: [
       { column: 'status', label: 'Status', equals: 'success' },
     ],
-    matchColumn: 'id',
-    matchColumnLabel: 'id',
-    /* The MT5 comment prefix ("Transact365:13553-20105") doesn't match
-       the PSP's short name — collectMt5Candidates() below falls back to
-       this field instead of `name` when searching comments. */
-    commentPrefix: 'transact365',
+    matchRules: [
+      /* The MT5 comment prefix ("Transact365:13553-20105") doesn't match
+         the PSP's short name, hence the explicit prefixCommentKey(). */
+      { id: 'id', label: 'id', column: 'id', bankKey: columnKey('id'), mt5Key: prefixCommentKey('transact365') },
+    ],
   },
   {
     name: 'narvi',
@@ -567,10 +587,38 @@ const PSP_RULES = [
        applyPspRules() (CSV/XLSX only) never runs for it. This entry
        exists purely to plug Narvi into the matching engine below. */
     filters: [],
-    matchColumn: 'referenzid', // the "Referenz-ID" column PDF_BANK_PARSERS produces
-    matchColumnLabel: 'Referenz-ID',
-    /* MT5 comment reads "CRM_Deposit:1WG4SF5CMPF3VMA6", not "Narvi:...". */
-    commentPrefix: 'CRM_Deposit',
+    matchRules: [
+      {
+        // Deposits: Referenz-ID <-> MT5 comment "CRM_Deposit:<id>".
+        id: 'deposit',
+        label: 'Referenz-ID (Einzahlung)',
+        column: 'referenzid',
+        bankKey: columnKey('referenzid'),
+        mt5Key: prefixCommentKey('CRM_Deposit'),
+      },
+      {
+        // Withdrawals (negative Betrag): the Titel column reads e.g.
+        // "ACC1768909286936 from 5911" — the number after "from" is
+        // compared against the MT5 comment, e.g.
+        // "F_Automatic_Withdraw_5911" — the number after the LAST "_".
+        id: 'withdrawal',
+        label: 'Titel "from …" (Auszahlung)',
+        column: 'titel',
+        bankKey(file, tx) {
+          const idx = findColumnIndex(file.headers, 'titel');
+          if (idx === -1) return null;
+          const m = /from\s+(\S+)\s*$/i.exec(String(tx.cells[idx] ?? ''));
+          return m ? m[1].trim() : null;
+        },
+        mt5Key(comment) {
+          const s = String(comment ?? '').trim();
+          const cut = s.lastIndexOf('_');
+          if (cut === -1) return null;
+          const rest = s.slice(cut + 1).trim();
+          return rest || null;
+        },
+      },
+    ],
   },
 ];
 
@@ -623,9 +671,11 @@ function applyPspRules(tabKey, sourceName, aoa) {
     }
   }
 
-  if (rule.matchColumn && keys.indexOf(rule.matchColumn) === -1) {
-    notes.push(`Keine Spalte "${rule.matchColumnLabel}" gefunden — automatisches Matching für diese Datei nicht möglich.`);
-  }
+  (rule.matchRules || []).forEach(mr => {
+    if (mr.column && keys.indexOf(mr.column) === -1) {
+      notes.push(`Keine Spalte "${mr.label}" gefunden — automatisches Matching (${mr.label}) für diese Datei nicht möglich.`);
+    }
+  });
 
   return { aoa: [newHeaderRow, ...dataRows], notes };
 }
@@ -1142,13 +1192,14 @@ function jumpToMatch(targetTab, targetTxId) {
    approvals, and earlier auto-matches are never overwritten — and a
    pair a person explicitly unmatched is skipped via rejectedMatchPairs.
 
-   Rules are derived straight from PSP_RULES (defined earlier, next to
-   the upload/filter rules) — each PSP there gets a matching rule here
-   for free: its Bank/PSP file's matchColumn (e.g. Unipayment's OrderId,
-   Alphapo's TRANSACTION_ID, Uniwire's uuid) is compared against the
-   order reference embedded in the MT5 transaction's "Comment" column,
-   e.g. "Unipayment:11034-27160" or "Alphapo:183572775" carries the
-   order reference right after the PSP name.
+   Rules are derived straight from PSP_RULES's matchRules (defined
+   earlier, next to the upload/filter rules) — each one there gets a
+   matching rule here for free: bankKey() reads a value off the Bank/PSP
+   transaction (usually one column, via columnKey()), mt5Key() pulls the
+   comparable value out of the MT5 Comment (usually a PSP-name prefix,
+   via prefixCommentKey()). Most PSPs need only one matchRule; Narvi has
+   two, because deposits and withdrawals are identified completely
+   differently in its statement.
 
    Matching itself is a loose contains-or-equal comparison (see
    valuesLooselyMatch below), which is what makes Uniwire work: its MT5
@@ -1173,43 +1224,40 @@ function valuesLooselyMatch(a, b) {
   return x === y || x.includes(y) || y.includes(x);
 }
 
-const MATCH_RULES = PSP_RULES.map(rule => ({
-  name: rule.name,
-  /* Bank/PSP side: files recognized as this PSP (by source name) with
-     the configured matchColumn, restricted to still-unmatched rows. */
-  collectBankCandidates() {
-    const out = [];
-    state.bank.files.forEach(f => {
-      if (!rule.sourceRegex.test(f.source)) return;
-      const idx = findColumnIndex(f.headers, rule.matchColumn);
-      if (idx === -1) return;
-      f.transactions.forEach(tx => {
-        if (tx.status !== 'unmatched') return;
-        const key = tx.cells[idx];
-        if (String(key ?? '').trim()) out.push({ file: f, tx, key });
+const MATCH_RULES = PSP_RULES.flatMap(rule =>
+  (rule.matchRules || []).map(mr => ({
+    name: rule.name + (rule.matchRules.length > 1 ? ':' + mr.id : ''),
+    /* Bank/PSP side: files recognized as this PSP (by source name),
+       restricted to still-unmatched rows with a non-empty key. */
+    collectBankCandidates() {
+      const out = [];
+      state.bank.files.forEach(f => {
+        if (!rule.sourceRegex.test(f.source)) return;
+        f.transactions.forEach(tx => {
+          if (tx.status !== 'unmatched') return;
+          const key = mr.bankKey(f, tx);
+          if (key) out.push({ file: f, tx, key });
+        });
       });
-    });
-    return out;
-  },
-  /* MT5 side: any file with a Comment column whose value names this PSP
-     and carries an order reference. Most PSPs' comment prefix is just
-     their name, but a few (T365 → "Transact365:...") don't match — those
-     set commentPrefix explicitly instead. */
-  collectMt5Candidates() {
-    const out = [];
-    const prefix = rule.commentPrefix || rule.name;
-    state.mt5.files.forEach(f => {
-      const commentIdx = findColumnIndex(f.headers, 'comment');
-      if (commentIdx === -1) return;
-      f.transactions.forEach(tx => {
-        if (tx.status !== 'unmatched') return;
-        const extracted = extractOrderRefFromComment(tx.cells[commentIdx], prefix);
-        if (extracted) out.push({ file: f, tx, key: extracted });
+      return out;
+    },
+    /* MT5 side: any file with a Comment column that yields a key for
+       this rule (mt5Key returns null/'' when the comment doesn't apply). */
+    collectMt5Candidates() {
+      const out = [];
+      state.mt5.files.forEach(f => {
+        const commentIdx = findColumnIndex(f.headers, 'comment');
+        if (commentIdx === -1) return;
+        f.transactions.forEach(tx => {
+          if (tx.status !== 'unmatched') return;
+          const key = mr.mt5Key(tx.cells[commentIdx]);
+          if (key) out.push({ file: f, tx, key });
+        });
       });
-    });
-    return out;
-  },
-}));
+      return out;
+    },
+  }))
+);
 
 function runAutoMatching() {
   let matchedCount = 0;
