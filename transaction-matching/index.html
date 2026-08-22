@@ -64,11 +64,10 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-dim); }
 .section-badge { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: 3px 8px; border-radius: 20px; background: var(--bg-panel-2); border: 1px solid var(--border); color: var(--text-faint); }
 
-.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 36px; }
-@media(max-width: 860px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
-@media(max-width: 480px) { .kpi-grid { grid-template-columns: 1fr; } }
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin-bottom: 36px; }
 .kpi-card { background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px 20px; }
 .kpi-label { font-size: 12px; color: var(--text-dim); font-weight: 500; }
+.kpi-live-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--success); margin-left: 4px; animation: pulse 2.2s infinite; vertical-align: middle; }
 .kpi-value { font-size: 26px; font-weight: 700; font-family: var(--font-mono); color: var(--text-faint); margin-top: 8px; }
 .kpi-sub { font-size: 11.5px; color: var(--text-faint); margin-top: 6px; }
 
@@ -145,6 +144,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .match-pill.unmatched { background: var(--danger-dim); color: var(--danger); }
 .match-pill.matched   { background: var(--success-dim); color: var(--success); }
 .match-pill.approved  { background: rgba(245,165,36,0.14); color: var(--accent-2); }
+.match-pill.ib-payout { background: var(--bg-panel-2); color: var(--text-faint); border: 1px solid var(--border); cursor: default; }
 .match-jump { appearance: none; background: var(--bg-panel-2); border: 1px solid var(--border); color: var(--text-dim); font-family: var(--font-mono); font-size: 10.5px; font-weight: 600; padding: 4px 8px; border-radius: 20px; cursor: pointer; white-space: nowrap; }
 .match-jump:hover { color: var(--accent); border-color: var(--accent); }
 
@@ -228,7 +228,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
     <!-- ── OVERVIEW (placeholder) ── -->
     <div class="section-head">
       <span class="section-title">Übersicht</span>
-      <span class="section-badge">Platzhalter</span>
+      <span class="section-badge">Teilweise live</span>
     </div>
     <div class="kpi-grid">
       <div class="kpi-card">
@@ -250,6 +250,11 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
         <div class="kpi-label">Match-Rate</div>
         <div class="kpi-value">—</div>
         <div class="kpi-sub">Bald verfügbar</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">IB Payouts <span class="kpi-live-dot" title="Live berechnet"></span></div>
+        <div class="kpi-value" id="kpiIbPayoutsValue">—</div>
+        <div class="kpi-sub" id="kpiIbPayoutsSub">Noch keine Payouts</div>
       </div>
     </div>
 
@@ -740,13 +745,26 @@ function applyPspRules(tabKey, aoa) {
 function assignHeadersAndRows(tabKey, batch, aoa) {
   const rows = (aoa || []).filter(r => Array.isArray(r) && r.some(c => String(c ?? '').trim() !== ''));
   if (!rows.length) { batch.headers = []; batch.transactions = []; return; }
-  const headerRow = rows[0].map((h, i) => {
-    const label = String(h ?? '').trim();
-    return label || ('Spalte ' + (i + 1));
-  });
-  const width = headerRow.length;
+
+  // Stop at the first blank header cell instead of labeling every trailing
+  // column "Spalte N" — some exports (e.g. a combined MT5 report) glue an
+  // unrelated pivot-table summary onto the right of the real table, and it
+  // always starts past a blank gap column. A real table's header never has
+  // a legitimate gap followed by more real columns, so this is safe.
+  let width = 0;
+  while (width < rows[0].length && String(rows[0][width] ?? '').trim() !== '') width++;
+  if (width === 0) width = rows[0].length; // header row was entirely blank — keep everything rather than produce a 0-width table
+
+  const headerRow = rows[0].slice(0, width).map((h, i) => String(h ?? '').trim() || ('Spalte ' + (i + 1)));
   batch.headers = headerRow;
-  batch.transactions = rows.slice(1).map(r => {
+
+  // Some exports stack several sections in one sheet (e.g. Deposits,
+  // Withdrawals, Payouts, Transfers), each re-printing the header row —
+  // drop those before they become bogus transactions.
+  const isHeaderRepeat = r => headerRow.every((_, i) =>
+    String(r[i] ?? '').trim().toLowerCase() === String(rows[0][i] ?? '').trim().toLowerCase());
+
+  batch.transactions = rows.slice(1).filter(r => !isHeaderRepeat(r)).map(r => {
     const cells = [];
     for (let i = 0; i < width; i++) cells.push(String(r[i] ?? '').trim());
     return makeTransaction(tabKey, cells);
@@ -780,12 +798,12 @@ function removeFile(tabKey, id) {
     file.transactions.forEach(tx => { if (tx.match) clearMatchLink(tx); });
   }
   state[tabKey].files = state[tabKey].files.filter(f => f.id !== id);
-  renderTab('bank'); renderTab('mt5');
+  renderAll();
 }
 function clearTab(tabKey) {
   state[tabKey].files.forEach(f => f.transactions.forEach(tx => { if (tx.match) clearMatchLink(tx); }));
   state[tabKey].files = [];
-  renderTab('bank'); renderTab('mt5');
+  renderAll();
 }
 
 /* ── CSV PARSER (handles quoted fields, auto-detects , ; \t) ── */
@@ -1183,7 +1201,7 @@ function pickMatch(otherFileId, otherTxId) {
   const otherTabKey = TAB_META[tabKey].otherTab;
   linkTransactions(tabKey, fileId, txId, otherTabKey, otherFileId, otherTxId, 'manual');
   closeMatchModal();
-  renderTab('bank'); renderTab('mt5');
+  renderAll();
 }
 
 function approveCurrent() {
@@ -1194,7 +1212,7 @@ function approveCurrent() {
   found.tx.status = 'approved';
   found.tx.match = null;
   closeMatchModal();
-  renderTab('bank'); renderTab('mt5');
+  renderAll();
 }
 function unapproveCurrent() {
   if (!matchModalCtx) return;
@@ -1202,7 +1220,7 @@ function unapproveCurrent() {
   if (!found) return;
   found.tx.status = 'unmatched';
   closeMatchModal();
-  renderTab('bank'); renderTab('mt5');
+  renderAll();
 }
 function unmatchCurrent() {
   if (!matchModalCtx) return;
@@ -1216,7 +1234,7 @@ function unmatchCurrent() {
   }
   clearMatchLink(found.tx);
   closeMatchModal();
-  renderTab('bank'); renderTab('mt5');
+  renderAll();
 }
 
 /* Clears a transaction's match AND resets its counterpart back to
@@ -1319,6 +1337,176 @@ const MATCH_RULES = PSP_RULES.flatMap(rule =>
   }))
 );
 
+/* ── LIVE FX RATE (EUR → USD) ──
+   Needed for two things that both involve comparing amounts across
+   differently-denominated MT5 sub-accounts: the IB Payouts dashboard
+   total (below) and the Internal Transfer matching tolerance check
+   (further down). Fetched from a free, keyless, CORS-enabled API and
+   cached in localStorage; falls back to the last known-good cached rate,
+   or failing that a fixed approximate constant, if the fetch fails. */
+const FX_API_URL = 'https://open.er-api.com/v6/latest/EUR';
+const FX_FALLBACK_EUR_USD = 1.08;
+const FX_CACHE_KEY = 'reconmatch_eurUsdRate';
+const FX_CACHE_MAX_AGE_MS = 6 * 60 * 60 * 1000; // 6h — the API itself only updates ~daily anyway
+
+let fxState = { rate: FX_FALLBACK_EUR_USD, source: 'fallback', fetchedAt: null, loading: false };
+
+function loadCachedFxRate() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(FX_CACHE_KEY));
+    if (!parsed || typeof parsed.rate !== 'number' || !parsed.fetchedAt) return null;
+    return parsed;
+  } catch { return null; }
+}
+function saveCachedFxRate(rate, fetchedAt) {
+  try { localStorage.setItem(FX_CACHE_KEY, JSON.stringify({ rate, fetchedAt })); } catch {}
+}
+
+async function ensureFxRate(force) {
+  if (fxState.loading) return;
+  if (!force) {
+    const cached = loadCachedFxRate();
+    if (cached && Date.now() - cached.fetchedAt < FX_CACHE_MAX_AGE_MS) {
+      fxState = { rate: cached.rate, source: 'cached', fetchedAt: cached.fetchedAt, loading: false };
+      updateOverview();
+      return;
+    }
+  }
+  fxState = { ...fxState, loading: true };
+  updateOverview();
+  try {
+    const resp = await fetch(FX_API_URL);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    const rate = data && data.rates && data.rates.USD;
+    if (typeof rate !== 'number' || !isFinite(rate) || rate <= 0) throw new Error('Ungültige Kursdaten');
+    const fetchedAt = Date.now();
+    fxState = { rate, source: 'live', fetchedAt, loading: false };
+    saveCachedFxRate(rate, fetchedAt);
+  } catch (e) {
+    // Prefer a stale cached rate over the hardcoded constant — still
+    // better than nothing if today's fetch failed.
+    const stale = loadCachedFxRate();
+    fxState = stale
+      ? { rate: stale.rate, source: 'cached-stale', fetchedAt: stale.fetchedAt, loading: false }
+      : { rate: FX_FALLBACK_EUR_USD, source: 'fallback', fetchedAt: null, loading: false };
+  }
+  updateOverview();
+  runAutoMatchingWithToast(); // a just-arrived live rate can newly satisfy the Internal Transfer tolerance check
+}
+
+/* Converts an MT5 amount to USD. USC is Narvi/CRM's cent-denominated
+   sub-account currency — confirmed exactly 1:100 against USD across every
+   sample Internal Transfer pair, unlike EUR which is a real floating
+   rate. Returns null for a currency we don't know how to convert, rather
+   than guessing. */
+function convertToUsd(amount, currency) {
+  const n = Number(amount);
+  if (!isFinite(n)) return null;
+  const cur = String(currency ?? '').trim().toUpperCase();
+  if (cur === 'USD' || cur === '') return n;
+  if (cur === 'USC') return n / 100;
+  if (cur === 'EUR') return n * fxState.rate;
+  return null;
+}
+
+/* ── IB PAYOUTS ──
+   CRM_Payout:<id>-<random> comments are IB (introducing broker) payouts —
+   by design never matched against anything (see runAutoMatching below,
+   which simply never looks for them), just tallied on the dashboard. */
+function isIbPayoutTx(file, tx) {
+  const commentIdx = findColumnIndex(file.headers, 'comment');
+  if (commentIdx === -1) return false;
+  return /^CRM_Payout:/i.test(String(tx.cells[commentIdx] ?? '').trim());
+}
+
+/* ── INTERNAL TRANSFERS (MT5 ↔ MT5, not Bank/PSP ↔ MT5) ──
+   "Transfer from <login>" / "Transfer to <login>" comments record money
+   moved between two MT5 accounts — both sides live in the MT5 tab, so
+   this is a different shape of match than everything in MATCH_RULES
+   (which is always Bank/PSP ↔ MT5). A login pair can have several
+   transfers on the same day with different amounts, so pairing by login
+   reference alone isn't enough — candidates are disambiguated by
+   converting both amounts to USD and requiring them to agree within
+   INTERNAL_TRANSFER_TOLERANCE (generous, since our live EUR rate won't
+   exactly match whatever rate the platform itself used), breaking ties
+   between equally-good candidates by closest timestamp. */
+const INTERNAL_TRANSFER_TOLERANCE = 0.15; // 15%
+const TRANSFER_FROM_RE = /^Transfer from (\d+)$/i;
+const TRANSFER_TO_RE = /^Transfer to (\d+)$/i;
+
+function parseMt5Time(s) {
+  const m = /^(\d{4})\.(\d{2})\.(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/.exec(String(s ?? '').trim());
+  if (!m) return NaN;
+  return Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]);
+}
+
+function collectInternalTransferCandidates() {
+  const out = [];
+  state.mt5.files.forEach(f => {
+    const loginIdx = findColumnIndex(f.headers, 'login');
+    const commentIdx = findColumnIndex(f.headers, 'comment');
+    const amountIdx = findColumnIndex(f.headers, 'amount');
+    const currencyIdx = findColumnIndex(f.headers, 'currency');
+    const timeIdx = findColumnIndex(f.headers, 'time');
+    if (loginIdx === -1 || commentIdx === -1) return;
+    f.transactions.forEach(tx => {
+      if (tx.status !== 'unmatched') return;
+      const comment = String(tx.cells[commentIdx] ?? '').trim();
+      const fromM = TRANSFER_FROM_RE.exec(comment);
+      const toM = TRANSFER_TO_RE.exec(comment);
+      if (!fromM && !toM) return;
+      out.push({
+        file: f,
+        tx,
+        direction: fromM ? 'from' : 'to',
+        counterpartLogin: fromM ? fromM[1] : toM[1],
+        login: String(tx.cells[loginIdx] ?? '').trim(),
+        amount: amountIdx !== -1 ? tx.cells[amountIdx] : '',
+        currency: currencyIdx !== -1 ? tx.cells[currencyIdx] : '',
+        time: timeIdx !== -1 ? tx.cells[timeIdx] : '',
+      });
+    });
+  });
+  return out;
+}
+
+function runInternalTransferMatching() {
+  const candidates = collectInternalTransferCandidates();
+  const froms = candidates.filter(c => c.direction === 'from');
+  const tos = candidates.filter(c => c.direction === 'to');
+  let matchedCount = 0;
+
+  froms.forEach(f => {
+    if (f.tx.status !== 'unmatched') return;
+    const usdF = convertToUsd(f.amount, f.currency);
+    if (usdF === null) return;
+
+    let best = null, bestDiff = Infinity;
+    tos.forEach(t => {
+      if (t.tx.status !== 'unmatched') return;
+      if (t.login !== f.counterpartLogin || t.counterpartLogin !== f.login) return;
+      if (rejectedMatchPairs.has(pairKey('mt5', f.tx.txId, 'mt5', t.tx.txId))) return;
+      const usdT = convertToUsd(t.amount, t.currency);
+      if (usdT === null) return;
+      const diff = Math.abs(Math.abs(usdF) - Math.abs(usdT)) / Math.max(Math.abs(usdF), Math.abs(usdT), 0.01);
+      if (diff > INTERNAL_TRANSFER_TOLERANCE) return;
+      const better = diff < bestDiff - 1e-9;
+      const tie = Math.abs(diff - bestDiff) <= 1e-9;
+      if (better || (tie && best && Math.abs(parseMt5Time(f.time) - parseMt5Time(t.time)) < Math.abs(parseMt5Time(f.time) - parseMt5Time(best.time)))) {
+        best = t; bestDiff = diff;
+      }
+    });
+
+    if (best) {
+      linkTransactions('mt5', f.file.id, f.tx.txId, 'mt5', best.file.id, best.tx.txId, 'auto:internal-transfer');
+      matchedCount++;
+    }
+  });
+
+  return matchedCount;
+}
+
 function runAutoMatching() {
   let matchedCount = 0;
   MATCH_RULES.forEach(rule => {
@@ -1337,6 +1525,7 @@ function runAutoMatching() {
       }
     });
   });
+  matchedCount += runInternalTransferMatching();
   return matchedCount;
 }
 
@@ -1361,9 +1550,9 @@ function showToast(message, tone) {
    possibly match yet (e.g. only one side has files so far) stay quiet. */
 function runAutoMatchingWithToast() {
   const matched = runAutoMatching();
-  renderTab('bank'); renderTab('mt5');
+  renderAll();
   if (matched > 0) {
-    showToast(`⚡ ${matched} Transaktion${matched === 1 ? '' : 'en'} automatisch zugeordnet (Unipayment).`);
+    showToast(`⚡ ${matched} Transaktion${matched === 1 ? '' : 'en'} automatisch zugeordnet.`);
   }
   return matched;
 }
@@ -1393,7 +1582,58 @@ function renderTab(tabKey) {
   listEl.innerHTML = files.map(f => renderBatchCard(tabKey, f)).join('');
 }
 
+function renderAll() {
+  renderTab('bank');
+  renderTab('mt5');
+  updateOverview();
+}
+
+/* Only the IB Payouts card is live so far — the other four Übersicht
+   cards stay static placeholders until that's asked for. */
+function updateOverview() {
+  let totalUsd = 0, count = 0, unconvertible = 0;
+  state.mt5.files.forEach(f => {
+    const commentIdx = findColumnIndex(f.headers, 'comment');
+    const amountIdx = findColumnIndex(f.headers, 'amount');
+    const currencyIdx = findColumnIndex(f.headers, 'currency');
+    if (commentIdx === -1 || amountIdx === -1) return;
+    f.transactions.forEach(tx => {
+      if (!isIbPayoutTx(f, tx)) return;
+      count++;
+      const usd = convertToUsd(tx.cells[amountIdx], currencyIdx !== -1 ? tx.cells[currencyIdx] : 'USD');
+      if (usd === null) { unconvertible++; return; }
+      totalUsd += usd;
+    });
+  });
+
+  const valueEl = document.getElementById('kpiIbPayoutsValue');
+  const subEl = document.getElementById('kpiIbPayoutsSub');
+  if (!valueEl || !subEl) return; // guard: called before DOM ready in edge cases
+
+  valueEl.textContent = count
+    ? totalUsd.toLocaleString('de-DE', { style: 'currency', currency: 'USD' })
+    : '—';
+
+  const parts = [];
+  parts.push(count ? `${count} Transaktion${count === 1 ? '' : 'en'}` : 'Noch keine Payouts');
+  if (unconvertible > 0) parts.push(`${unconvertible} nicht umrechenbar`);
+  const fxLabel = fxState.loading
+    ? 'Kurs wird geladen…'
+    : `1 EUR = ${fxState.rate.toFixed(4)} USD (${
+        fxState.source === 'live' ? 'live' : fxState.source === 'cached' ? 'gecacht' : fxState.source === 'cached-stale' ? 'gecacht, veraltet' : 'Fallback'
+      })`;
+  parts.push(fxLabel);
+  subEl.textContent = parts.join(' · ');
+}
+
+/* IB Payouts (CRM_Payout:<id>-<random>) are never matched — see
+   isIbPayoutTx() below — so they get their own neutral badge instead of
+   the red "unmatched" pill, which would otherwise wrongly read as a
+   pending/failed case. */
 function matchPillHtml(tabKey, file, tx) {
+  if (tabKey === 'mt5' && tx.status === 'unmatched' && isIbPayoutTx(file, tx)) {
+    return `<span class="match-pill ib-payout" title="IB Payout — wird nicht gematcht, zählt in die IB-Payouts-Summe.">IB Payout</span>`;
+  }
   if (tx.status === 'matched' && tx.match) {
     return `
       <span class="match-cell">
@@ -1473,8 +1713,8 @@ function escapeHtml(v) {
   }[c]));
 }
 
-renderTab('bank');
-renderTab('mt5');
+renderAll();
+ensureFxRate();
 </script>
 </body>
 </html>
