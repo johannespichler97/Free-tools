@@ -277,6 +277,16 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
           <button type="button" class="fx-override-refresh" onclick="ensureFxRate(true)" title="Live-Kurs neu abrufen">🔄</button>
         </div>
       </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Deposit Costs <span class="kpi-live-dot" title="Live berechnet"></span></div>
+        <div class="kpi-value" id="kpiDepositCostsValue">—</div>
+        <div class="kpi-sub" id="kpiDepositCostsSub">Noch keine Einzahlungen</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Withdrawal Costs <span class="kpi-live-dot" title="Live berechnet"></span></div>
+        <div class="kpi-value" id="kpiWithdrawalCostsValue">—</div>
+        <div class="kpi-sub" id="kpiWithdrawalCostsSub">Noch keine Auszahlungen</div>
+      </div>
     </div>
 
     <!-- ── TABS ── -->
@@ -601,8 +611,20 @@ const PSP_RULES = [
     filters: [
       { column: 'status', label: 'Status', equals: 'complete' },
     ],
+    // Net amount actually settled after commission — what should have
+    // landed on the MT5 side, not the originally invoiced PriceAmount.
+    amountColumn: 'settledamount',
+    currencyColumn: 'settledcurrency',
+    // Deposit Costs dashboard figure — per the user, NetAmount directly
+    // (same currency as SettledAmount, no separate NetCurrency column).
+    computeFeeUsd(file, tx) {
+      const idx = findColumnIndex(file.headers, 'netamount');
+      if (idx === -1) return null;
+      const currencyIdx = findColumnIndex(file.headers, 'settledcurrency');
+      return convertToUsd(tx.cells[idx], currencyIdx !== -1 ? tx.cells[currencyIdx] : 'USD');
+    },
     matchRules: [
-      { id: 'orderid', label: 'OrderId', column: 'orderid', bankKey: columnKey('orderid'), mt5Key: prefixCommentKey('unipayment') },
+      { id: 'orderid', label: 'OrderId', column: 'orderid', bankKey: columnKey('orderid'), mt5Key: prefixCommentKey('unipayment'), direction: 'deposit' },
     ],
   },
   {
@@ -615,8 +637,22 @@ const PSP_RULES = [
       { column: 'type', label: 'TYPE', oneOf: ['deposit', 'withdrawal'] },
       { column: 'status', label: 'STATUS', equals: 'confirmed' },
     ],
+    // Already EUR-converted regardless of the original crypto/fiat leg
+    // (AMOUNT_FROM/AMOUNT_TO can be BTC etc.) — the one directly
+    // comparable figure across every Alphapo row.
+    amountColumn: 'amounteur',
+    amountCurrency: 'EUR',
+    // Deposit/Withdrawal Costs figure — per the user, a flat 1% of
+    // AMOUNT_EUR ("das ist was wir netto bekommen bei diesem Anbieter"),
+    // not the separate MINING_FEE_AMOUNT/PROCESSING_FEE_AMOUNT columns.
+    computeFeeUsd(file, tx) {
+      const idx = findColumnIndex(file.headers, 'amounteur');
+      if (idx === -1) return null;
+      const usd = convertToUsd(tx.cells[idx], 'EUR');
+      return usd === null ? null : usd * 0.01;
+    },
     matchRules: [
-      { id: 'transactionid', label: 'TRANSACTION_ID', column: 'transactionid', bankKey: columnKey('transactionid'), mt5Key: prefixCommentKey('alphapo') },
+      { id: 'transactionid', label: 'TRANSACTION_ID', column: 'transactionid', bankKey: columnKey('transactionid'), mt5Key: prefixCommentKey('alphapo'), direction: 'deposit' },
       {
         // Withdrawals also pay out via the same "F_Automatic_Withdraw_…"
         // MT5 comments Narvi uses — Alphapo's own reference sits in NOTE,
@@ -627,6 +663,7 @@ const PSP_RULES = [
         column: 'note',
         bankKey: fromSuffixKey('note', 'withdrawal'),
         mt5Key: lastUnderscoreSuffixKey(),
+        direction: 'withdrawal',
       },
     ],
   },
@@ -642,8 +679,27 @@ const PSP_RULES = [
       { column: 'date', label: 'DATE', notEmpty: true },
       { column: 'status', label: 'Status', equals: 'complete' },
     ],
+    // in_usd is Uniwire's own USD conversion of whatever crypto actually
+    // arrived (paid/paid_currency) — no separate currency column, it's
+    // always USD.
+    amountColumn: 'inusd',
+    amountCurrency: 'USD',
+    // Deposit Costs figure — total_fee is denominated in the same crypto
+    // as `paid`, not USD; converted using the same paid→in_usd ratio the
+    // PSP itself already computed for the principal.
+    computeFeeUsd(file, tx) {
+      const feeIdx = findColumnIndex(file.headers, 'totalfee');
+      const paidIdx = findColumnIndex(file.headers, 'paid');
+      const inUsdIdx = findColumnIndex(file.headers, 'inusd');
+      if (feeIdx === -1 || paidIdx === -1 || inUsdIdx === -1) return null;
+      const fee = Number(tx.cells[feeIdx]);
+      const paid = Number(tx.cells[paidIdx]);
+      const inUsd = Number(tx.cells[inUsdIdx]);
+      if (!isFinite(fee) || !isFinite(paid) || !isFinite(inUsd) || paid === 0) return null;
+      return fee * (inUsd / paid);
+    },
     matchRules: [
-      { id: 'uuid', label: 'uuid', column: 'uuid', bankKey: columnKey('uuid'), mt5Key: prefixCommentKey('uniwire') },
+      { id: 'uuid', label: 'uuid', column: 'uuid', bankKey: columnKey('uuid'), mt5Key: prefixCommentKey('uniwire'), direction: 'deposit' },
     ],
   },
   {
@@ -655,10 +711,14 @@ const PSP_RULES = [
     filters: [
       { column: 'status', label: 'Status', equals: 'success' },
     ],
+    amountColumn: 'amount',
+    currencyColumn: 'currency',
+    // No fee column in T365's export — contributes nothing to Deposit Costs.
+    computeFeeUsd() { return 0; },
     matchRules: [
       /* The MT5 comment prefix ("Transact365:13553-20105") doesn't match
          the PSP's short name, hence the explicit prefixCommentKey(). */
-      { id: 'id', label: 'id', column: 'id', bankKey: columnKey('id'), mt5Key: prefixCommentKey('transact365') },
+      { id: 'id', label: 'id', column: 'id', bankKey: columnKey('id'), mt5Key: prefixCommentKey('transact365'), direction: 'deposit' },
     ],
   },
   {
@@ -670,6 +730,17 @@ const PSP_RULES = [
        never runs for it. This entry exists purely to plug Narvi into the
        matching engine below. */
     filters: [],
+    // Netto-Betrag (post-Gebühr), same "what actually settled" choice as
+    // Unipayment's SettledAmount above. Narvi is a EUR-denominated bank
+    // statement, no separate currency column.
+    amountColumn: 'nettobetrag',
+    amountCurrency: 'EUR',
+    // Deposit/Withdrawal Costs figure — the statement's own Gebühr column, EUR.
+    computeFeeUsd(file, tx) {
+      const idx = findColumnIndex(file.headers, 'gebhr'); // normalizeHeaderKey('Gebühr') strips the ü
+      if (idx === -1) return null;
+      return convertToUsd(tx.cells[idx], 'EUR');
+    },
     matchRules: [
       {
         // Deposits: Referenz-ID <-> MT5 comment "CRM_Deposit:<id>".
@@ -678,6 +749,7 @@ const PSP_RULES = [
         column: 'referenzid',
         bankKey: columnKey('referenzid'),
         mt5Key: prefixCommentKey('CRM_Deposit'),
+        direction: 'deposit',
       },
       {
         // Withdrawals (negative Betrag): the Titel column reads e.g.
@@ -689,10 +761,39 @@ const PSP_RULES = [
         column: 'titel',
         bankKey: fromSuffixKey('titel'), // no TYPE column on Narvi — the "from …" shape alone identifies a withdrawal
         mt5Key: lastUnderscoreSuffixKey(),
+        direction: 'withdrawal',
       },
     ],
   },
 ];
+
+/* Classifies a single Bank/PSP row as a deposit or withdrawal for the
+   Deposit/Withdrawal Costs dashboard totals — independent of whether it
+   ever gets matched. Unipayment/Uniwire/T365 never do withdrawals in this
+   system, so they're always 'deposit'. Alphapo has an explicit TYPE
+   column (already used by its own filter). Narvi has no TYPE column, so
+   it's the same "from …" pattern its withdrawal matchRule itself keys
+   on; not derived by testing every matchRule's bankKey in order, since
+   Alphapo's TRANSACTION_ID rule would otherwise "match" every row
+   (deposit AND withdrawal) and always win by being listed first. */
+function classifyBankTxDirection(file, tx) {
+  const rule = PSP_RULES.find(r => r.name === file.pspName);
+  if (!rule) return null;
+  if (rule.name === 'alphapo') {
+    const idx = findColumnIndex(file.headers, 'type');
+    if (idx === -1) return null;
+    const v = String(tx.cells[idx] ?? '').trim().toLowerCase();
+    return v === 'withdrawal' ? 'withdrawal' : v === 'deposit' ? 'deposit' : null;
+  }
+  if (rule.name === 'narvi') {
+    const titelIdx = findColumnIndex(file.headers, 'titel');
+    if (titelIdx !== -1 && /from\s+\S+\s*$/i.test(String(tx.cells[titelIdx] ?? ''))) return 'withdrawal';
+    const refIdx = findColumnIndex(file.headers, 'referenzid');
+    if (refIdx !== -1 && String(tx.cells[refIdx] ?? '').trim()) return 'deposit';
+    return null;
+  }
+  return 'deposit'; // unipayment, uniwire, t365
+}
 
 function normalizeHeaderKey(h) {
   return String(h ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -1124,18 +1225,22 @@ const rejectedMatchPairs = new Set();
    Internal Transfer whose two sides don't convert to the same USD amount
    within INTERNAL_TRANSFER_WARN_THRESHOLD — see runInternalTransferMatching)
    without refusing the match itself, since it's still clearly the same
-   transfer, just off. Stored on both sides so either row's pill/modal can
-   surface it. */
-function linkTransactions(tabA, fileIdA, txIdA, tabB, fileIdB, txIdB, source, warning) {
+   transfer, just off. `diff`, when given, is the analogous Bank/PSP ↔ MT5
+   amount comparison (see computeBankMt5DiffInfo) — always populated with a
+   signed percentage on every such match, flagged only when it exceeds
+   BANK_MT5_DIFF_WARN_THRESHOLD. Both are stored on both sides so either
+   row's pill/modal can surface them; a match only ever carries one or the
+   other, never both, since they come from disjoint match categories. */
+function linkTransactions(tabA, fileIdA, txIdA, tabB, fileIdB, txIdB, source, warning, diff) {
   const a = findTx(tabA, fileIdA, txIdA);
   const b = findTx(tabB, fileIdB, txIdB);
   if (!a || !b) return false;
   if (a.tx.match) clearMatchLink(a.tx);
   if (b.tx.match) clearMatchLink(b.tx);
   a.tx.status = 'matched';
-  a.tx.match = { tab: tabB, txId: b.tx.txId, source, warning: warning || null };
+  a.tx.match = { tab: tabB, txId: b.tx.txId, source, warning: warning || null, diff: diff || null };
   b.tx.status = 'matched';
-  b.tx.match = { tab: tabA, txId: a.tx.txId, source, warning: warning || null };
+  b.tx.match = { tab: tabA, txId: a.tx.txId, source, warning: warning || null, diff: diff || null };
   return true;
 }
 
@@ -1171,11 +1276,23 @@ function renderMatchModal(filterText) {
     ? `<div class="match-current-auto">⚡ Automatisch zugeordnet (Regel: ${escapeHtml(String(tx.match.source).replace('auto:', ''))})</div>`
     : '';
   const w = tx.status === 'matched' && tx.match ? tx.match.warning : null;
-  const warningNote = w
-    ? (w.confirmed
-        ? `<div class="match-current-warning confirmed">✓ Trotz ${(w.diffPct * 100).toFixed(1)}% Kursabweichung (${formatUsd(w.usdFrom)} vs. ${formatUsd(w.usdTo)}) manuell bestätigt.</div>`
-        : `<div class="match-current-warning">⚠ Kursabweichung ${(w.diffPct * 100).toFixed(1)}% — ${formatUsd(w.usdFrom)} vs. ${formatUsd(w.usdTo)}. Vermutlich ein falscher Betrag auf einer Seite, bitte prüfen.</div>`)
-    : '';
+  const d = tx.status === 'matched' && tx.match ? tx.match.diff : null;
+  let warningNote = '';
+  if (w) {
+    warningNote = w.confirmed
+      ? `<div class="match-current-warning confirmed">✓ Trotz ${(w.diffPct * 100).toFixed(1)}% Kursabweichung (${formatUsd(w.usdFrom)} vs. ${formatUsd(w.usdTo)}) manuell bestätigt.</div>`
+      : `<div class="match-current-warning">⚠ Kursabweichung ${(w.diffPct * 100).toFixed(1)}% — ${formatUsd(w.usdFrom)} vs. ${formatUsd(w.usdTo)}. Vermutlich ein falscher Betrag auf einer Seite, bitte prüfen.</div>`;
+  } else if (d) {
+    const sign = d.pct >= 0 ? '+' : '';
+    const pctText = `${sign}${(d.pct * 100).toFixed(1)}%`;
+    if (d.flagged) {
+      warningNote = d.confirmed
+        ? `<div class="match-current-warning confirmed">✓ Trotz ${pctText} Betragsabweichung (${formatUsd(d.bankUsd)} Bank/PSP vs. ${formatUsd(d.mt5Usd)} MT5) manuell bestätigt.</div>`
+        : `<div class="match-current-warning">⚠ Betragsabweichung ${pctText} — ${formatUsd(d.bankUsd)} (Bank/PSP) vs. ${formatUsd(d.mt5Usd)} (MT5). Über der 8%-Toleranz, bitte prüfen.</div>`;
+    } else {
+      warningNote = `<div class="match-current-auto">Betragsabgleich: ${pctText} (${formatUsd(d.bankUsd)} Bank/PSP vs. ${formatUsd(d.mt5Usd)} MT5) — innerhalb der 8%-Toleranz.</div>`;
+    }
+  }
   document.getElementById('matchModalCurrent').innerHTML = `
     <div class="match-current-id">${tx.txId}</div>
     <div class="match-current-source">${escapeHtml(file.source)}</div>
@@ -1187,9 +1304,11 @@ function renderMatchModal(filterText) {
   let actionsHtml = '';
   if (tx.status === 'matched') {
     actionsHtml = `<button class="modal-cancel" onclick="unmatchCurrent()">Match entfernen</button>`;
-    if (w && !w.confirmed) {
+    const flagged = !!w || (d && d.flagged);
+    const confirmed = (w && w.confirmed) || (d && d.confirmed);
+    if (flagged && !confirmed) {
       actionsHtml += `<button class="modal-confirm-warning" onclick="confirmMatchWarning()">Trotzdem bestätigen</button>`;
-    } else if (w && w.confirmed) {
+    } else if (flagged && confirmed) {
       actionsHtml += `<button class="modal-cancel" onclick="unconfirmMatchWarning()">Bestätigung aufheben</button>`;
     }
   } else if (tx.status === 'approved') {
@@ -1290,16 +1409,18 @@ function unmatchCurrent() {
 function confirmMatchWarning() {
   if (!matchModalCtx) return;
   const found = findTx(matchModalCtx.tabKey, matchModalCtx.fileId, matchModalCtx.txId);
-  if (!found || !found.tx.match || !found.tx.match.warning) return;
-  found.tx.match.warning.confirmed = true;
+  if (!found || !found.tx.match) return;
+  if (found.tx.match.warning) found.tx.match.warning.confirmed = true;
+  else if (found.tx.match.diff) found.tx.match.diff.confirmed = true;
   renderMatchModal();
   renderAll();
 }
 function unconfirmMatchWarning() {
   if (!matchModalCtx) return;
   const found = findTx(matchModalCtx.tabKey, matchModalCtx.fileId, matchModalCtx.txId);
-  if (!found || !found.tx.match || !found.tx.match.warning) return;
-  found.tx.match.warning.confirmed = false;
+  if (!found || !found.tx.match) return;
+  if (found.tx.match.warning) found.tx.match.warning.confirmed = false;
+  else if (found.tx.match.diff) found.tx.match.diff.confirmed = false;
   renderMatchModal();
   renderAll();
 }
@@ -1371,6 +1492,8 @@ function valuesLooselyMatch(a, b) {
 const MATCH_RULES = PSP_RULES.flatMap(rule =>
   (rule.matchRules || []).map(mr => ({
     name: rule.name + (rule.matchRules.length > 1 ? ':' + mr.id : ''),
+    pspRule: rule,
+    direction: mr.direction,
     /* Bank/PSP side: files recognized as this PSP (by content — see
        applyPspRules()/PDF_BANK_PARSERS, which set f.pspName at upload
        time), restricted to still-unmatched rows with a non-empty key. */
@@ -1459,6 +1582,7 @@ async function ensureFxRate(force) {
       : { rate: FX_FALLBACK_EUR_USD, source: 'fallback', fetchedAt: null, loading: false };
   }
   recomputeInternalTransferWarnings(); // re-grade already-matched pairs against the new rate too
+  recomputeBankMt5MatchDiffs();
   updateOverview();
   runAutoMatchingWithToast(); // a just-arrived live rate can newly satisfy the Internal Transfer tolerance check
 }
@@ -1483,6 +1607,7 @@ function applyManualFxRate() {
   saveCachedFxRate(rate, fetchedAt);
   input.value = '';
   recomputeInternalTransferWarnings(); // re-grade already-matched pairs against the corrected rate
+  recomputeBankMt5MatchDiffs();
   updateOverview();
   runAutoMatchingWithToast(); // still-unmatched pairs get a fresh chance too
   showToast(`Kurs manuell auf 1 EUR = ${rate.toFixed(4)} USD gesetzt.`, 'success');
@@ -1650,8 +1775,82 @@ function recomputeInternalTransferWarnings() {
   });
 }
 
+/* ── BANK/PSP ↔ MT5 AMOUNT COMPARISON ──
+   Unlike Internal Transfers (MT5 ↔ MT5, currency almost always differs
+   on the two legs), a Bank/PSP ↔ MT5 match is usually the *same*
+   currency on both sides — but "same currency" doesn't mean the amounts
+   always agree: a PSP's settled/net amount can differ from what actually
+   landed on MT5 (a partial credit, a fee taken twice, a manual correction
+   on either side). This always computes and attaches the % difference —
+   not just when it's suspiciously large — flagging it (still matched,
+   just visibly red) only past BANK_MT5_DIFF_WARN_THRESHOLD. */
+const BANK_MT5_DIFF_WARN_THRESHOLD = 0.08; // 8%
+
+/* Reads the PSP-specific "this is the real settled amount" column
+   configured on its PSP_RULES entry (amountColumn + either
+   currencyColumn or a fixed amountCurrency) and converts it to USD.
+   Returns null when the file's PSP isn't configured for this (no
+   amountColumn) or the column/currency can't be resolved — callers treat
+   that as "diff not computable", not as zero. */
+function getPspAmountUsd(file, tx) {
+  if (!file.pspName) return null;
+  const rule = PSP_RULES.find(r => r.name === file.pspName);
+  if (!rule || !rule.amountColumn) return null;
+  const amountIdx = findColumnIndex(file.headers, rule.amountColumn);
+  if (amountIdx === -1) return null;
+  let currency = rule.amountCurrency;
+  if (rule.currencyColumn) {
+    const currencyIdx = findColumnIndex(file.headers, rule.currencyColumn);
+    if (currencyIdx !== -1) currency = tx.cells[currencyIdx];
+  }
+  return convertToUsd(tx.cells[amountIdx], currency);
+}
+
+/* Signed so the direction of the mismatch is visible at a glance, per the
+   convention: for a deposit, positive means MT5 received LESS than the
+   Bank/PSP side paid out (bank > mt5); for a withdrawal, positive means
+   MT5 paid out MORE than the Bank/PSP side shows going down (mt5 > bank).
+   Negative is the mirror in both cases. Denominator is the larger of the
+   two sides (floor 0.01), same convention as the Internal Transfer check. */
+function computeBankMt5DiffInfo(bankUsd, mt5Usd, direction) {
+  if (bankUsd === null || mt5Usd === null) return null;
+  const bankAbs = Math.abs(bankUsd), mt5Abs = Math.abs(mt5Usd);
+  const base = Math.max(bankAbs, mt5Abs, 0.01);
+  const pct = direction === 'withdrawal' ? (mt5Abs - bankAbs) / base : (bankAbs - mt5Abs) / base;
+  return { pct, flagged: Math.abs(pct) > BANK_MT5_DIFF_WARN_THRESHOLD, bankUsd: bankAbs, mt5Usd: mt5Abs, direction, confirmed: false };
+}
+
+/* Re-grades every already-matched Bank/PSP ↔ MT5 pair's diff against the
+   current FX rate (same reasoning as recomputeInternalTransferWarnings:
+   a rate that changes after the fact would otherwise never reach a match
+   already made). Skips pairs a person has already confirmed. */
+function recomputeBankMt5MatchDiffs() {
+  const seen = new Set();
+  state.bank.files.forEach(f => {
+    f.transactions.forEach(tx => {
+      if (tx.status !== 'matched' || !tx.match || !tx.match.diff) return;
+      if (tx.match.diff.confirmed) return;
+      const key = pairKey('bank', tx.txId, tx.match.tab, tx.match.txId);
+      if (seen.has(key)) return;
+      seen.add(key);
+      const counterpart = findTxById(tx.match.tab, tx.match.txId);
+      if (!counterpart) return;
+      const mt5AmountIdx = findColumnIndex(counterpart.file.headers, 'amount');
+      const mt5CurrencyIdx = findColumnIndex(counterpart.file.headers, 'currency');
+      if (mt5AmountIdx === -1) return;
+      const bankUsd = getPspAmountUsd(f, tx);
+      const mt5Usd = convertToUsd(counterpart.tx.cells[mt5AmountIdx], mt5CurrencyIdx !== -1 ? counterpart.tx.cells[mt5CurrencyIdx] : 'USD');
+      const newDiff = computeBankMt5DiffInfo(bankUsd, mt5Usd, tx.match.diff.direction);
+      if (!newDiff) return;
+      tx.match.diff = newDiff;
+      counterpart.tx.match.diff = newDiff;
+    });
+  });
+}
+
 function runAutoMatching() {
   let matchedCount = 0;
+  let bankMt5WarnedCount = 0;
   MATCH_RULES.forEach(rule => {
     const bankCandidates = rule.collectBankCandidates();
     const mt5Candidates = rule.collectMt5Candidates();
@@ -1663,14 +1862,22 @@ function runAutoMatching() {
         !rejectedMatchPairs.has(pairKey('bank', b.tx.txId, 'mt5', m.tx.txId))
       );
       if (hit) {
-        linkTransactions('bank', hit.file.id, hit.tx.txId, 'mt5', m.file.id, m.tx.txId, 'auto:' + rule.name);
+        const mt5AmountIdx = findColumnIndex(m.file.headers, 'amount');
+        const mt5CurrencyIdx = findColumnIndex(m.file.headers, 'currency');
+        const bankUsd = getPspAmountUsd(hit.file, hit.tx);
+        const mt5Usd = mt5AmountIdx !== -1
+          ? convertToUsd(m.tx.cells[mt5AmountIdx], mt5CurrencyIdx !== -1 ? m.tx.cells[mt5CurrencyIdx] : 'USD')
+          : null;
+        const diff = computeBankMt5DiffInfo(bankUsd, mt5Usd, rule.direction);
+        linkTransactions('bank', hit.file.id, hit.tx.txId, 'mt5', m.file.id, m.tx.txId, 'auto:' + rule.name, null, diff);
         matchedCount++;
+        if (diff && diff.flagged) bankMt5WarnedCount++;
       }
     });
   });
   const transferResult = runInternalTransferMatching();
   matchedCount += transferResult.matched;
-  return { matched: matchedCount, warned: transferResult.warned };
+  return { matched: matchedCount, warned: transferResult.warned + bankMt5WarnedCount };
 }
 
 function showToast(message, tone) {
@@ -1734,8 +1941,9 @@ function renderAll() {
   updateOverview();
 }
 
-/* Only the IB Payouts card is live so far — the other four Übersicht
-   cards stay static placeholders until that's asked for. */
+/* Only IB Payouts / Deposit Costs / Withdrawal Costs are live so far —
+   the other four Übersicht cards stay static placeholders until that's
+   asked for. */
 function updateOverview() {
   let totalUsd = 0, count = 0, unconvertible = 0;
   state.mt5.files.forEach(f => {
@@ -1770,6 +1978,48 @@ function updateOverview() {
       })`;
   parts.push(fxLabel);
   subEl.textContent = parts.join(' · ');
+
+  updateCostsOverview();
+}
+
+/* Deposit/Withdrawal Costs — summed across every recognized Bank/PSP row
+   (matched or not; a fee is owed the moment the PSP processed the row,
+   independent of whether MT5's side has been reconciled yet), using each
+   PSP's own computeFeeUsd() — see PSP_RULES. Direction (deposit vs.
+   withdrawal) comes from classifyBankTxDirection(), not from match data,
+   so this stays accurate even before any matching has run. */
+function updateCostsOverview() {
+  const totals = {
+    deposit: { usd: 0, count: 0, unconvertible: 0 },
+    withdrawal: { usd: 0, count: 0, unconvertible: 0 },
+  };
+  state.bank.files.forEach(f => {
+    if (!f.pspName) return;
+    const rule = PSP_RULES.find(r => r.name === f.pspName);
+    if (!rule || !rule.computeFeeUsd) return;
+    f.transactions.forEach(tx => {
+      const direction = classifyBankTxDirection(f, tx);
+      if (direction !== 'deposit' && direction !== 'withdrawal') return;
+      const bucket = totals[direction];
+      bucket.count++;
+      const fee = rule.computeFeeUsd(f, tx);
+      if (fee === null) { bucket.unconvertible++; return; }
+      bucket.usd += fee;
+    });
+  });
+
+  const render = (key, valueElId, subElId, noneLabel) => {
+    const valueEl = document.getElementById(valueElId);
+    const subEl = document.getElementById(subElId);
+    if (!valueEl || !subEl) return;
+    const t = totals[key];
+    valueEl.textContent = t.count ? formatUsd(t.usd) : '—';
+    const parts = [t.count ? `${t.count} Transaktion${t.count === 1 ? '' : 'en'}` : noneLabel];
+    if (t.unconvertible > 0) parts.push(`${t.unconvertible} nicht umrechenbar`);
+    subEl.textContent = parts.join(' · ');
+  };
+  render('deposit', 'kpiDepositCostsValue', 'kpiDepositCostsSub', 'Noch keine Einzahlungen');
+  render('withdrawal', 'kpiWithdrawalCostsValue', 'kpiWithdrawalCostsSub', 'Noch keine Auszahlungen');
 }
 
 /* IB Payouts (CRM_Payout:<id>-<random>) are never matched — see
@@ -1782,15 +2032,31 @@ function matchPillHtml(tabKey, file, tx) {
   }
   if (tx.status === 'matched' && tx.match) {
     const w = tx.match.warning;
-    const pillClass = 'match-pill matched' + (w ? (w.confirmed ? ' warning-confirmed' : ' warning') : '');
-    const pillLabel = w
-      ? (w.confirmed ? `Gematcht ✓ (${(w.diffPct * 100).toFixed(1)}% bestätigt)` : `⚠ Gematcht (${w.diffPct >= 0 ? '' : '-'}${(w.diffPct * 100).toFixed(1)}%)`)
-      : 'Gematcht';
-    const pillTitle = w
-      ? (w.confirmed
-          ? `Manuell bestätigt trotz ${(w.diffPct * 100).toFixed(1)}% Abweichung: ${formatUsd(w.usdFrom)} vs. ${formatUsd(w.usdTo)}.`
-          : `Beträge stimmen nicht überein: ${formatUsd(w.usdFrom)} vs. ${formatUsd(w.usdTo)} (${(w.diffPct * 100).toFixed(1)}% Abweichung) — bitte prüfen.`)
-      : 'Match bearbeiten';
+    const d = tx.match.diff;
+    let pillClass = 'match-pill matched';
+    let pillLabel = 'Gematcht';
+    let pillTitle = 'Match bearbeiten';
+    if (w) {
+      pillClass += w.confirmed ? ' warning-confirmed' : ' warning';
+      pillLabel = w.confirmed ? `Gematcht ✓ (${(w.diffPct * 100).toFixed(1)}% bestätigt)` : `⚠ Gematcht (${w.diffPct >= 0 ? '' : '-'}${(w.diffPct * 100).toFixed(1)}%)`;
+      pillTitle = w.confirmed
+        ? `Manuell bestätigt trotz ${(w.diffPct * 100).toFixed(1)}% Abweichung: ${formatUsd(w.usdFrom)} vs. ${formatUsd(w.usdTo)}.`
+        : `Beträge stimmen nicht überein: ${formatUsd(w.usdFrom)} vs. ${formatUsd(w.usdTo)} (${(w.diffPct * 100).toFixed(1)}% Abweichung) — bitte prüfen.`;
+    } else if (d) {
+      // Always shown, matched or not — only the color/⚠ depend on flagged.
+      const sign = d.pct >= 0 ? '+' : '';
+      const pctText = `${sign}${(d.pct * 100).toFixed(1)}%`;
+      if (d.flagged) {
+        pillClass += d.confirmed ? ' warning-confirmed' : ' warning';
+        pillLabel = d.confirmed ? `Gematcht ✓ (${pctText} bestätigt)` : `⚠ Gematcht (${pctText})`;
+        pillTitle = d.confirmed
+          ? `Manuell bestätigt trotz ${pctText} Abweichung: ${formatUsd(d.bankUsd)} (Bank/PSP) vs. ${formatUsd(d.mt5Usd)} (MT5).`
+          : `Betragsabweichung ${pctText}: ${formatUsd(d.bankUsd)} (Bank/PSP) vs. ${formatUsd(d.mt5Usd)} (MT5) — über 8% Toleranz, bitte prüfen.`;
+      } else {
+        pillLabel = `Gematcht (${pctText})`;
+        pillTitle = `Beträge stimmen überein (${pctText} Abweichung): ${formatUsd(d.bankUsd)} (Bank/PSP) vs. ${formatUsd(d.mt5Usd)} (MT5).`;
+      }
+    }
     return `
       <span class="match-cell">
         <button class="${pillClass}" onclick="openMatchModal('${tabKey}','${file.id}','${tx.txId}')" title="${escapeHtml(pillTitle)}">${pillLabel}</button>
@@ -1829,7 +2095,7 @@ function renderBatchCard(tabKey, f) {
             </tr></thead>
             <tbody>
               ${f.transactions.map(tx => `
-                <tr data-txid="${tx.txId}" class="${tx.match && tx.match.warning && !tx.match.warning.confirmed ? 'match-warning' : ''}">
+                <tr data-txid="${tx.txId}" class="${tx.match && ((tx.match.warning && !tx.match.warning.confirmed) || (tx.match.diff && tx.match.diff.flagged && !tx.match.diff.confirmed)) ? 'match-warning' : ''}">
                   <td class="tx-id">${tx.txId}</td>
                   <td>${escapeHtml(f.source)}</td>
                   <td>${matchPillHtml(tabKey, f, tx)}</td>
