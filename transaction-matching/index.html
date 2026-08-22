@@ -182,6 +182,13 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .match-current-auto { font-size: 11.5px; color: var(--accent-2); margin-top: 8px; font-weight: 600; }
 .match-current-warning { font-size: 11.5px; color: var(--danger); margin-top: 8px; font-weight: 600; line-height: 1.5; }
 
+.fx-override { display: flex; align-items: center; gap: 6px; margin-top: 10px; }
+.fx-override input { width: 78px; background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 5px 8px; font-size: 11.5px; color: var(--text); font-family: var(--font-mono); }
+.fx-override input:focus { outline: none; border-color: var(--accent); }
+.fx-override button { flex-shrink: 0; background: none; border: 1px solid var(--border); color: var(--text-dim); font-size: 11px; font-weight: 600; padding: 5px 9px; border-radius: 20px; cursor: pointer; font-family: var(--font); }
+.fx-override button:hover { color: var(--accent); border-color: var(--accent); }
+.fx-override-refresh { padding: 5px 7px !important; }
+
 /* ── AUTO-MATCH BUTTON / TOAST ── */
 .auto-match-btn { background: var(--accent-dim); border: 1px solid transparent; color: var(--accent); padding: 7px 14px; border-radius: 20px; font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: var(--font); white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
 .auto-match-btn:hover { opacity: .85; }
@@ -260,6 +267,11 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
         <div class="kpi-label">IB Payouts <span class="kpi-live-dot" title="Live berechnet"></span></div>
         <div class="kpi-value" id="kpiIbPayoutsValue">—</div>
         <div class="kpi-sub" id="kpiIbPayoutsSub">Noch keine Payouts</div>
+        <div class="fx-override">
+          <input type="number" step="0.0001" min="0" id="fxOverrideInput" placeholder="z.B. 1.16" title="EUR/USD-Kurs manuell setzen">
+          <button type="button" onclick="applyManualFxRate()">Übernehmen</button>
+          <button type="button" class="fx-override-refresh" onclick="ensureFxRate(true)" title="Live-Kurs neu abrufen">🔄</button>
+        </div>
       </div>
     </div>
 
@@ -1407,8 +1419,34 @@ async function ensureFxRate(force) {
       ? { rate: stale.rate, source: 'cached-stale', fetchedAt: stale.fetchedAt, loading: false }
       : { rate: FX_FALLBACK_EUR_USD, source: 'fallback', fetchedAt: null, loading: false };
   }
+  recomputeInternalTransferWarnings(); // re-grade already-matched pairs against the new rate too
   updateOverview();
   runAutoMatchingWithToast(); // a just-arrived live rate can newly satisfy the Internal Transfer tolerance check
+}
+
+/* Manual override — mainly for environments where the live fetch above
+   can't reach the network (e.g. a strict sandbox/CSP or a locked-down
+   corporate firewall) and silently falls back to the approximate
+   constant. Lets a person type in today's real rate so IB-Payout totals
+   and Internal-Transfer discrepancy flags are computed correctly even
+   then. Persisted the same way a live-fetched rate would be, so it
+   survives a reload until it goes stale or a live fetch succeeds. */
+function applyManualFxRate() {
+  const input = document.getElementById('fxOverrideInput');
+  if (!input) return;
+  const rate = Number(input.value);
+  if (!isFinite(rate) || rate <= 0) {
+    showToast('Bitte einen gültigen Kurs eingeben (z.B. 1.16).', 'warning');
+    return;
+  }
+  const fetchedAt = Date.now();
+  fxState = { rate, source: 'manual', fetchedAt, loading: false };
+  saveCachedFxRate(rate, fetchedAt);
+  input.value = '';
+  recomputeInternalTransferWarnings(); // re-grade already-matched pairs against the corrected rate
+  updateOverview();
+  runAutoMatchingWithToast(); // still-unmatched pairs get a fresh chance too
+  showToast(`Kurs manuell auf 1 EUR = ${rate.toFixed(4)} USD gesetzt.`, 'success');
 }
 
 /* Converts an MT5 amount to USD. USC is Narvi/CRM's cent-denominated
@@ -1535,6 +1573,43 @@ function runInternalTransferMatching() {
   return { matched: matchedCount, warned: warnedCount };
 }
 
+/* An Internal Transfer pair already matched bakes its warning (or lack of
+   one) in at match time using whatever fxState.rate was current then —
+   and since runInternalTransferMatching() above only ever looks at
+   status==='unmatched' transactions, a rate that changes afterwards (a
+   manual override, or a live fetch finally succeeding) would otherwise
+   never reach an already-matched pair. Call this whenever fxState.rate
+   changes to re-grade every existing Internal Transfer match against the
+   new rate, without re-running the matching itself. */
+function recomputeInternalTransferWarnings() {
+  const seen = new Set();
+  state.mt5.files.forEach(f => {
+    const amountIdx = findColumnIndex(f.headers, 'amount');
+    const currencyIdx = findColumnIndex(f.headers, 'currency');
+    if (amountIdx === -1) return;
+    f.transactions.forEach(tx => {
+      if (tx.status !== 'matched' || !tx.match || tx.match.source !== 'auto:internal-transfer') return;
+      const key = pairKey('mt5', tx.txId, tx.match.tab, tx.match.txId);
+      if (seen.has(key)) return;
+      seen.add(key);
+      const counterpart = findTxById(tx.match.tab, tx.match.txId);
+      if (!counterpart) return;
+      const cAmountIdx = findColumnIndex(counterpart.file.headers, 'amount');
+      const cCurrencyIdx = findColumnIndex(counterpart.file.headers, 'currency');
+      if (cAmountIdx === -1) return;
+      const usdA = convertToUsd(tx.cells[amountIdx], currencyIdx !== -1 ? tx.cells[currencyIdx] : 'USD');
+      const usdB = convertToUsd(counterpart.tx.cells[cAmountIdx], cCurrencyIdx !== -1 ? counterpart.tx.cells[cCurrencyIdx] : 'USD');
+      if (usdA === null || usdB === null) return;
+      const diff = Math.abs(Math.abs(usdA) - Math.abs(usdB)) / Math.max(Math.abs(usdA), Math.abs(usdB), 0.01);
+      const warning = diff > INTERNAL_TRANSFER_WARN_THRESHOLD
+        ? { type: 'fx-mismatch', diffPct: diff, usdFrom: usdA, usdTo: usdB }
+        : null;
+      tx.match.warning = warning;
+      counterpart.tx.match.warning = warning;
+    });
+  });
+}
+
 function runAutoMatching() {
   let matchedCount = 0;
   MATCH_RULES.forEach(rule => {
@@ -1651,7 +1726,7 @@ function updateOverview() {
   const fxLabel = fxState.loading
     ? 'Kurs wird geladen…'
     : `1 EUR = ${fxState.rate.toFixed(4)} USD (${
-        fxState.source === 'live' ? 'live' : fxState.source === 'cached' ? 'gecacht' : fxState.source === 'cached-stale' ? 'gecacht, veraltet' : 'Fallback'
+        fxState.source === 'live' ? 'live' : fxState.source === 'manual' ? 'manuell' : fxState.source === 'cached' ? 'gecacht' : fxState.source === 'cached-stale' ? 'gecacht, veraltet' : 'Fallback'
       })`;
   parts.push(fxLabel);
   subEl.textContent = parts.join(' · ');
