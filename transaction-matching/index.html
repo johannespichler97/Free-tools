@@ -611,10 +611,13 @@ const PSP_RULES = [
     filters: [
       { column: 'status', label: 'Status', equals: 'complete' },
     ],
-    // Net amount actually settled after commission — what should have
-    // landed on the MT5 side, not the originally invoiced PriceAmount.
-    amountColumn: 'settledamount',
-    currencyColumn: 'settledcurrency',
+    // NetAmount, not SettledAmount — confirmed by the user with a real
+    // example (Jakob Bangerl: 2000€ credited on MT5, Unipayment's
+    // NetAmount for that row is 1880.6€ after commission; SettledAmount
+    // would have hidden that real gap). Same column the Deposit Costs
+    // fee figure below already uses.
+    amountColumn: 'netamount',
+    currencyColumn: 'settledcurrency', // NetAmount has no NetCurrency column of its own
     // Deposit Costs dashboard figure — per the user, NetAmount directly
     // (same currency as SettledAmount, no separate NetCurrency column).
     computeFeeUsd(file, tx) {
