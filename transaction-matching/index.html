@@ -278,14 +278,38 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
         </div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">Deposit Costs <span class="kpi-live-dot" title="Live berechnet"></span></div>
+        <div class="kpi-label">Deposit Costs (Total) <span class="kpi-live-dot" title="Live berechnet"></span></div>
         <div class="kpi-value" id="kpiDepositCostsValue">—</div>
         <div class="kpi-sub" id="kpiDepositCostsSub">Noch keine Einzahlungen</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">Withdrawal Costs <span class="kpi-live-dot" title="Live berechnet"></span></div>
+        <div class="kpi-label">Withdrawal Costs (Total) <span class="kpi-live-dot" title="Live berechnet"></span></div>
         <div class="kpi-value" id="kpiWithdrawalCostsValue">—</div>
         <div class="kpi-sub" id="kpiWithdrawalCostsSub">Noch keine Auszahlungen</div>
+      </div>
+    </div>
+
+    <!-- ── COSTS BY PSP/BANK ── -->
+    <div class="section-head">
+      <span class="section-title">Kosten nach PSP/Bank</span>
+      <span class="section-badge">Live</span>
+    </div>
+    <div class="batch-card" style="margin-bottom: 36px;">
+      <div class="table-scroll">
+        <table class="tx-table" id="pspCostsTable">
+          <thead>
+            <tr>
+              <th>PSP / Bank</th>
+              <th>Deposit Costs</th>
+              <th>Einzahlungen</th>
+              <th>Withdrawal Costs</th>
+              <th>Auszahlungen</th>
+            </tr>
+          </thead>
+          <tbody id="pspCostsBody">
+            <tr><td colspan="5" style="color: var(--text-faint);">Noch keine gematchten Transaktionen.</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
@@ -1934,8 +1958,12 @@ function updateCostsOverview() {
     deposit: { usd: 0, count: 0 },
     withdrawal: { usd: 0, count: 0 },
   };
+  const newBucket = () => ({ depositUsd: 0, depositCount: 0, withdrawalUsd: 0, withdrawalCount: 0 });
+  const perPsp = new Map(); // pspName -> newBucket(), in PSP_RULES order
+
   const seen = new Set();
   state.bank.files.forEach(f => {
+    if (f.pspName && !perPsp.has(f.pspName)) perPsp.set(f.pspName, newBucket());
     f.transactions.forEach(tx => {
       if (tx.status !== 'matched' || !tx.match || !tx.match.diff) return;
       const key = pairKey('bank', tx.txId, tx.match.tab, tx.match.txId);
@@ -1943,9 +1971,17 @@ function updateCostsOverview() {
       seen.add(key);
       const d = tx.match.diff;
       if (d.direction !== 'deposit' && d.direction !== 'withdrawal') return;
+      const cost = d.direction === 'deposit' ? (d.mt5Usd - d.bankUsd) : (d.bankUsd - d.mt5Usd);
+
       const bucket = totals[d.direction];
       bucket.count++;
-      bucket.usd += d.direction === 'deposit' ? (d.mt5Usd - d.bankUsd) : (d.bankUsd - d.mt5Usd);
+      bucket.usd += cost;
+
+      if (f.pspName) {
+        const p = perPsp.get(f.pspName);
+        if (d.direction === 'deposit') { p.depositUsd += cost; p.depositCount++; }
+        else { p.withdrawalUsd += cost; p.withdrawalCount++; }
+      }
     });
   });
 
@@ -1959,6 +1995,24 @@ function updateCostsOverview() {
   };
   render('deposit', 'kpiDepositCostsValue', 'kpiDepositCostsSub', 'Noch keine gematchten Einzahlungen');
   render('withdrawal', 'kpiWithdrawalCostsValue', 'kpiWithdrawalCostsSub', 'Noch keine gematchten Auszahlungen');
+
+  const bodyEl = document.getElementById('pspCostsBody');
+  if (!bodyEl) return;
+  // PSP_RULES order, skipping any PSP with zero matched pairs on either side.
+  const rows = PSP_RULES
+    .filter(rule => perPsp.has(rule.name))
+    .map(rule => ({ label: rule.label, ...perPsp.get(rule.name) }))
+    .filter(r => r.depositCount > 0 || r.withdrawalCount > 0);
+  bodyEl.innerHTML = rows.length
+    ? rows.map(r => `
+        <tr>
+          <td>${escapeHtml(r.label)}</td>
+          <td class="num">${r.depositCount ? formatUsd(r.depositUsd) : '—'}</td>
+          <td class="num">${r.depositCount || '—'}</td>
+          <td class="num">${r.withdrawalCount ? formatUsd(r.withdrawalUsd) : '—'}</td>
+          <td class="num">${r.withdrawalCount || '—'}</td>
+        </tr>`).join('')
+    : `<tr><td colspan="5" style="color: var(--text-faint);">Noch keine gematchten Transaktionen.</td></tr>`;
 }
 
 /* IB Payouts (CRM_Payout:<id>-<random>) are never matched — see
