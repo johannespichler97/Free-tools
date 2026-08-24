@@ -1652,13 +1652,27 @@ function applyManualFxRate() {
   showToast(`Kurs manuell auf 1 EUR = ${rate.toFixed(4)} USD gesetzt.`, 'success');
 }
 
-/* Converts an MT5 amount to USD. USC is Narvi/CRM's cent-denominated
+/* Converts an amount to USD. USC is Narvi/CRM's cent-denominated
    sub-account currency — confirmed exactly 1:100 against USD across every
    sample Internal Transfer pair, unlike EUR which is a real floating
    rate. Returns null for a currency we don't know how to convert, rather
-   than guessing. */
+   than guessing.
+
+   `amount` is usually already a clean number, but the Narvi PDF parser's
+   own cells read like "+20,000.00 EUR" (kept that way for the table —
+   it's exactly how the statement itself prints it), which Number()
+   can't parse at all: a leading '+', thousands-separator commas, and a
+   trailing embedded currency code all fail silently to NaN and used to
+   make every Narvi Deposit/Withdrawal Cost and match-diff come out null
+   (looked like Narvi wasn't computing fees, when it just couldn't read
+   the amount). Stripped unconditionally — a no-op on every other PSP's
+   plain numeric cells. */
 function convertToUsd(amount, currency) {
-  const n = Number(amount);
+  const cleaned = String(amount ?? '').trim()
+    .replace(/^\+/, '')
+    .replace(/,/g, '')
+    .replace(/\s*[A-Za-z]{2,4}\s*$/, '');
+  const n = Number(cleaned);
   if (!isFinite(n)) return null;
   const cur = String(currency ?? '').trim().toUpperCase();
   if (cur === 'USD' || cur === '') return n;
