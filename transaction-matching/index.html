@@ -618,14 +618,6 @@ const PSP_RULES = [
     // fee figure below already uses.
     amountColumn: 'netamount',
     currencyColumn: 'settledcurrency', // NetAmount has no NetCurrency column of its own
-    // Deposit Costs dashboard figure — per the user, NetAmount directly
-    // (same currency as SettledAmount, no separate NetCurrency column).
-    computeFeeUsd(file, tx) {
-      const idx = findColumnIndex(file.headers, 'netamount');
-      if (idx === -1) return null;
-      const currencyIdx = findColumnIndex(file.headers, 'settledcurrency');
-      return convertToUsd(tx.cells[idx], currencyIdx !== -1 ? tx.cells[currencyIdx] : 'USD');
-    },
     matchRules: [
       { id: 'orderid', label: 'OrderId', column: 'orderid', bankKey: columnKey('orderid'), mt5Key: prefixCommentKey('unipayment'), direction: 'deposit' },
     ],
@@ -645,15 +637,6 @@ const PSP_RULES = [
     // comparable figure across every Alphapo row.
     amountColumn: 'amounteur',
     amountCurrency: 'EUR',
-    // Deposit/Withdrawal Costs figure — per the user, a flat 1% of
-    // AMOUNT_EUR ("das ist was wir netto bekommen bei diesem Anbieter"),
-    // not the separate MINING_FEE_AMOUNT/PROCESSING_FEE_AMOUNT columns.
-    computeFeeUsd(file, tx) {
-      const idx = findColumnIndex(file.headers, 'amounteur');
-      if (idx === -1) return null;
-      const usd = convertToUsd(tx.cells[idx], 'EUR');
-      return usd === null ? null : usd * 0.01;
-    },
     matchRules: [
       { id: 'transactionid', label: 'TRANSACTION_ID', column: 'transactionid', bankKey: columnKey('transactionid'), mt5Key: prefixCommentKey('alphapo'), direction: 'deposit' },
       {
@@ -687,20 +670,6 @@ const PSP_RULES = [
     // always USD.
     amountColumn: 'inusd',
     amountCurrency: 'USD',
-    // Deposit Costs figure — total_fee is denominated in the same crypto
-    // as `paid`, not USD; converted using the same paid→in_usd ratio the
-    // PSP itself already computed for the principal.
-    computeFeeUsd(file, tx) {
-      const feeIdx = findColumnIndex(file.headers, 'totalfee');
-      const paidIdx = findColumnIndex(file.headers, 'paid');
-      const inUsdIdx = findColumnIndex(file.headers, 'inusd');
-      if (feeIdx === -1 || paidIdx === -1 || inUsdIdx === -1) return null;
-      const fee = Number(tx.cells[feeIdx]);
-      const paid = Number(tx.cells[paidIdx]);
-      const inUsd = Number(tx.cells[inUsdIdx]);
-      if (!isFinite(fee) || !isFinite(paid) || !isFinite(inUsd) || paid === 0) return null;
-      return fee * (inUsd / paid);
-    },
     matchRules: [
       { id: 'uuid', label: 'uuid', column: 'uuid', bankKey: columnKey('uuid'), mt5Key: prefixCommentKey('uniwire'), direction: 'deposit' },
     ],
@@ -716,8 +685,6 @@ const PSP_RULES = [
     ],
     amountColumn: 'amount',
     currencyColumn: 'currency',
-    // No fee column in T365's export — contributes nothing to Deposit Costs.
-    computeFeeUsd() { return 0; },
     matchRules: [
       /* The MT5 comment prefix ("Transact365:13553-20105") doesn't match
          the PSP's short name, hence the explicit prefixCommentKey(). */
@@ -738,12 +705,6 @@ const PSP_RULES = [
     // statement, no separate currency column.
     amountColumn: 'nettobetrag',
     amountCurrency: 'EUR',
-    // Deposit/Withdrawal Costs figure — the statement's own Gebühr column, EUR.
-    computeFeeUsd(file, tx) {
-      const idx = findColumnIndex(file.headers, 'gebhr'); // normalizeHeaderKey('Gebühr') strips the ü
-      if (idx === -1) return null;
-      return convertToUsd(tx.cells[idx], 'EUR');
-    },
     matchRules: [
       {
         // Deposits: Referenz-ID <-> MT5 comment "CRM_Deposit:<id>".
@@ -769,34 +730,6 @@ const PSP_RULES = [
     ],
   },
 ];
-
-/* Classifies a single Bank/PSP row as a deposit or withdrawal for the
-   Deposit/Withdrawal Costs dashboard totals — independent of whether it
-   ever gets matched. Unipayment/Uniwire/T365 never do withdrawals in this
-   system, so they're always 'deposit'. Alphapo has an explicit TYPE
-   column (already used by its own filter). Narvi has no TYPE column, so
-   it's the same "from …" pattern its withdrawal matchRule itself keys
-   on; not derived by testing every matchRule's bankKey in order, since
-   Alphapo's TRANSACTION_ID rule would otherwise "match" every row
-   (deposit AND withdrawal) and always win by being listed first. */
-function classifyBankTxDirection(file, tx) {
-  const rule = PSP_RULES.find(r => r.name === file.pspName);
-  if (!rule) return null;
-  if (rule.name === 'alphapo') {
-    const idx = findColumnIndex(file.headers, 'type');
-    if (idx === -1) return null;
-    const v = String(tx.cells[idx] ?? '').trim().toLowerCase();
-    return v === 'withdrawal' ? 'withdrawal' : v === 'deposit' ? 'deposit' : null;
-  }
-  if (rule.name === 'narvi') {
-    const titelIdx = findColumnIndex(file.headers, 'titel');
-    if (titelIdx !== -1 && /from\s+\S+\s*$/i.test(String(tx.cells[titelIdx] ?? ''))) return 'withdrawal';
-    const refIdx = findColumnIndex(file.headers, 'referenzid');
-    if (refIdx !== -1 && String(tx.cells[refIdx] ?? '').trim()) return 'deposit';
-    return null;
-  }
-  return 'deposit'; // unipayment, uniwire, t365
-}
 
 function normalizeHeaderKey(h) {
   return String(h ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -1985,29 +1918,34 @@ function updateOverview() {
   updateCostsOverview();
 }
 
-/* Deposit/Withdrawal Costs — summed across every recognized Bank/PSP row
-   (matched or not; a fee is owed the moment the PSP processed the row,
-   independent of whether MT5's side has been reconciled yet), using each
-   PSP's own computeFeeUsd() — see PSP_RULES. Direction (deposit vs.
-   withdrawal) comes from classifyBankTxDirection(), not from match data,
-   so this stays accurate even before any matching has run. */
+/* Deposit/Withdrawal Costs — only counts MATCHED Bank/PSP ↔ MT5 pairs
+   (per the user: an unmatched row has no known MT5-side amount to
+   compare against, so it can't yield a real cost figure yet), reusing
+   the same diff.bankUsd/diff.mt5Usd already computed for the % amount
+   comparison above rather than a separate per-PSP fee column. The cost
+   is the actual USD gap between the two sides — confirmed by the user
+   with a real example: Jakob Bangerl was credited 2000€ on MT5, but
+   Unipayment's matched NetAmount for that row is only 1880.6€, i.e. a
+   119.4€ cost. Deposit: mt5Usd - bankUsd (MT5 credited more than we
+   netted from the PSP). Withdrawal: bankUsd - mt5Usd (we paid the PSP
+   more than what was actually debited from the client's MT5 account). */
 function updateCostsOverview() {
   const totals = {
-    deposit: { usd: 0, count: 0, unconvertible: 0 },
-    withdrawal: { usd: 0, count: 0, unconvertible: 0 },
+    deposit: { usd: 0, count: 0 },
+    withdrawal: { usd: 0, count: 0 },
   };
+  const seen = new Set();
   state.bank.files.forEach(f => {
-    if (!f.pspName) return;
-    const rule = PSP_RULES.find(r => r.name === f.pspName);
-    if (!rule || !rule.computeFeeUsd) return;
     f.transactions.forEach(tx => {
-      const direction = classifyBankTxDirection(f, tx);
-      if (direction !== 'deposit' && direction !== 'withdrawal') return;
-      const bucket = totals[direction];
+      if (tx.status !== 'matched' || !tx.match || !tx.match.diff) return;
+      const key = pairKey('bank', tx.txId, tx.match.tab, tx.match.txId);
+      if (seen.has(key)) return;
+      seen.add(key);
+      const d = tx.match.diff;
+      if (d.direction !== 'deposit' && d.direction !== 'withdrawal') return;
+      const bucket = totals[d.direction];
       bucket.count++;
-      const fee = rule.computeFeeUsd(f, tx);
-      if (fee === null) { bucket.unconvertible++; return; }
-      bucket.usd += fee;
+      bucket.usd += d.direction === 'deposit' ? (d.mt5Usd - d.bankUsd) : (d.bankUsd - d.mt5Usd);
     });
   });
 
@@ -2017,12 +1955,10 @@ function updateCostsOverview() {
     if (!valueEl || !subEl) return;
     const t = totals[key];
     valueEl.textContent = t.count ? formatUsd(t.usd) : '—';
-    const parts = [t.count ? `${t.count} Transaktion${t.count === 1 ? '' : 'en'}` : noneLabel];
-    if (t.unconvertible > 0) parts.push(`${t.unconvertible} nicht umrechenbar`);
-    subEl.textContent = parts.join(' · ');
+    subEl.textContent = t.count ? `${t.count} gematchte Transaktion${t.count === 1 ? '' : 'en'}` : noneLabel;
   };
-  render('deposit', 'kpiDepositCostsValue', 'kpiDepositCostsSub', 'Noch keine Einzahlungen');
-  render('withdrawal', 'kpiWithdrawalCostsValue', 'kpiWithdrawalCostsSub', 'Noch keine Auszahlungen');
+  render('deposit', 'kpiDepositCostsValue', 'kpiDepositCostsSub', 'Noch keine gematchten Einzahlungen');
+  render('withdrawal', 'kpiWithdrawalCostsValue', 'kpiWithdrawalCostsSub', 'Noch keine gematchten Auszahlungen');
 }
 
 /* IB Payouts (CRM_Payout:<id>-<random>) are never matched — see
