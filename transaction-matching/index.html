@@ -1992,6 +1992,7 @@ function renderAll() {
   renderTab('bank');
   renderTab('mt5');
   updateOverview();
+  persistState(); // debounced sync to the server — see PERSISTENCE below
 }
 
 /* Only IB Payouts / Deposit Costs / Withdrawal Costs are live so far —
@@ -2221,8 +2222,91 @@ function escapeHtml(v) {
   }[c]));
 }
 
-renderAll();
-ensureFxRate();
+/* ── PERSISTENCE (server sync) ──
+   Everything above (parsing, matching, the UI) is unchanged and stays
+   entirely client-side. This is just the bridge to server.js's two
+   endpoints so `state`/`fxState` survive a reload instead of living only
+   in this tab: hydrateFromServer() runs once on load, persistState()
+   runs (debounced) at the end of every renderAll() — i.e. after every
+   upload, match, confirm, unmatch, FX-rate change, etc., since they all
+   already funnel through renderAll() to refresh the UI. */
+let persistTimer = null;
+function persistState() {
+  clearTimeout(persistTimer);
+  persistTimer = setTimeout(() => {
+    fetch('/api/state', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        bank: state.bank,
+        mt5: state.mt5,
+        fxState,
+        rejectedMatchPairs: [...rejectedMatchPairs],
+      }),
+    }).catch(err => console.warn('Speichern auf dem Server fehlgeschlagen (bleibt lokal im Browser bestehen):', err));
+  }, 800);
+}
+
+/* genTxId()/genFileId() (see the STATE section near the top) just keep
+   incrementing counters that start at 0 on every page load — fine when
+   nothing persisted yet, but a freshly reloaded page would otherwise
+   hand out "B-0001" again for a brand-new upload even though a loaded
+   file already has a transaction with that exact ID. Scans every loaded
+   ID and fast-forwards the counters past the highest one seen. */
+function restoreIdCounters() {
+  ['bank', 'mt5'].forEach(tabKey => {
+    let max = 0;
+    state[tabKey].files.forEach(f => f.transactions.forEach(tx => {
+      const m = /-(\d+)$/.exec(tx.txId);
+      if (m) max = Math.max(max, parseInt(m[1], 10));
+    }));
+    txIdCounters[tabKey] = max;
+  });
+  let maxFile = 0;
+  ['bank', 'mt5'].forEach(tabKey => {
+    state[tabKey].files.forEach(f => {
+      const m = /^f(\d+)_/.exec(f.id);
+      if (m) maxFile = Math.max(maxFile, parseInt(m[1], 10));
+    });
+  });
+  fileIdCounter = maxFile;
+}
+
+/* Returns true once real persisted data was actually applied, so the
+   startup sequence below knows whether to trust a hydrated fxState or
+   still needs ensureFxRate() to establish one from scratch. */
+async function hydrateFromServer() {
+  try {
+    const resp = await fetch('/api/state');
+    if (!resp.ok) return false;
+    const { data } = await resp.json();
+    if (!data) return false;
+    if (data.bank) state.bank = data.bank;
+    if (data.mt5) state.mt5 = data.mt5;
+    if (Array.isArray(data.rejectedMatchPairs)) {
+      data.rejectedMatchPairs.forEach(key => rejectedMatchPairs.add(key));
+    }
+    if (data.fxState) fxState = { ...data.fxState, loading: false };
+    restoreIdCounters();
+    return true;
+  } catch (err) {
+    console.warn('Konnte gespeicherten Stand nicht laden, starte leer:', err);
+    return false;
+  }
+}
+
+(async () => {
+  const hydrated = await hydrateFromServer();
+  renderAll();
+  // A hydrated manual rate is a deliberate choice — always respected. A
+  // hydrated live/cached rate is respected only while still fresh (same
+  // rule ensureFxRate() itself applies); otherwise fetch a current one.
+  const fxIsFresh = hydrated && fxState && (
+    fxState.source === 'manual' ||
+    (fxState.fetchedAt && Date.now() - fxState.fetchedAt < FX_CACHE_MAX_AGE_MS)
+  );
+  if (!fxIsFresh) ensureFxRate();
+})();
 </script>
 </body>
 </html>

@@ -1,0 +1,16 @@
+{
+  "name": "reconmatch-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Tiny persistence layer for ReconMatch — the matching engine and UI stay entirely client-side (see index.html); this only stores/serves the current state so it survives a reload and is shared across whoever has access.",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "pg": "^8.12.0"
+  }
+}
