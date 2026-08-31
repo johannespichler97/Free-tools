@@ -19,9 +19,49 @@
  */
 const express = require('express');
 const path = require('path');
+const crypto = require('crypto');
 const { Pool } = require('pg');
 
 const app = express();
+
+/* Access control: a single shared HTTP Basic Auth password (env vars
+   AUTH_USER/AUTH_PASSWORD), not per-user accounts — this is an internal
+   tool for a small, known group, not a public product. Gates every
+   route, including the API, so a request that skips the page (e.g. a
+   direct GET /api/state) is covered too. Uses a fixed-length HMAC
+   comparison instead of `===` so a wrong guess can't be timed byte-by-
+   byte; skipped entirely (open access) if the env vars aren't set, e.g.
+   for local development. */
+const AUTH_USER = process.env.AUTH_USER;
+const AUTH_PASSWORD = process.env.AUTH_PASSWORD;
+
+function timingSafeStringEqual(a, b) {
+  const bufA = Buffer.from(String(a));
+  const bufB = Buffer.from(String(b));
+  // Hash both to a fixed length first — timingSafeEqual itself requires
+  // equal-length buffers and would otherwise leak the length by throwing.
+  const hashA = crypto.createHash('sha256').update(bufA).digest();
+  const hashB = crypto.createHash('sha256').update(bufB).digest();
+  return crypto.timingSafeEqual(hashA, hashB) && bufA.length === bufB.length;
+}
+
+if (AUTH_USER && AUTH_PASSWORD) {
+  app.use((req, res, next) => {
+    const header = req.headers.authorization || '';
+    const [scheme, encoded] = header.split(' ');
+    if (scheme === 'Basic' && encoded) {
+      const [user, pass] = Buffer.from(encoded, 'base64').toString('utf8').split(':');
+      if (timingSafeStringEqual(user ?? '', AUTH_USER) && timingSafeStringEqual(pass ?? '', AUTH_PASSWORD)) {
+        return next();
+      }
+    }
+    res.set('WWW-Authenticate', 'Basic realm="ReconMatch"');
+    res.status(401).send('Authentication required.');
+  });
+} else {
+  console.warn('AUTH_USER/AUTH_PASSWORD not set — ReconMatch is running with no access control.');
+}
+
 app.use(express.json({ limit: '25mb' })); // a day's worth of statements/matches, comfortably
 
 const pool = new Pool({
