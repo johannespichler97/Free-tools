@@ -1502,21 +1502,37 @@ function unmatchCurrent() {
    pill/modal to pick it up too. recomputeInternalTransferWarnings() skips
    confirmed pairs, so a later FX-rate change won't silently re-flag one a
    person already reviewed. */
+/* Sets `confirmed` on both sides of a match explicitly, rather than
+   relying on the two sides sharing the same warning/diff object in
+   memory: that sharing only holds within one running session — once a
+   match has been through persistState()/hydrateFromServer() (i.e.
+   JSON stringified and parsed back), each side gets its own
+   independent copy of the object, so mutating just one side (as this
+   used to do) silently stopped propagating to the counterpart after a
+   reload. This is why confirming a flagged match after a reload only
+   ever "took" on whichever row's modal was actually open. */
+function setMatchConfirmed(tabKey, fileId, txId, confirmed) {
+  const found = findTx(tabKey, fileId, txId);
+  if (!found || !found.tx.match) return;
+  const flag = found.tx.match.warning || found.tx.match.diff;
+  if (!flag) return;
+  flag.confirmed = confirmed;
+  const counterpart = findTxById(found.tx.match.tab, found.tx.match.txId);
+  if (counterpart && counterpart.tx.match) {
+    const counterFlag = counterpart.tx.match.warning || counterpart.tx.match.diff;
+    if (counterFlag) counterFlag.confirmed = confirmed;
+  }
+}
+
 function confirmMatchWarning() {
   if (!matchModalCtx) return;
-  const found = findTx(matchModalCtx.tabKey, matchModalCtx.fileId, matchModalCtx.txId);
-  if (!found || !found.tx.match) return;
-  if (found.tx.match.warning) found.tx.match.warning.confirmed = true;
-  else if (found.tx.match.diff) found.tx.match.diff.confirmed = true;
+  setMatchConfirmed(matchModalCtx.tabKey, matchModalCtx.fileId, matchModalCtx.txId, true);
   renderMatchModal();
   renderAll();
 }
 function unconfirmMatchWarning() {
   if (!matchModalCtx) return;
-  const found = findTx(matchModalCtx.tabKey, matchModalCtx.fileId, matchModalCtx.txId);
-  if (!found || !found.tx.match) return;
-  if (found.tx.match.warning) found.tx.match.warning.confirmed = false;
-  else if (found.tx.match.diff) found.tx.match.diff.confirmed = false;
+  setMatchConfirmed(matchModalCtx.tabKey, matchModalCtx.fileId, matchModalCtx.txId, false);
   renderMatchModal();
   renderAll();
 }
@@ -2484,6 +2500,39 @@ function restoreIdCounters() {
   fileIdCounter = maxFile;
 }
 
+/* One-time repair for data saved before setMatchConfirmed() started
+   updating both sides of a match explicitly (see there): a "Trotzdem
+   bestätigen" click used to only ever mutate the object on whichever
+   row's modal was open, which "worked" only by both sides sharing one
+   JS object reference in memory — a sharing that JSON round-tripping
+   through persistState()/hydrateFromServer() silently breaks. Any pair
+   already persisted asymmetrically (one side confirmed, its
+   counterpart not) gets symmetrized on load — a person only ever
+   clicks "confirm" meaning the whole pair, never just their half of
+   it. */
+function repairAsymmetricConfirmations() {
+  const seen = new Set();
+  ['bank', 'mt5'].forEach(tabKey => {
+    state[tabKey].files.forEach(f => {
+      f.transactions.forEach(tx => {
+        if (tx.status !== 'matched' || !tx.match) return;
+        const flag = tx.match.warning || tx.match.diff;
+        if (!flag) return;
+        const key = pairKey(tabKey, tx.txId, tx.match.tab, tx.match.txId);
+        if (seen.has(key)) return;
+        seen.add(key);
+        const counterpart = findTxById(tx.match.tab, tx.match.txId);
+        if (!counterpart || !counterpart.tx.match) return;
+        const counterFlag = counterpart.tx.match.warning || counterpart.tx.match.diff;
+        if (!counterFlag) return;
+        if (flag.confirmed !== counterFlag.confirmed) {
+          flag.confirmed = counterFlag.confirmed = true;
+        }
+      });
+    });
+  });
+}
+
 /* Returns true once real persisted data was actually applied, so the
    startup sequence below knows whether to trust a hydrated fxState or
    still needs ensureFxRate() to establish one from scratch. */
@@ -2500,6 +2549,7 @@ async function hydrateFromServer() {
     }
     if (data.fxState) fxState = { ...data.fxState, loading: false };
     restoreIdCounters();
+    repairAsymmetricConfirmations();
     return true;
   } catch (err) {
     console.warn('Konnte gespeicherten Stand nicht laden, starte leer:', err);
