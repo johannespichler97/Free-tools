@@ -1995,8 +1995,29 @@ function isNumericLike(v) {
   return /^[+-]?\d{1,3}([.,]\d{3})*([.,]\d{1,2})?$/.test(String(v).trim());
 }
 
+/* Earliest transaction date in an MT5 file's own Time column — used to
+   sort file cards chronologically (see renderTab below) instead of by
+   upload order, since e.g. several single-day "Deposits and
+   Withdrawals" reports uploaded out of order (today's, then
+   yesterday's) should still line up by the date they actually cover.
+   A file with no recognizable Time column or no parseable date sorts
+   last either way (very old sentinel), rather than jumping to the top
+   or bottom depending on sort direction. */
+function getMt5FileSortDate(f) {
+  const timeIdx = findColumnIndex(f.headers, 'time');
+  if (timeIdx === -1) return -Infinity;
+  let min = null;
+  f.transactions.forEach(tx => {
+    const t = parseMt5Time(tx.cells[timeIdx]);
+    if (!isNaN(t) && (min === null || t < min)) min = t;
+  });
+  return min === null ? -Infinity : min;
+}
+
 function renderTab(tabKey) {
-  const files = state[tabKey].files;
+  const files = tabKey === 'mt5'
+    ? [...state.mt5.files].sort((a, b) => getMt5FileSortDate(b) - getMt5FileSortDate(a)) // newest date first
+    : state[tabKey].files;
   document.getElementById('tabCount-' + tabKey).textContent = files.reduce((n, f) => n + f.transactions.length, 0);
   document.getElementById('emptyState-' + tabKey).style.display = files.length ? 'none' : 'flex';
   document.getElementById('toolbar-' + tabKey).style.display = files.length ? 'flex' : 'none';
