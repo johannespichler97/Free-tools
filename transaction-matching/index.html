@@ -127,6 +127,18 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 
 /* ── TABLE ── */
 .table-scroll { overflow-x: auto; }
+
+/* Floating left/right nav for wide transaction tables — fixed to the
+   viewport (stays put while the page scrolls vertically), only shown
+   while a table on the active tab actually has something to scroll to.
+   Targets whichever table is nearest the vertical center of the screen,
+   so it stays relevant across several stacked file cards. */
+.h-scroll-nav { position: fixed; top: 50%; transform: translateY(-50%); z-index: 50; width: 40px; height: 40px; border-radius: 50%; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-dim); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 18px; font-family: var(--font); line-height: 1; box-shadow: 0 4px 16px rgba(0,0,0,0.35); transition: opacity .15s, background .15s, border-color .15s, color .15s; opacity: 0; pointer-events: none; }
+.h-scroll-nav.visible { opacity: 1; pointer-events: auto; }
+.h-scroll-nav:hover { background: var(--bg-panel-2); color: var(--text); border-color: var(--accent); }
+.h-scroll-nav-left { left: 14px; }
+.h-scroll-nav-right { right: 14px; }
+@media (max-width: 700px) { .h-scroll-nav { display: none; } }
 .tx-table { width: 100%; border-collapse: collapse; min-width: 820px; }
 .tx-table th { text-align: left; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--text-faint); padding: 9px 14px; border-bottom: 1px solid var(--border); background: var(--bg-panel-2); white-space: nowrap; position: sticky; top: 0; }
 .tx-table td { font-size: 12.5px; padding: 9px 14px; border-bottom: 1px solid var(--border-soft); color: var(--text); white-space: nowrap; }
@@ -402,6 +414,9 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
     </div>
   </div>
 
+  <button type="button" class="h-scroll-nav h-scroll-nav-left" id="hScrollLeft" title="Tabelle nach links scrollen" aria-label="Tabelle nach links scrollen">‹</button>
+  <button type="button" class="h-scroll-nav h-scroll-nav-right" id="hScrollRight" title="Tabelle nach rechts scrollen" aria-label="Tabelle nach rechts scrollen">›</button>
+
 <script type="text/plain" id="pdf-worker-src">
 /**
  * @licstart The following is the entire license notice for the
@@ -538,7 +553,51 @@ function switchTab(key) {
     document.getElementById('tabBtn-' + k).setAttribute('aria-selected', k === key ? 'true' : 'false');
     document.getElementById('tabPanel-' + k).classList.toggle('active', k === key);
   });
+  updateHScrollNav();
 }
+
+/* ── FLOATING HORIZONTAL SCROLL NAV ──
+   Wide transaction tables (no more truncation — see the row-content
+   change above) need a lot of horizontal scrolling. These two fixed
+   ‹ › buttons stay put on screen as the page scrolls vertically, and
+   always act on whichever file's table is nearest the middle of the
+   viewport right now, so they stay useful across several stacked
+   batch cards on one tab. Only the active tab's tables are considered
+   — the ones on the hidden tab aren't visible to scroll anyway. */
+function findActiveTableScroll() {
+  const candidates = Array.from(document.querySelectorAll('.tab-panel.active .table-scroll'))
+    .filter(el => el.scrollWidth > el.clientWidth + 2); // skip tables that already fit
+  if (!candidates.length) return null;
+  const viewportCenter = window.innerHeight / 2;
+  let best = null, bestDist = Infinity;
+  candidates.forEach(el => {
+    const rect = el.getBoundingClientRect();
+    if (rect.bottom < 0 || rect.top > window.innerHeight) return; // fully scrolled off-screen
+    const dist = Math.abs((rect.top + rect.bottom) / 2 - viewportCenter);
+    if (dist < bestDist) { bestDist = dist; best = el; }
+  });
+  return best;
+}
+
+function updateHScrollNav() {
+  const leftBtn = document.getElementById('hScrollLeft');
+  const rightBtn = document.getElementById('hScrollRight');
+  if (!leftBtn || !rightBtn) return;
+  const visible = !!findActiveTableScroll();
+  leftBtn.classList.toggle('visible', visible);
+  rightBtn.classList.toggle('visible', visible);
+}
+
+function scrollActiveTable(direction) {
+  const el = findActiveTableScroll();
+  if (!el) return;
+  el.scrollBy({ left: direction * Math.round(el.clientWidth * 0.7), behavior: 'smooth' });
+}
+
+document.getElementById('hScrollLeft').addEventListener('click', () => scrollActiveTable(-1));
+document.getElementById('hScrollRight').addEventListener('click', () => scrollActiveTable(1));
+window.addEventListener('scroll', updateHScrollNav, { passive: true });
+window.addEventListener('resize', updateHScrollNav);
 
 /* ── DROPZONE WIRING ── */
 ['bank', 'mt5'].forEach(key => {
@@ -2057,6 +2116,7 @@ function renderAll() {
   renderTab('bank');
   renderTab('mt5');
   updateOverview();
+  updateHScrollNav(); // tables were just replaced — re-check what's scrollable
   persistState(); // debounced sync to the server — see PERSISTENCE below
 }
 
