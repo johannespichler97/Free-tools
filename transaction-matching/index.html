@@ -746,10 +746,13 @@ const PSP_RULES = [
     amountColumn: 'amounteur',
     amountCurrency: 'EUR',
     // Real extra cost on top of whatever the MT5-vs-bank amount gap
-    // already shows — Alphapo charges this on withdrawals specifically,
-    // per the user. Applied to the Bank/PSP-side USD amount in
-    // updateCostsOverview() below.
-    extraWithdrawalFeeRate: 0.01,
+    // already shows — a 1% fee Alphapo charges when the broker cashes
+    // out a received deposit to its own bank account (nothing to do
+    // with a customer's MT5 withdrawal). Applies on DEPOSIT matches,
+    // per the user's own worked example: MT5 credited 500, Alphapo also
+    // shows 500 (zero gap) → still a real cost of 5 to the broker.
+    // Applied to the Bank/PSP-side USD amount in updateCostsOverview().
+    extraDepositFeeRate: 0.01,
     matchRules: [
       { id: 'transactionid', label: 'TRANSACTION_ID', column: 'transactionid', bankKey: columnKey('transactionid'), mt5Key: prefixCommentKey('alphapo'), direction: 'deposit' },
       {
@@ -798,11 +801,10 @@ const PSP_RULES = [
     ],
     amountColumn: 'amount',
     currencyColumn: 'currency',
-    // Same 1% withdrawal fee as Alphapo — see there. NOTE: T365 currently
-    // has no withdrawal matchRule at all below (only ever matched as a
-    // deposit), so this has no effect yet; it's here so the fee applies
-    // automatically the moment T365 withdrawal matching exists.
-    extraWithdrawalFeeRate: 0.01,
+    // Same 1% deposit-cashout fee as Alphapo — see there. Applies to
+    // T365's existing deposit matchRule right away (T365 only ever
+    // matches deposits in this system anyway).
+    extraDepositFeeRate: 0.01,
     matchRules: [
       /* The MT5 comment prefix ("Transact365:13553-20105") doesn't match
          the PSP's short name, hence the explicit prefixCommentKey(). */
@@ -2150,11 +2152,14 @@ function updateCostsOverview() {
       const d = tx.match.diff;
       if (d.direction !== 'deposit' && d.direction !== 'withdrawal') return;
       let cost = d.direction === 'deposit' ? (d.mt5Usd - d.bankUsd) : (d.bankUsd - d.mt5Usd);
-      // A real extra fee some PSPs charge on withdrawals, on top of
-      // whatever the MT5-vs-bank amount gap already accounts for — see
-      // extraWithdrawalFeeRate on PSP_RULES (Alphapo, T365).
-      if (d.direction === 'withdrawal' && rule && rule.extraWithdrawalFeeRate) {
-        cost += rule.extraWithdrawalFeeRate * d.bankUsd;
+      // A real extra fee some PSPs charge the broker for cashing out a
+      // received deposit to its own bank account, on top of whatever the
+      // MT5-vs-bank amount gap already shows — see extraDepositFeeRate
+      // on PSP_RULES (Alphapo, T365). Per the user: MT5 credited 500,
+      // PSP also shows 500 (zero gap) still costs 1% = 5, so this is
+      // added even when the gap alone is 0.
+      if (d.direction === 'deposit' && rule && rule.extraDepositFeeRate) {
+        cost += rule.extraDepositFeeRate * d.bankUsd;
       }
       const volume = d.bankUsd;
 
