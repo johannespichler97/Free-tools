@@ -1755,11 +1755,14 @@ function isIbPayoutTx(file, tx) {
    counterpart to match against, same shape as IB Payouts above: shown
    green/"matched" instead of the red unmatched pill, excluded from
    "Offen"/Match-Rate, and — per the user, since this is real money the
-   broker spends — tallied on its own dashboard card. */
+   broker spends — tallied on its own dashboard card. Two known comment
+   wordings for the same thing: "Negative Balance Correction" and
+   "Balance adjustment to Zero". */
 function isNegativeBalanceCorrectionTx(file, tx) {
   const commentIdx = findColumnIndex(file.headers, 'comment');
   if (commentIdx === -1) return false;
-  return /negative balance correction/i.test(String(tx.cells[commentIdx] ?? ''));
+  const comment = String(tx.cells[commentIdx] ?? '');
+  return /negative balance correction/i.test(comment) || /balance adjustment to zero/i.test(comment);
 }
 
 /* PF fee — e.g. "fee #1542 [pf]". Both "fee" and the literal "[pf]" tag
