@@ -290,6 +290,11 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
         <div class="kpi-value" id="kpiWithdrawalCostsValue">—</div>
         <div class="kpi-sub" id="kpiWithdrawalCostsSub">Noch keine Auszahlungen</div>
       </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Negative Balance Corrections <span class="kpi-live-dot" title="Live berechnet"></span></div>
+        <div class="kpi-value" id="kpiNbcValue">—</div>
+        <div class="kpi-sub" id="kpiNbcSub">Noch keine Corrections</div>
+      </div>
     </div>
 
     <!-- ── COSTS BY PSP/BANK ── -->
@@ -1711,6 +1716,28 @@ function isIbPayoutTx(file, tx) {
   return /^CRM_Payout:/i.test(String(tx.cells[commentIdx] ?? '').trim());
 }
 
+/* Negative Balance Correction — MT5-side write-offs with no Bank/PSP
+   counterpart to match against, same shape as IB Payouts above: shown
+   green/"matched" instead of the red unmatched pill, excluded from
+   "Offen"/Match-Rate, and — per the user, since this is real money the
+   broker spends — tallied on its own dashboard card. */
+function isNegativeBalanceCorrectionTx(file, tx) {
+  const commentIdx = findColumnIndex(file.headers, 'comment');
+  if (commentIdx === -1) return false;
+  return /negative balance correction/i.test(String(tx.cells[commentIdx] ?? ''));
+}
+
+/* PF fee — e.g. "fee #1542 [pf]". Both "fee" and the literal "[pf]" tag
+   must be present (not just "fee" alone, which could mean something
+   else entirely). Same green/"matched" treatment as above; no separate
+   dashboard total was asked for this one. */
+function isPfFeeTx(file, tx) {
+  const commentIdx = findColumnIndex(file.headers, 'comment');
+  if (commentIdx === -1) return false;
+  const comment = String(tx.cells[commentIdx] ?? '');
+  return /fee/i.test(comment) && /\[pf\]/i.test(comment);
+}
+
 /* ── INTERNAL TRANSFERS (MT5 ↔ MT5, not Bank/PSP ↔ MT5) ──
    "Transfer from <login>" / "Transfer to <login>" comments record money
    moved between two MT5 accounts — both sides live in the MT5 tab, so
@@ -2033,42 +2060,57 @@ function renderAll() {
   persistState(); // debounced sync to the server — see PERSISTENCE below
 }
 
-function updateOverview() {
-  updateSummaryOverview();
-
+/* Shared by every "sum up a category of never-matched MT5 transactions,
+   identified purely by their Comment" dashboard card — IB Payouts and
+   Negative Balance Corrections both fit this exact shape. */
+function sumMt5CommentCategory(predicate) {
   let totalUsd = 0, count = 0, unconvertible = 0;
   state.mt5.files.forEach(f => {
-    const commentIdx = findColumnIndex(f.headers, 'comment');
     const amountIdx = findColumnIndex(f.headers, 'amount');
     const currencyIdx = findColumnIndex(f.headers, 'currency');
-    if (commentIdx === -1 || amountIdx === -1) return;
+    if (amountIdx === -1) return;
     f.transactions.forEach(tx => {
-      if (!isIbPayoutTx(f, tx)) return;
+      if (!predicate(f, tx)) return;
       count++;
       const usd = convertToUsd(tx.cells[amountIdx], currencyIdx !== -1 ? tx.cells[currencyIdx] : 'USD');
       if (usd === null) { unconvertible++; return; }
       totalUsd += usd;
     });
   });
+  return { totalUsd, count, unconvertible };
+}
 
-  const valueEl = document.getElementById('kpiIbPayoutsValue');
-  const subEl = document.getElementById('kpiIbPayoutsSub');
-  if (!valueEl || !subEl) return; // guard: called before DOM ready in edge cases
+function updateOverview() {
+  updateSummaryOverview();
 
-  valueEl.textContent = count
-    ? formatUsd(totalUsd)
-    : '—';
-
-  const parts = [];
-  parts.push(count ? `${count} Transaktion${count === 1 ? '' : 'en'}` : 'Noch keine Payouts');
-  if (unconvertible > 0) parts.push(`${unconvertible} nicht umrechenbar`);
+  const ib = sumMt5CommentCategory(isIbPayoutTx);
+  const ibValueEl = document.getElementById('kpiIbPayoutsValue');
+  const ibSubEl = document.getElementById('kpiIbPayoutsSub');
+  if (!ibValueEl) return; // guard: called before DOM ready in edge cases
+  ibValueEl.textContent = ib.count ? formatUsd(ib.totalUsd) : '—';
+  const ibParts = [];
+  ibParts.push(ib.count ? `${ib.count} Transaktion${ib.count === 1 ? '' : 'en'}` : 'Noch keine Payouts');
+  if (ib.unconvertible > 0) ibParts.push(`${ib.unconvertible} nicht umrechenbar`);
   const fxLabel = fxState.loading
     ? 'Kurs wird geladen…'
     : `1 EUR = ${fxState.rate.toFixed(4)} USD (${
         fxState.source === 'live' ? 'live' : fxState.source === 'manual' ? 'manuell' : fxState.source === 'cached' ? 'gecacht' : fxState.source === 'cached-stale' ? 'gecacht, veraltet' : 'Fallback'
       })`;
-  parts.push(fxLabel);
-  subEl.textContent = parts.join(' · ');
+  ibParts.push(fxLabel);
+  ibSubEl.textContent = ibParts.join(' · ');
+
+  // Negative Balance Corrections — real money the broker spends, per the
+  // user, so it gets its own live dashboard total the same way IB
+  // Payouts does.
+  const nbc = sumMt5CommentCategory(isNegativeBalanceCorrectionTx);
+  const nbcValueEl = document.getElementById('kpiNbcValue');
+  const nbcSubEl = document.getElementById('kpiNbcSub');
+  if (nbcValueEl) {
+    nbcValueEl.textContent = nbc.count ? formatUsd(nbc.totalUsd) : '—';
+    const nbcParts = [nbc.count ? `${nbc.count} Transaktion${nbc.count === 1 ? '' : 'en'}` : 'Noch keine Corrections'];
+    if (nbc.unconvertible > 0) nbcParts.push(`${nbc.unconvertible} nicht umrechenbar`);
+    nbcSubEl.textContent = nbcParts.join(' · ');
+  }
 
   updateFxHeaderNote();
   updateCostsOverview();
@@ -2106,10 +2148,12 @@ function updateFxHeaderNote() {
    (not pairs) across both tabs combined, so e.g. one matched Bank/PSP
    row + its MT5 counterpart count as 2 toward both "gesamt" and
    "gematcht", consistent with how every other count on this dashboard
-   already works per-row. IB Payouts are excluded from "Offen" and from
-   the Match-Rate's denominator — they're unmatched by design, not a
-   pending reconciliation problem, so counting them as "open" would
-   understate the real match rate. */
+   already works per-row. IB Payouts are excluded from "Offen" AND from
+   "Gematcht"/the Match-Rate denominator entirely — they're unmatched by
+   design, not a pending reconciliation problem. Negative Balance
+   Corrections and PF fees are different: the user asked for those to
+   be counted as matched (green pill, "declared as matched"), so they
+   go into `matched` directly rather than their own excluded bucket. */
 function updateSummaryOverview() {
   let total = 0, matched = 0, unmatched = 0, ibPayouts = 0;
   ['bank', 'mt5'].forEach(tabKey => {
@@ -2119,6 +2163,7 @@ function updateSummaryOverview() {
         if (tx.status === 'matched') matched++;
         else if (tx.status === 'unmatched') {
           if (tabKey === 'mt5' && isIbPayoutTx(f, tx)) ibPayouts++;
+          else if (tabKey === 'mt5' && (isNegativeBalanceCorrectionTx(f, tx) || isPfFeeTx(f, tx))) matched++;
           else unmatched++;
         }
       });
@@ -2238,6 +2283,12 @@ function updateCostsOverview() {
 function matchPillHtml(tabKey, file, tx) {
   if (tabKey === 'mt5' && tx.status === 'unmatched' && isIbPayoutTx(file, tx)) {
     return `<span class="match-pill ib-payout" title="IB Payout — wird nicht gematcht, zählt in die IB-Payouts-Summe.">IB Payout</span>`;
+  }
+  if (tabKey === 'mt5' && tx.status === 'unmatched' && isNegativeBalanceCorrectionTx(file, tx)) {
+    return `<span class="match-pill matched" title="Negative Balance Correction — wird nicht gegen Bank/PSP gematcht, zählt in die NBC-Summe.">Gematcht (NBC)</span>`;
+  }
+  if (tabKey === 'mt5' && tx.status === 'unmatched' && isPfFeeTx(file, tx)) {
+    return `<span class="match-pill matched" title="PF-Fee — wird nicht gegen Bank/PSP gematcht.">Gematcht (Fee)</span>`;
   }
   if (tx.status === 'matched' && tx.match) {
     const w = tx.match.warning;
