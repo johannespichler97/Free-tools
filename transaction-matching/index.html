@@ -49,6 +49,8 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .header-spacer { flex: 1; }
 .header-note { font-size: 12px; color: var(--text-faint); display: flex; align-items: center; gap: 6px; }
 .header-note .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-2); animation: pulse 2.2s infinite; }
+.header-note .dot.dot-live { background: var(--success); }
+.header-note .dot.dot-stale { background: var(--danger); }
 
 /* ── HERO ── */
 .hero { border-bottom: 1px solid var(--border); padding: 34px 24px 30px; background: radial-gradient(1100px 320px at 15% -20%, rgba(124,127,242,0.16), transparent); }
@@ -229,6 +231,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
       </div>
       <div class="header-spacer"></div>
       <div class="header-note"><span class="dot"></span> Matching-Engine: Unipayment, Alphapo, Uniwire, T365 &amp; Narvi aktiv</div>
+      <div class="header-note" id="fxHeaderNote"><span class="dot" id="fxHeaderDot"></span> <span id="fxHeaderText">EUR/USD-Kurs wird geladen…</span></div>
     </div>
   </header>
 
@@ -241,31 +244,31 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 
   <div class="main">
 
-    <!-- ── OVERVIEW (placeholder) ── -->
+    <!-- ── OVERVIEW ── -->
     <div class="section-head">
       <span class="section-title">Übersicht</span>
-      <span class="section-badge">Teilweise live</span>
+      <span class="section-badge">Live</span>
     </div>
     <div class="kpi-grid">
       <div class="kpi-card">
-        <div class="kpi-label">Transaktionen gesamt</div>
-        <div class="kpi-value">—</div>
-        <div class="kpi-sub">Bald verfügbar</div>
+        <div class="kpi-label">Transaktionen gesamt <span class="kpi-live-dot" title="Live berechnet"></span></div>
+        <div class="kpi-value" id="kpiTotalValue">—</div>
+        <div class="kpi-sub" id="kpiTotalSub">Noch keine Transaktionen</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">Gematcht</div>
-        <div class="kpi-value">—</div>
-        <div class="kpi-sub">Bald verfügbar</div>
+        <div class="kpi-label">Gematcht <span class="kpi-live-dot" title="Live berechnet"></span></div>
+        <div class="kpi-value" id="kpiMatchedValue">—</div>
+        <div class="kpi-sub" id="kpiMatchedSub">—</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">Offen</div>
-        <div class="kpi-value">—</div>
-        <div class="kpi-sub">Bald verfügbar</div>
+        <div class="kpi-label">Offen <span class="kpi-live-dot" title="Live berechnet"></span></div>
+        <div class="kpi-value" id="kpiOpenValue">—</div>
+        <div class="kpi-sub" id="kpiOpenSub">—</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">Match-Rate</div>
-        <div class="kpi-value">—</div>
-        <div class="kpi-sub">Bald verfügbar</div>
+        <div class="kpi-label">Match-Rate <span class="kpi-live-dot" title="Live berechnet"></span></div>
+        <div class="kpi-value" id="kpiMatchRateValue">—</div>
+        <div class="kpi-sub" id="kpiMatchRateSub">IB Payouts nicht mitgezählt</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">IB Payouts <span class="kpi-live-dot" title="Live berechnet"></span></div>
@@ -301,13 +304,15 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
             <tr>
               <th>PSP / Bank</th>
               <th>Deposit Costs</th>
+              <th>Deposit %</th>
               <th>Einzahlungen</th>
               <th>Withdrawal Costs</th>
+              <th>Withdrawal %</th>
               <th>Auszahlungen</th>
             </tr>
           </thead>
           <tbody id="pspCostsBody">
-            <tr><td colspan="5" style="color: var(--text-faint);">Noch keine gematchten Transaktionen.</td></tr>
+            <tr><td colspan="7" style="color: var(--text-faint);">Noch keine gematchten Transaktionen.</td></tr>
           </tbody>
         </table>
       </div>
@@ -740,6 +745,11 @@ const PSP_RULES = [
     // comparable figure across every Alphapo row.
     amountColumn: 'amounteur',
     amountCurrency: 'EUR',
+    // Real extra cost on top of whatever the MT5-vs-bank amount gap
+    // already shows — Alphapo charges this on withdrawals specifically,
+    // per the user. Applied to the Bank/PSP-side USD amount in
+    // updateCostsOverview() below.
+    extraWithdrawalFeeRate: 0.01,
     matchRules: [
       { id: 'transactionid', label: 'TRANSACTION_ID', column: 'transactionid', bankKey: columnKey('transactionid'), mt5Key: prefixCommentKey('alphapo'), direction: 'deposit' },
       {
@@ -788,6 +798,11 @@ const PSP_RULES = [
     ],
     amountColumn: 'amount',
     currencyColumn: 'currency',
+    // Same 1% withdrawal fee as Alphapo — see there. NOTE: T365 currently
+    // has no withdrawal matchRule at all below (only ever matched as a
+    // deposit), so this has no effect yet; it's here so the fee applies
+    // automatically the moment T365 withdrawal matching exists.
+    extraWithdrawalFeeRate: 0.01,
     matchRules: [
       /* The MT5 comment prefix ("Transact365:13553-20105") doesn't match
          the PSP's short name, hence the explicit prefixCommentKey(). */
@@ -1995,10 +2010,9 @@ function renderAll() {
   persistState(); // debounced sync to the server — see PERSISTENCE below
 }
 
-/* Only IB Payouts / Deposit Costs / Withdrawal Costs are live so far —
-   the other four Übersicht cards stay static placeholders until that's
-   asked for. */
 function updateOverview() {
+  updateSummaryOverview();
+
   let totalUsd = 0, count = 0, unconvertible = 0;
   state.mt5.files.forEach(f => {
     const commentIdx = findColumnIndex(f.headers, 'comment');
@@ -2033,7 +2047,76 @@ function updateOverview() {
   parts.push(fxLabel);
   subEl.textContent = parts.join(' · ');
 
+  updateFxHeaderNote();
   updateCostsOverview();
+}
+
+/* Header-level FX status, separate from the (smaller, easy-to-miss)
+   label inside the IB Payouts card — the user asked to be able to see
+   at a glance that matching is really using a live rate now that this
+   runs as a real deployed site (the manual override was only ever a
+   workaround for the Artifact preview sandbox blocking outbound
+   fetches, not something matching should depend on day to day). Green
+   dot = live or still-fresh cached; red = stale cache or the hardcoded
+   fallback constant, i.e. "not talking to the real market rate right
+   now" — worth a person's attention. */
+function updateFxHeaderNote() {
+  const dotEl = document.getElementById('fxHeaderDot');
+  const textEl = document.getElementById('fxHeaderText');
+  if (!dotEl || !textEl) return;
+  if (fxState.loading) {
+    dotEl.className = 'dot';
+    textEl.textContent = 'EUR/USD-Kurs wird geladen…';
+    return;
+  }
+  const isLive = fxState.source === 'live' || fxState.source === 'cached';
+  dotEl.className = 'dot ' + (isLive ? 'dot-live' : 'dot-stale');
+  const sourceLabel = {
+    live: 'live', cached: 'live, gecacht', manual: 'manuell gesetzt',
+    'cached-stale': 'veraltet, letzter bekannter Kurs', fallback: 'Fallback-Wert, kein Live-Kurs erreichbar',
+  }[fxState.source] || fxState.source;
+  const age = fxState.fetchedAt ? `, vor ${Math.max(0, Math.round((Date.now() - fxState.fetchedAt) / 60000))} Min. abgerufen` : '';
+  textEl.textContent = `EUR/USD: ${fxState.rate.toFixed(4)} (${sourceLabel}${age})`;
+}
+
+/* Transaktionen gesamt / Gematcht / Offen / Match-Rate — counts rows
+   (not pairs) across both tabs combined, so e.g. one matched Bank/PSP
+   row + its MT5 counterpart count as 2 toward both "gesamt" and
+   "gematcht", consistent with how every other count on this dashboard
+   already works per-row. IB Payouts are excluded from "Offen" and from
+   the Match-Rate's denominator — they're unmatched by design, not a
+   pending reconciliation problem, so counting them as "open" would
+   understate the real match rate. */
+function updateSummaryOverview() {
+  let total = 0, matched = 0, unmatched = 0, ibPayouts = 0;
+  ['bank', 'mt5'].forEach(tabKey => {
+    state[tabKey].files.forEach(f => {
+      f.transactions.forEach(tx => {
+        total++;
+        if (tx.status === 'matched') matched++;
+        else if (tx.status === 'unmatched') {
+          if (tabKey === 'mt5' && isIbPayoutTx(f, tx)) ibPayouts++;
+          else unmatched++;
+        }
+      });
+    });
+  });
+
+  const totalValueEl = document.getElementById('kpiTotalValue');
+  if (!totalValueEl) return; // guard: called before DOM ready in edge cases
+  document.getElementById('kpiTotalValue').textContent = total || '—';
+  document.getElementById('kpiTotalSub').textContent = total ? `${state.bank.files.length + state.mt5.files.length} Datei${state.bank.files.length + state.mt5.files.length === 1 ? '' : 'en'} geladen` : 'Noch keine Transaktionen';
+
+  document.getElementById('kpiMatchedValue').textContent = total ? matched : '—';
+  document.getElementById('kpiMatchedSub').textContent = total ? `${matched} von ${total} Zeilen` : '—';
+
+  document.getElementById('kpiOpenValue').textContent = total ? unmatched : '—';
+  document.getElementById('kpiOpenSub').textContent = total
+    ? (ibPayouts ? `${ibPayouts} IB Payout${ibPayouts === 1 ? '' : 's'} nicht mitgezählt` : 'ohne IB Payouts')
+    : '—';
+
+  const rateBase = matched + unmatched; // excludes IB Payouts, which can never be matched
+  document.getElementById('kpiMatchRateValue').textContent = rateBase ? `${(matched / rateBase * 100).toFixed(0)}%` : '—';
 }
 
 /* Deposit/Withdrawal Costs — only counts MATCHED Bank/PSP ↔ MT5 pairs
@@ -2049,14 +2132,15 @@ function updateOverview() {
    more than what was actually debited from the client's MT5 account). */
 function updateCostsOverview() {
   const totals = {
-    deposit: { usd: 0, count: 0 },
-    withdrawal: { usd: 0, count: 0 },
+    deposit: { usd: 0, volumeUsd: 0, count: 0 },
+    withdrawal: { usd: 0, volumeUsd: 0, count: 0 },
   };
-  const newBucket = () => ({ depositUsd: 0, depositCount: 0, withdrawalUsd: 0, withdrawalCount: 0 });
+  const newBucket = () => ({ depositUsd: 0, depositVolumeUsd: 0, depositCount: 0, withdrawalUsd: 0, withdrawalVolumeUsd: 0, withdrawalCount: 0 });
   const perPsp = new Map(); // pspName -> newBucket(), in PSP_RULES order
 
   const seen = new Set();
   state.bank.files.forEach(f => {
+    const rule = f.pspName ? PSP_RULES.find(r => r.name === f.pspName) : null;
     if (f.pspName && !perPsp.has(f.pspName)) perPsp.set(f.pspName, newBucket());
     f.transactions.forEach(tx => {
       if (tx.status !== 'matched' || !tx.match || !tx.match.diff) return;
@@ -2065,16 +2149,24 @@ function updateCostsOverview() {
       seen.add(key);
       const d = tx.match.diff;
       if (d.direction !== 'deposit' && d.direction !== 'withdrawal') return;
-      const cost = d.direction === 'deposit' ? (d.mt5Usd - d.bankUsd) : (d.bankUsd - d.mt5Usd);
+      let cost = d.direction === 'deposit' ? (d.mt5Usd - d.bankUsd) : (d.bankUsd - d.mt5Usd);
+      // A real extra fee some PSPs charge on withdrawals, on top of
+      // whatever the MT5-vs-bank amount gap already accounts for — see
+      // extraWithdrawalFeeRate on PSP_RULES (Alphapo, T365).
+      if (d.direction === 'withdrawal' && rule && rule.extraWithdrawalFeeRate) {
+        cost += rule.extraWithdrawalFeeRate * d.bankUsd;
+      }
+      const volume = d.bankUsd;
 
       const bucket = totals[d.direction];
       bucket.count++;
       bucket.usd += cost;
+      bucket.volumeUsd += volume;
 
       if (f.pspName) {
         const p = perPsp.get(f.pspName);
-        if (d.direction === 'deposit') { p.depositUsd += cost; p.depositCount++; }
-        else { p.withdrawalUsd += cost; p.withdrawalCount++; }
+        if (d.direction === 'deposit') { p.depositUsd += cost; p.depositVolumeUsd += volume; p.depositCount++; }
+        else { p.withdrawalUsd += cost; p.withdrawalVolumeUsd += volume; p.withdrawalCount++; }
       }
     });
   });
@@ -2085,13 +2177,15 @@ function updateCostsOverview() {
     if (!valueEl || !subEl) return;
     const t = totals[key];
     valueEl.textContent = t.count ? formatUsd(t.usd) : '—';
-    subEl.textContent = t.count ? `${t.count} gematchte Transaktion${t.count === 1 ? '' : 'en'}` : noneLabel;
+    const pct = t.count && t.volumeUsd > 0 ? ` (${(t.usd / t.volumeUsd * 100).toFixed(2)}%)` : '';
+    subEl.textContent = t.count ? `${t.count} gematchte Transaktion${t.count === 1 ? '' : 'en'}${pct}` : noneLabel;
   };
   render('deposit', 'kpiDepositCostsValue', 'kpiDepositCostsSub', 'Noch keine gematchten Einzahlungen');
   render('withdrawal', 'kpiWithdrawalCostsValue', 'kpiWithdrawalCostsSub', 'Noch keine gematchten Auszahlungen');
 
   const bodyEl = document.getElementById('pspCostsBody');
   if (!bodyEl) return;
+  const pctText = (usd, volume) => volume > 0 ? `${(usd / volume * 100).toFixed(2)}%` : '—';
   // PSP_RULES order, skipping any PSP with zero matched pairs on either side.
   const rows = PSP_RULES
     .filter(rule => perPsp.has(rule.name))
@@ -2102,11 +2196,13 @@ function updateCostsOverview() {
         <tr>
           <td>${escapeHtml(r.label)}</td>
           <td class="num">${r.depositCount ? formatUsd(r.depositUsd) : '—'}</td>
+          <td class="num">${r.depositCount ? pctText(r.depositUsd, r.depositVolumeUsd) : '—'}</td>
           <td class="num">${r.depositCount || '—'}</td>
           <td class="num">${r.withdrawalCount ? formatUsd(r.withdrawalUsd) : '—'}</td>
+          <td class="num">${r.withdrawalCount ? pctText(r.withdrawalUsd, r.withdrawalVolumeUsd) : '—'}</td>
           <td class="num">${r.withdrawalCount || '—'}</td>
         </tr>`).join('')
-    : `<tr><td colspan="5" style="color: var(--text-faint);">Noch keine gematchten Transaktionen.</td></tr>`;
+    : `<tr><td colspan="7" style="color: var(--text-faint);">Noch keine gematchten Transaktionen.</td></tr>`;
 }
 
 /* IB Payouts (CRM_Payout:<id>-<random>) are never matched — see
