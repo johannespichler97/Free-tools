@@ -122,6 +122,9 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .spinner { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--accent-dim); border-top-color: var(--accent); animation: spin .7s linear infinite; display: inline-block; }
 .remove-btn { background: none; border: 1px solid var(--border); color: var(--text-faint); width: 26px; height: 26px; border-radius: 7px; cursor: pointer; font-size: 13px; line-height: 1; display: flex; align-items: center; justify-content: center; }
 .remove-btn:hover { color: var(--danger); border-color: var(--danger); }
+.collapse-btn { background: none; border: 1px solid var(--border); color: var(--text-faint); width: 26px; height: 26px; border-radius: 7px; cursor: pointer; font-size: 12px; line-height: 1; display: flex; align-items: center; justify-content: center; transition: transform .15s, color .15s, border-color .15s; }
+.collapse-btn:hover { color: var(--text); border-color: var(--accent); }
+.collapse-btn.collapsed { transform: rotate(-90deg); }
 
 .error-box { padding: 16px 18px; font-size: 12.5px; color: var(--danger); background: var(--danger-dim); }
 
@@ -620,6 +623,7 @@ async function handleFiles(tabKey, fileList) {
       pspName: null, // set below if the file's content is recognized as a known PSP
       headers: [],
       transactions: [],
+      collapsed: false,
     };
     if (!['csv', 'xlsx', 'xls', 'pdf'].includes(ext)) {
       batch.status = 'error';
@@ -2408,6 +2412,77 @@ function matchPillHtml(tabKey, file, tx) {
   return `<button class="match-pill unmatched" onclick="openMatchModal('${tabKey}','${file.id}','${tx.txId}')" title="Manuell zuweisen oder genehmigen">Nicht gematcht</button>`;
 }
 
+/* ── BATCH CARD COLLAPSE + DATE RANGE ──
+   Collapsing a file card keeps the file (nothing is removed, still
+   fully part of matching/persistence) but skips building its whole
+   transaction table — the actual point, since a large uploaded file's
+   table is the expensive part to render. The header stays, now always
+   showing the Bank/PSP source and (when a recognizable date column
+   exists) the date range it covers, so a collapsed card is still
+   identifiable at a glance. */
+function toggleFileCollapse(tabKey, fileId) {
+  const f = findFile(tabKey, fileId);
+  if (!f) return;
+  f.collapsed = !f.collapsed;
+  renderAll();
+}
+
+/* Every PSP/MT5 export spells dates differently; this covers every
+   format actually seen across PSP_RULES/MT5 exports rather than
+   relying on the browser's native Date parsing alone, which silently
+   fails on T365's "DD.MM.YYYY" and Narvi's "4 Aug 2026 CEST" (verified
+   — Date.parse() returns Invalid Date for both). Returns NaN, never a
+   guess, when nothing matches — a missing date range is better than a
+   wrong one. */
+function parseAnyDate(raw) {
+  const s = String(raw ?? '').trim();
+  if (!s) return NaN;
+  // MT5-style "YYYY.MM.DD HH:MM:SS"
+  let m = /^(\d{4})\.(\d{2})\.(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/.exec(s);
+  if (m) return Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]);
+  // European "DD.MM.YYYY", optionally with a time (T365)
+  m = /^(\d{2})\.(\d{2})\.(\d{4})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/.exec(s);
+  if (m) return Date.UTC(+m[3], +m[2] - 1, +m[1], +(m[4] || 0), +(m[5] || 0), +(m[6] || 0));
+  // Narvi-style "4 Aug 2026 CEST" — strip the trailing timezone
+  // abbreviation the native parser doesn't understand, then retry.
+  const stripped = s.replace(/\s+[A-Za-z]{2,5}$/, '');
+  const d1 = new Date(stripped);
+  if (!isNaN(d1.getTime())) return d1.getTime();
+  const d2 = new Date(s);
+  if (!isNaN(d2.getTime())) return d2.getTime();
+  return NaN;
+}
+
+/* 'time' ranks last on purpose: T365 has both a full "Date" (DD.MM.YYYY)
+   and a separate bare "Time" (just "10:00:00", no date at all — useless
+   here on its own), so preferring 'date' first is what actually finds a
+   parseable value there. MT5 exports only ever have 'time' (their one
+   full datetime column) and no 'date' at all, so it still gets picked
+   correctly there by elimination. */
+const DATE_COLUMN_CANDIDATES = ['date', 'createtime', 'transactiondatetime', 'datum', 'orderdatetime', 'time'];
+
+function getFileDateRange(f) {
+  const keys = f.headers.map(normalizeHeaderKey);
+  const colIdx = DATE_COLUMN_CANDIDATES.map(c => keys.indexOf(c)).find(i => i !== -1);
+  if (colIdx === undefined || colIdx === -1) return null;
+  let min = null, max = null;
+  f.transactions.forEach(tx => {
+    const t = parseAnyDate(tx.cells[colIdx]);
+    if (isNaN(t)) return;
+    if (min === null || t < min) min = t;
+    if (max === null || t > max) max = t;
+  });
+  return min === null ? null : { min, max };
+}
+
+function formatFileDateRangeText(f) {
+  const range = getFileDateRange(f);
+  if (!range) return '';
+  const fmt = ms => new Date(ms).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const a = fmt(range.min), b = fmt(range.max);
+  return a === b ? a : `${a} – ${b}`;
+}
+
 function renderBatchCard(tabKey, f) {
   const iconLabel = f.ext === 'pdf' ? 'PDF' : f.ext === 'csv' ? 'CSV' : (f.ext === 'xlsx' || f.ext === 'xls') ? 'XLS' : (f.ext || '?').slice(0, 4).toUpperCase();
   const statusHtml = f.status === 'parsing'
@@ -2416,8 +2491,19 @@ function renderBatchCard(tabKey, f) {
       ? `<span class="status-pill error">Fehler</span>`
       : `<span class="status-pill success">${f.transactions.length} Zeilen</span>`;
 
+  const collapsed = !!f.collapsed;
+  const metaParts = [humanSize(f.size)];
+  if (f.status === 'success') {
+    if (f.source) metaParts.push(escapeHtml(f.source));
+    const dateRangeText = formatFileDateRangeText(f);
+    if (dateRangeText) metaParts.push(dateRangeText);
+  }
+
   let bodyHtml = '';
-  if (f.status === 'error') {
+  if (collapsed) {
+    // Skip building the (potentially huge) transaction table entirely —
+    // that's the actual performance win, not just hiding it via CSS.
+  } else if (f.status === 'error') {
     bodyHtml = `<div class="error-box">${escapeHtml(f.error)}</div>`;
   } else if (f.status === 'success') {
     if (!f.transactions.length) {
@@ -2455,11 +2541,12 @@ function renderBatchCard(tabKey, f) {
           <span class="file-icon ${f.ext}">${iconLabel}</span>
           <div class="batch-text">
             <div class="file-name">${escapeHtml(f.name)}</div>
-            <div class="file-meta">${humanSize(f.size)}</div>
+            <div class="file-meta">${metaParts.join(' · ')}</div>
           </div>
         </div>
         <div class="batch-status">
           ${statusHtml}
+          <button class="collapse-btn${collapsed ? ' collapsed' : ''}" title="${collapsed ? 'Ausklappen' : 'Einklappen'}" onclick="toggleFileCollapse('${tabKey}','${f.id}')">▾</button>
           <button class="remove-btn" title="Entfernen" onclick="removeFile('${tabKey}','${f.id}')">✕</button>
         </div>
       </div>
