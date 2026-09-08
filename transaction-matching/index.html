@@ -66,6 +66,24 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-dim); }
 .section-badge { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: 3px 8px; border-radius: 20px; background: var(--bg-panel-2); border: 1px solid var(--border); color: var(--text-faint); }
 
+/* Document coverage timeline — a per-PSP/MT5 Gantt-style view of which
+   date ranges already have an uploaded statement, so a gap (a week with
+   no bar) is visible at a glance instead of having to open every file
+   card. Built as a 2-column CSS grid (row label | track) so the axis
+   ticks and every row's bars share exactly the same horizontal scale. */
+.coverage-panel { background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px 20px 16px; margin-bottom: 36px; overflow-x: auto; }
+.coverage-empty { font-size: 12.5px; color: var(--text-faint); padding: 6px 2px; }
+.coverage-grid { display: grid; grid-template-columns: 130px 1fr; column-gap: 12px; row-gap: 5px; min-width: 620px; align-items: start; }
+.coverage-axis-label { }
+.coverage-axis-track { position: relative; height: 18px; border-bottom: 1px solid var(--border-soft); margin-bottom: 2px; }
+.coverage-axis-tick { position: absolute; top: 0; bottom: 0; border-left: 1px solid var(--border-soft); padding-left: 4px; font-size: 10px; color: var(--text-faint); font-family: var(--font-mono); white-space: nowrap; }
+.coverage-row-label { font-size: 12px; font-weight: 600; color: var(--text-dim); padding-top: 3px; }
+.coverage-nodate-note { font-size: 10px; font-weight: 400; color: var(--text-faint); margin-top: 2px; }
+.coverage-row-track { position: relative; border-bottom: 1px solid var(--border-soft); padding-bottom: 4px; }
+.coverage-empty-track { font-size: 10.5px; color: var(--text-faint); font-style: italic; line-height: 22px; }
+.coverage-bar { position: absolute; height: 18px; border-radius: 5px; background: var(--accent-dim); border: 1px solid var(--accent); color: var(--accent); font-size: 10px; font-family: var(--font-mono); display: flex; align-items: center; padding: 0 6px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; cursor: default; }
+.coverage-bar.overridden { background: rgba(245,165,36,0.14); border-color: var(--accent-2); color: var(--accent-2); }
+
 .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin-bottom: 36px; }
 .kpi-card { background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px 20px; }
 .kpi-label { font-size: 12px; color: var(--text-dim); font-weight: 500; }
@@ -274,6 +292,15 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
   </section>
 
   <div class="main">
+
+    <!-- ── DOCUMENT COVERAGE ── -->
+    <div class="section-head">
+      <span class="section-title">Dokumenten-Abdeckung</span>
+      <span class="section-badge">Live</span>
+    </div>
+    <div class="coverage-panel">
+      <div id="coverageTimeline"><div class="coverage-empty">Noch keine Dokumente hochgeladen.</div></div>
+    </div>
 
     <!-- ── OVERVIEW ── -->
     <div class="section-head">
@@ -2213,6 +2240,7 @@ function updateOverview() {
 
   updateFxHeaderNote();
   updateCostsOverview();
+  renderCoverageOverview();
 }
 
 /* Header-level FX status, separate from the (smaller, easy-to-miss)
@@ -2505,14 +2533,22 @@ function formatDeDate(isoDateStr) {
    if no transaction happens to fall on the actual first/last day of the
    statement period (a quiet weekend day, e.g.), the detected range is
    narrower than reality. dateRangeOverride lets the user correct that by
-   hand — checked first here, ahead of the auto-detected range. */
-function formatFileDateRangeText(f) {
+   hand — this is the single source of truth every other date-range
+   consumer (the file card's meta line, the coverage timeline) should go
+   through, so a manual correction is reflected everywhere consistently. */
+function getEffectiveFileDateRange(f) {
   if (f.dateRangeOverride && (f.dateRangeOverride.min || f.dateRangeOverride.max)) {
-    const { min, max } = f.dateRangeOverride;
-    if (min && max) return min === max ? formatDeDate(min) : `${formatDeDate(min)} – ${formatDeDate(max)}`;
-    return formatDeDate(min || max);
+    const minStr = f.dateRangeOverride.min || f.dateRangeOverride.max;
+    const maxStr = f.dateRangeOverride.max || f.dateRangeOverride.min;
+    const [y1, m1, d1] = minStr.split('-').map(Number);
+    const [y2, m2, d2] = maxStr.split('-').map(Number);
+    return { min: Date.UTC(y1, m1 - 1, d1), max: Date.UTC(y2, m2 - 1, d2) };
   }
-  const range = getFileDateRange(f);
+  return getFileDateRange(f);
+}
+
+function formatFileDateRangeText(f) {
+  const range = getEffectiveFileDateRange(f);
   if (!range) return '';
   const a = isoDateFromMs(range.min), b = isoDateFromMs(range.max);
   return a === b ? formatDeDate(a) : `${formatDeDate(a)} – ${formatDeDate(b)}`;
@@ -2570,6 +2606,122 @@ function renderDateRangeEditor(tabKey, f) {
       <button type="button" onclick="closeDateRangeEditor()">Abbrechen</button>
     </div>
   `;
+}
+
+/* ── Document coverage timeline ─────────────────────────────────────
+   A per-PSP/MT5 overview of which date ranges already have an uploaded
+   statement, rendered at the top of the dashboard so a gap (a week with
+   no bar) is visible without opening every file card. Goes through
+   getEffectiveFileDateRange() like everything else, so a manual
+   dateRangeOverride is reflected here too. */
+const COVERAGE_PSP_ORDER = ['narvi', 'unipayment', 'alphapo', 't365', 'uniwire', 'centrobill'];
+const COVERAGE_LANE_HEIGHT = 22;
+
+function buildCoverageRows() {
+  const bankFiles = state.bank.files.filter(f => f.status === 'success' && f.transactions.length);
+  const rows = COVERAGE_PSP_ORDER.map(pspName => {
+    const rule = PSP_RULES.find(p => p.name === pspName);
+    return { label: rule ? rule.label : pspName, files: bankFiles.filter(f => f.pspName === pspName) };
+  });
+  const unrecognized = bankFiles.filter(f => !COVERAGE_PSP_ORDER.includes(f.pspName));
+  if (unrecognized.length) rows.push({ label: 'Nicht erkannt', files: unrecognized });
+  // MT5 gets exactly one row, no per-PSP split — there's only ever one
+  // "bank" on that side, unlike the Bank/PSP tab.
+  rows.push({ label: 'MT5', files: state.mt5.files.filter(f => f.status === 'success' && f.transactions.length) });
+  return rows;
+}
+
+// Greedy interval-packing: each item goes into the first lane whose last
+// bar already ended before this one starts, else it opens a new lane.
+// Keeps overlapping statements (e.g. two Alphapo exports covering
+// adjoining weeks) from being drawn on top of each other.
+function packCoverageLanes(items) {
+  const sorted = [...items].sort((a, b) => a.min - b.min);
+  const laneEnds = [];
+  sorted.forEach(it => {
+    let lane = laneEnds.findIndex(end => it.min > end);
+    if (lane === -1) { lane = laneEnds.length; laneEnds.push(it.max); }
+    else laneEnds[lane] = it.max;
+    it.lane = lane;
+  });
+  return { items: sorted, laneCount: Math.max(1, laneEnds.length) };
+}
+
+// One tick per calendar month by default; thins out to keep the axis
+// readable once a coverage span gets long (many months/years of
+// statements uploaded over time).
+function coverageMonthTicks(scaleMin, scaleMax) {
+  const months = [];
+  const first = new Date(scaleMin);
+  let cursor = Date.UTC(first.getUTCFullYear(), first.getUTCMonth(), 1);
+  while (cursor <= scaleMax) {
+    months.push(cursor);
+    const d = new Date(cursor);
+    cursor = Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1);
+  }
+  const stride = months.length > 16 ? Math.ceil(months.length / 12) : 1;
+  return months.filter((_, i) => i % stride === 0).map(ms => ({
+    ms,
+    label: new Date(ms).toLocaleDateString('de-DE', { month: 'short', year: '2-digit' }),
+  }));
+}
+
+function renderCoverageOverview() {
+  const el = document.getElementById('coverageTimeline');
+  if (!el) return;
+  const rows = buildCoverageRows();
+
+  let scaleMin = null, scaleMax = null;
+  const rowData = rows.map(row => {
+    const items = [];
+    let noDateCount = 0;
+    row.files.forEach(f => {
+      const r = getEffectiveFileDateRange(f);
+      if (!r) { noDateCount++; return; }
+      const overridden = !!(f.dateRangeOverride && (f.dateRangeOverride.min || f.dateRangeOverride.max));
+      items.push({ f, min: r.min, max: r.max, overridden });
+      if (scaleMin === null || r.min < scaleMin) scaleMin = r.min;
+      if (scaleMax === null || r.max > scaleMax) scaleMax = r.max;
+    });
+    return { label: row.label, items, noDateCount };
+  });
+
+  if (scaleMin === null) {
+    el.innerHTML = `<div class="coverage-empty">Noch keine Dokumente mit erkennbarem Datum hochgeladen.</div>`;
+    return;
+  }
+
+  const ONE_DAY = 86400000;
+  const pad = Math.max(ONE_DAY * 2, Math.round((scaleMax - scaleMin) * 0.02));
+  scaleMin -= pad;
+  scaleMax += pad;
+  const span = Math.max(ONE_DAY, scaleMax - scaleMin);
+  const pct = ms => ((ms - scaleMin) / span) * 100;
+
+  const ticks = coverageMonthTicks(scaleMin, scaleMax);
+  let html = `<div class="coverage-axis-label"></div><div class="coverage-axis-track">`;
+  html += ticks.map(t => `<div class="coverage-axis-tick" style="left:${pct(t.ms).toFixed(3)}%">${escapeHtml(t.label)}</div>`).join('');
+  html += `</div>`;
+
+  rowData.forEach(row => {
+    const labelExtra = row.noDateCount ? `<div class="coverage-nodate-note">+${row.noDateCount} ohne Datum</div>` : '';
+    html += `<div class="coverage-row-label">${escapeHtml(row.label)}${labelExtra}</div>`;
+    if (!row.items.length) {
+      html += `<div class="coverage-row-track" style="height:${COVERAGE_LANE_HEIGHT}px"><div class="coverage-empty-track">keine Datei hochgeladen</div></div>`;
+      return;
+    }
+    const { items, laneCount } = packCoverageLanes(row.items);
+    const bars = items.map(it => {
+      const left = pct(it.min);
+      const width = Math.max(pct(it.max) - pct(it.min), 0.8);
+      const rangeLabel = formatFileDateRangeText(it.f);
+      const titleText = `${it.f.name}\n${rangeLabel}${it.overridden ? ' (manuell)' : ''}\n${it.f.transactions.length} Zeilen`;
+      return `<div class="coverage-bar${it.overridden ? ' overridden' : ''}" style="left:${left.toFixed(3)}%;width:${width.toFixed(3)}%;top:${it.lane * COVERAGE_LANE_HEIGHT}px" title="${escapeHtml(titleText)}">${escapeHtml(it.f.name)}</div>`;
+    }).join('');
+    html += `<div class="coverage-row-track" style="height:${laneCount * COVERAGE_LANE_HEIGHT}px">${bars}</div>`;
+  });
+
+  el.innerHTML = `<div class="coverage-grid">${html}</div>`;
 }
 
 function renderBatchCard(tabKey, f) {
