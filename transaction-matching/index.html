@@ -126,6 +126,20 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .collapse-btn:hover { color: var(--text); border-color: var(--accent); }
 .collapse-btn.collapsed { transform: rotate(-90deg); }
 
+.date-range-wrap { display: inline-flex; align-items: center; gap: 3px; }
+.date-range-text.overridden { color: var(--accent-2); }
+.date-range-text.overridden::after { content: ' (manuell)'; font-style: italic; opacity: .8; }
+.date-range-empty { color: var(--text-faint); font-style: italic; }
+.date-range-edit-btn, .date-range-reset-btn { background: none; border: none; color: var(--text-faint); cursor: pointer; font-size: 11px; padding: 1px 3px; line-height: 1; }
+.date-range-edit-btn:hover, .date-range-reset-btn:hover { color: var(--accent); }
+.date-range-editor { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 18px; background: var(--bg-panel-2); border-top: 1px solid var(--border-soft); font-size: 11.5px; color: var(--text-dim); }
+.date-range-editor label { display: flex; align-items: center; gap: 5px; }
+.date-range-editor input[type="date"] { background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 4px 7px; font-size: 11.5px; color: var(--text); font-family: var(--font-mono); }
+.date-range-editor input[type="date"]:focus { outline: none; border-color: var(--accent); }
+.date-range-editor button { flex-shrink: 0; background: none; border: 1px solid var(--border); color: var(--text-dim); font-size: 11px; font-weight: 600; padding: 5px 10px; border-radius: 20px; cursor: pointer; font-family: var(--font); }
+.date-range-editor button:hover { color: var(--accent); border-color: var(--accent); }
+.date-range-editor button.date-range-save { color: var(--accent); border-color: var(--accent); }
+
 .error-box { padding: 16px 18px; font-size: 12.5px; color: var(--danger); background: var(--danger-dim); }
 
 /* ── TABLE ── */
@@ -624,6 +638,7 @@ async function handleFiles(tabKey, fileList) {
       headers: [],
       transactions: [],
       collapsed: false,
+      dateRangeOverride: null, // { min: 'YYYY-MM-DD', max: 'YYYY-MM-DD' } when the auto-detected range is wrong (e.g. no transactions fell on the first/last calendar day) and the user corrected it manually
     };
     if (!['csv', 'xlsx', 'xls', 'pdf'].includes(ext)) {
       batch.status = 'error';
@@ -1369,6 +1384,7 @@ function linkTransactions(tabA, fileIdA, txIdA, tabB, fileIdB, txIdB, source, wa
 }
 
 let matchModalCtx = null; // { tabKey, fileId, txId } of the row the modal is open for
+let dateRangeEditorOpenFor = null; // '<tabKey>:<fileId>' of the file whose date-range editor is currently open, or null. Deliberately NOT part of `state` — it's transient UI, not worth persisting.
 
 function openMatchModal(tabKey, fileId, txId) {
   matchModalCtx = { tabKey, fileId, txId };
@@ -2475,12 +2491,85 @@ function getFileDateRange(f) {
   return min === null ? null : { min, max };
 }
 
+function isoDateFromMs(ms) {
+  const d = new Date(ms);
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+}
+
+function formatDeDate(isoDateStr) {
+  const [y, m, d] = isoDateStr.split('-');
+  return `${d}.${m}.${y}`;
+}
+
+/* The auto-detected range (getFileDateRange) is only as good as the data:
+   if no transaction happens to fall on the actual first/last day of the
+   statement period (a quiet weekend day, e.g.), the detected range is
+   narrower than reality. dateRangeOverride lets the user correct that by
+   hand — checked first here, ahead of the auto-detected range. */
 function formatFileDateRangeText(f) {
+  if (f.dateRangeOverride && (f.dateRangeOverride.min || f.dateRangeOverride.max)) {
+    const { min, max } = f.dateRangeOverride;
+    if (min && max) return min === max ? formatDeDate(min) : `${formatDeDate(min)} – ${formatDeDate(max)}`;
+    return formatDeDate(min || max);
+  }
   const range = getFileDateRange(f);
   if (!range) return '';
-  const fmt = ms => new Date(ms).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  const a = fmt(range.min), b = fmt(range.max);
-  return a === b ? a : `${a} – ${b}`;
+  const a = isoDateFromMs(range.min), b = isoDateFromMs(range.max);
+  return a === b ? formatDeDate(a) : `${formatDeDate(a)} – ${formatDeDate(b)}`;
+}
+
+function openDateRangeEditor(tabKey, fileId) {
+  dateRangeEditorOpenFor = `${tabKey}:${fileId}`;
+  renderAll();
+}
+
+function closeDateRangeEditor() {
+  dateRangeEditorOpenFor = null;
+  renderAll();
+}
+
+function saveDateRangeOverride(tabKey, fileId) {
+  const f = findFile(tabKey, fileId);
+  if (!f) return;
+  const minEl = document.getElementById(`daterangeMin-${tabKey}-${fileId}`);
+  const maxEl = document.getElementById(`daterangeMax-${tabKey}-${fileId}`);
+  let min = minEl ? minEl.value : '';
+  let max = maxEl ? maxEl.value : '';
+  if (!min && !max) {
+    f.dateRangeOverride = null;
+  } else {
+    // Only one end filled in → treat it as a single-day range. Reversed
+    // order (Bis before Von) is swapped rather than rejected — friendlier
+    // than an error for what's obviously a typo.
+    if (!min) min = max;
+    if (!max) max = min;
+    if (min > max) { const t = min; min = max; max = t; }
+    f.dateRangeOverride = { min, max };
+  }
+  dateRangeEditorOpenFor = null;
+  renderAll();
+}
+
+function resetDateRangeOverride(tabKey, fileId) {
+  const f = findFile(tabKey, fileId);
+  if (!f) return;
+  f.dateRangeOverride = null;
+  renderAll();
+}
+
+function renderDateRangeEditor(tabKey, f) {
+  const auto = getFileDateRange(f);
+  const defaults = (f.dateRangeOverride && (f.dateRangeOverride.min || f.dateRangeOverride.max))
+    ? f.dateRangeOverride
+    : (auto ? { min: isoDateFromMs(auto.min), max: isoDateFromMs(auto.max) } : { min: '', max: '' });
+  return `
+    <div class="date-range-editor">
+      <label>Von <input type="date" id="daterangeMin-${tabKey}-${f.id}" value="${defaults.min || ''}"></label>
+      <label>Bis <input type="date" id="daterangeMax-${tabKey}-${f.id}" value="${defaults.max || ''}"></label>
+      <button type="button" class="date-range-save" onclick="saveDateRangeOverride('${tabKey}','${f.id}')">Speichern</button>
+      <button type="button" onclick="closeDateRangeEditor()">Abbrechen</button>
+    </div>
+  `;
 }
 
 function renderBatchCard(tabKey, f) {
@@ -2493,10 +2582,20 @@ function renderBatchCard(tabKey, f) {
 
   const collapsed = !!f.collapsed;
   const metaParts = [humanSize(f.size)];
+  if (f.status === 'success' && f.source) metaParts.push(escapeHtml(f.source));
+
+  let dateRangeHtml = '';
+  const editingRange = dateRangeEditorOpenFor === `${tabKey}:${f.id}`;
   if (f.status === 'success') {
-    if (f.source) metaParts.push(escapeHtml(f.source));
+    const hasOverride = !!(f.dateRangeOverride && (f.dateRangeOverride.min || f.dateRangeOverride.max));
     const dateRangeText = formatFileDateRangeText(f);
-    if (dateRangeText) metaParts.push(dateRangeText);
+    dateRangeHtml = `
+      <span class="date-range-wrap">
+        · <span class="date-range-text${hasOverride ? ' overridden' : ''}">${dateRangeText ? escapeHtml(dateRangeText) : '<span class="date-range-empty">keine Datumsrange erkannt</span>'}</span>
+        <button type="button" class="date-range-edit-btn" title="Datumsrange manuell anpassen" onclick="openDateRangeEditor('${tabKey}','${f.id}')">✎</button>
+        ${hasOverride ? `<button type="button" class="date-range-reset-btn" title="Automatisch erkannte Range wiederherstellen" onclick="resetDateRangeOverride('${tabKey}','${f.id}')">↺</button>` : ''}
+      </span>
+    `;
   }
 
   let bodyHtml = '';
@@ -2541,7 +2640,7 @@ function renderBatchCard(tabKey, f) {
           <span class="file-icon ${f.ext}">${iconLabel}</span>
           <div class="batch-text">
             <div class="file-name">${escapeHtml(f.name)}</div>
-            <div class="file-meta">${metaParts.join(' · ')}</div>
+            <div class="file-meta">${metaParts.join(' · ')}${dateRangeHtml}</div>
           </div>
         </div>
         <div class="batch-status">
@@ -2550,6 +2649,7 @@ function renderBatchCard(tabKey, f) {
           <button class="remove-btn" title="Entfernen" onclick="removeFile('${tabKey}','${f.id}')">✕</button>
         </div>
       </div>
+      ${editingRange ? renderDateRangeEditor(tabKey, f) : ''}
       ${bodyHtml}
     </div>
   `;
