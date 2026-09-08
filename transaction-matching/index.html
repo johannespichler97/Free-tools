@@ -244,7 +244,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
         <span class="brand-tag">Beta</span>
       </div>
       <div class="header-spacer"></div>
-      <div class="header-note"><span class="dot"></span> Matching-Engine: Unipayment, Alphapo, Uniwire, T365 &amp; Narvi aktiv</div>
+      <div class="header-note"><span class="dot"></span> Matching-Engine: Unipayment, Alphapo, Uniwire, T365, Narvi &amp; Centrobill aktiv</div>
       <div class="header-note" id="fxHeaderNote"><span class="dot" id="fxHeaderDot"></span> <span id="fxHeaderText">EUR/USD-Kurs wird geladen…</span></div>
     </div>
   </header>
@@ -252,7 +252,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
   <section class="hero">
     <div class="hero-inner">
       <h1>Transaction Matching Platform</h1>
-      <p>Lade Bank-/PSP-Auszüge und MT5-Transaktionen hoch (PDF, CSV oder XLSX). Die Plattform zerlegt sie in einzelne Transaktionen und listet sie tabellarisch auf. Die automatische Matching-Engine gleicht Unipayment- (OrderId), Alphapo- (Einzahlung: TRANSACTION_ID, Auszahlung: Nummer aus NOTE), Uniwire- (uuid, per Teilstring), T365- (id) und Narvi-Transaktionen (Einzahlung: Referenz-ID, Auszahlung: Nummer aus dem Titel) bereits selbstständig mit dem MT5-Kommentar ab; weitere PSPs und Regeln folgen Schritt für Schritt.</p>
+      <p>Lade Bank-/PSP-Auszüge und MT5-Transaktionen hoch (PDF, CSV oder XLSX). Die Plattform zerlegt sie in einzelne Transaktionen und listet sie tabellarisch auf. Die automatische Matching-Engine gleicht Unipayment- (OrderId), Alphapo- (Einzahlung: TRANSACTION_ID, Auszahlung: Nummer aus NOTE), Uniwire- (uuid, per Teilstring), T365- (id), Narvi- (Einzahlung: Referenz-ID, Auszahlung: Nummer aus dem Titel) und Centrobill-Transaktionen (Transaction ID) bereits selbstständig mit dem MT5-Kommentar ab; weitere PSPs und Regeln folgen Schritt für Schritt.</p>
     </div>
   </section>
 
@@ -356,7 +356,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
         <input type="file" id="fileInput-bank" multiple accept=".pdf,.csv,.xlsx,.xls" />
       </div>
       <div class="tab-toolbar" id="toolbar-bank" style="display:none;">
-        <div class="tab-toolbar-note">Jede hochgeladene Datei wird als eigene Tabelle unten angezeigt. Unipayment- (OrderId), Alphapo- (Einzahlung: TRANSACTION_ID, Auszahlung: Nummer aus NOTE), Uniwire- (uuid), T365- (id) und Narvi-Transaktionen (Einzahlung: Referenz-ID, Auszahlung: Nummer im Titel) werden automatisch mit MT5 abgeglichen; alles andere lässt sich über die Match-Spalte manuell zuweisen oder ohne Gegenbuchung genehmigen.</div>
+        <div class="tab-toolbar-note">Jede hochgeladene Datei wird als eigene Tabelle unten angezeigt. Unipayment- (OrderId), Alphapo- (Einzahlung: TRANSACTION_ID, Auszahlung: Nummer aus NOTE), Uniwire- (uuid), T365- (id), Narvi- (Einzahlung: Referenz-ID, Auszahlung: Nummer im Titel) und Centrobill-Transaktionen (Transaction ID) werden automatisch mit MT5 abgeglichen; alles andere lässt sich über die Match-Spalte manuell zuweisen oder ohne Gegenbuchung genehmigen.</div>
         <div style="display:flex; gap:8px; flex-shrink:0;">
           <button class="auto-match-btn" onclick="triggerManualAutoMatch()">⚡ Automatisch matchen</button>
           <button class="clear-all-btn" onclick="clearTab('bank')">Alle entfernen</button>
@@ -887,6 +887,30 @@ const PSP_RULES = [
         mt5Key: lastUnderscoreSuffixKey(),
         direction: 'withdrawal',
       },
+    ],
+  },
+  {
+    name: 'centrobill',
+    label: 'Centrobill',
+    // "Centrobill Max" is the one column name distinctive enough on its
+    // own to be worth anchoring on; paired with a couple more so an
+    // unrelated export sharing just one of these by coincidence still
+    // wouldn't match.
+    headerSignature: ['centrobillmax', 'midid', 'paymentmethod', 'reasoncode'],
+    reorderColumn: 'transactiondatetime',
+    reorderColumnLabel: 'Transaction Date/Time',
+    filters: [
+      { column: 'status', label: 'Status', equals: 'success' },
+    ],
+    // "Amount, USD" is Centrobill's own USD conversion regardless of the
+    // original charge currency (see Original amount/Original currency)
+    // — always USD, no separate currency column needed.
+    amountColumn: 'amountusd',
+    amountCurrency: 'USD',
+    matchRules: [
+      // MT5 comment reads e.g. "CentroBill:834738354" — the part after
+      // the ":" is Centrobill's own Transaction ID.
+      { id: 'transactionid', label: 'Transaction ID', column: 'transactionid', bankKey: columnKey('transactionid'), mt5Key: prefixCommentKey('centrobill'), direction: 'deposit' },
     ],
   },
 ];
