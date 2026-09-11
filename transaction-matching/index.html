@@ -204,6 +204,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .match-pill.ib-payout { background: var(--bg-panel-2); color: var(--text-faint); border: 1px solid var(--border); cursor: default; }
 .match-pill.matched.warning { background: var(--danger-dim); color: var(--danger); border: 1px solid var(--danger); }
 .match-pill.matched.warning-confirmed { background: var(--success-dim); color: var(--success); border: 1px solid var(--accent-2); }
+.match-pill.matched.internal { background: var(--accent-dim); color: var(--accent); }
 .tx-table tr.match-warning td { background: var(--danger-dim); }
 .tx-table tr.match-warning:hover td { background: rgba(240,87,107,0.2); }
 .match-jump { appearance: none; background: var(--bg-panel-2); border: 1px solid var(--border); color: var(--text-dim); font-family: var(--font-mono); font-size: 10.5px; font-weight: 600; padding: 4px 8px; border-radius: 20px; cursor: pointer; white-space: nowrap; }
@@ -220,6 +221,10 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .match-current-source { font-size: 12.5px; color: var(--text-dim); margin-top: 2px; }
 .match-current-detail { font-size: 12px; color: var(--text-faint); margin-top: 6px; line-height: 1.5; }
 .modal-actions-row { display: flex; gap: 8px; margin-bottom: 16px; }
+.match-mode-toggle { display: flex; gap: 6px; margin-bottom: 14px; }
+.match-mode-btn { flex: 1; background: none; border: 1px solid var(--border); color: var(--text-dim); font-size: 11.5px; font-weight: 600; padding: 7px 10px; border-radius: 8px; cursor: pointer; font-family: var(--font); }
+.match-mode-btn:hover { border-color: var(--accent); color: var(--text); }
+.match-mode-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
 .modal-cancel { flex: 1; background: var(--bg-panel-2); border: 1px solid var(--border); color: var(--text-dim); padding: 9px; border-radius: 20px; font-size: 12.5px; font-weight: 600; cursor: pointer; font-family: var(--font); }
 .modal-cancel:hover { color: var(--text); border-color: var(--text-faint); }
 .modal-confirm-warning { flex: 1; background: var(--accent-2); border: none; color: #201400; padding: 9px; border-radius: 20px; font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: var(--font); }
@@ -456,9 +461,10 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
   <div class="modal-overlay" id="matchModal">
     <div class="modal-box">
       <div class="modal-title">Transaktion zuweisen</div>
-      <div class="modal-sub">Manuell mit einer Transaktion aus dem jeweils anderen Tab verknüpfen, oder ohne Gegenbuchung genehmigen — z.&nbsp;B. wenn etwas bezahlt wurde, dafür aber keine Transaktion existiert.</div>
+      <div class="modal-sub" id="matchModalSub">Manuell mit einer Transaktion aus dem jeweils anderen Tab verknüpfen, oder ohne Gegenbuchung genehmigen — z.&nbsp;B. wenn etwas bezahlt wurde, dafür aber keine Transaktion existiert.</div>
       <div class="match-current" id="matchModalCurrent"></div>
       <div class="modal-actions-row" id="matchModalActions"></div>
+      <div class="match-mode-toggle" id="matchModalModeToggle" hidden></div>
       <label class="match-search-label" for="matchSearchInput">Passende Transaktion suchen</label>
       <input type="text" id="matchSearchInput" class="match-search" placeholder="ID, Quelle oder Text durchsuchen…" oninput="onMatchSearchInput(this.value)" />
       <div class="match-candidate-list" id="matchModalList"></div>
@@ -1416,14 +1422,33 @@ function linkTransactions(tabA, fileIdA, txIdA, tabB, fileIdB, txIdB, source, wa
   return true;
 }
 
-let matchModalCtx = null; // { tabKey, fileId, txId } of the row the modal is open for
+let matchModalCtx = null; // { tabKey, fileId, txId, mode } of the row the modal is open for — mode is 'external' (search the other tab, the original/default behavior) or 'internal' (Bank/PSP-only: search other Bank/PSP transactions instead, for pairing purely internal bookings that never reach MT5 at all — see the mode toggle in renderMatchModal)
 let dateRangeEditorOpenFor = null; // '<tabKey>:<fileId>' of the file whose date-range editor is currently open, or null. Deliberately NOT part of `state` — it's transient UI, not worth persisting.
 
 function openMatchModal(tabKey, fileId, txId) {
-  matchModalCtx = { tabKey, fileId, txId };
+  // Reopening an already-internally-matched row's pill should land back
+  // on the internal tab, not default to 'external' — otherwise the
+  // toggle and the "is-current-match" highlight in the candidate list
+  // would silently disagree with what's actually matched.
+  const found = findTx(tabKey, fileId, txId);
+  const mode = (found && found.tx.status === 'matched' && found.tx.match && found.tx.match.source === 'manual-internal') ? 'internal' : 'external';
+  matchModalCtx = { tabKey, fileId, txId, mode };
   document.getElementById('matchSearchInput').value = '';
   renderMatchModal();
   document.getElementById('matchModal').classList.add('open');
+}
+// Switches the modal between matching against the other tab (external,
+// the default) and matching within the SAME tab (internal) — only ever
+// offered on the Bank/PSP tab, for pairing two Bank/PSP-side entries by
+// hand (e.g. an internal transfer between accounts that never shows up
+// on MT5 at all, so it would otherwise just sit unmatched forever).
+// Deliberately manual only, no auto-matching rule for this — per the
+// user, these are one-off/ad-hoc pairings, not a pattern to automate.
+function setMatchModalMode(mode) {
+  if (!matchModalCtx) return;
+  matchModalCtx.mode = mode;
+  document.getElementById('matchSearchInput').value = '';
+  renderMatchModal();
 }
 function closeMatchModal() {
   document.getElementById('matchModal').classList.remove('open');
@@ -1444,10 +1469,35 @@ function renderMatchModal(filterText) {
   if (!found) { closeMatchModal(); return; }
   const { file, tx } = found;
   const otherTab = TAB_META[tabKey].otherTab;
+  // The mode toggle only ever appears on the Bank/PSP tab (see below), so
+  // 'internal' can only actually be in effect there — this guard just
+  // keeps it that way even if matchModalCtx somehow carried a stale mode
+  // in from a previous (different-tab) time the modal was open.
+  const mode = (tabKey === 'bank' && matchModalCtx.mode === 'internal') ? 'internal' : 'external';
+  const candidateTab = mode === 'internal' ? tabKey : otherTab;
+
+  const modeToggleEl = document.getElementById('matchModalModeToggle');
+  const subEl = document.getElementById('matchModalSub');
+  if (tabKey === 'bank') {
+    modeToggleEl.hidden = false;
+    modeToggleEl.innerHTML = `
+      <button type="button" class="match-mode-btn${mode === 'external' ? ' active' : ''}" onclick="setMatchModalMode('external')">↔ Gegen MT5</button>
+      <button type="button" class="match-mode-btn${mode === 'internal' ? ' active' : ''}" onclick="setMatchModalMode('internal')">🔗 Intern (Bank/PSP)</button>
+    `;
+    subEl.textContent = mode === 'internal'
+      ? 'Manuell mit einer anderen Bank/PSP-Transaktion verknüpfen — für interne Buchungen, die nie in MT5 auftauchen (z. B. eine Umbuchung zwischen Konten).'
+      : 'Manuell mit einer MT5-Transaktion verknüpfen, oder ohne Gegenbuchung genehmigen — z. B. wenn etwas bezahlt wurde, dafür aber keine Transaktion existiert.';
+  } else {
+    modeToggleEl.hidden = true;
+    modeToggleEl.innerHTML = '';
+    subEl.textContent = 'Manuell mit einer Transaktion aus dem jeweils anderen Tab verknüpfen, oder ohne Gegenbuchung genehmigen — z. B. wenn etwas bezahlt wurde, dafür aber keine Transaktion existiert.';
+  }
 
   const autoNote = (tx.status === 'matched' && tx.match && String(tx.match.source).startsWith('auto'))
     ? `<div class="match-current-auto">⚡ Automatisch zugeordnet (Regel: ${escapeHtml(String(tx.match.source).replace('auto:', ''))})</div>`
-    : '';
+    : (tx.status === 'matched' && tx.match && tx.match.source === 'manual-internal')
+      ? `<div class="match-current-auto">🔗 Intern mit einer anderen Bank/PSP-Transaktion verknüpft</div>`
+      : '';
   const w = tx.status === 'matched' && tx.match ? tx.match.warning : null;
   const d = tx.status === 'matched' && tx.match ? tx.match.diff : null;
   let warningNote = '';
@@ -1493,8 +1543,9 @@ function renderMatchModal(filterText) {
 
   const q = (filterText || '').trim().toLowerCase();
   const candidates = [];
-  state[otherTab].files.forEach(f => {
+  state[candidateTab].files.forEach(f => {
     f.transactions.forEach(t => {
+      if (candidateTab === tabKey && t.txId === txId) return; // never offer the transaction as its own match
       const hay = (t.txId + ' ' + f.source + ' ' + txPreviewText(f, t)).toLowerCase();
       if (!q || hay.includes(q)) candidates.push({ file: f, tx: t });
     });
@@ -1502,9 +1553,22 @@ function renderMatchModal(filterText) {
 
   const listEl = document.getElementById('matchModalList');
   if (!candidates.length) {
-    const emptyMsg = state[otherTab].files.length
-      ? 'Keine Treffer für diese Suche.'
-      : `Noch keine ${escapeHtml(TAB_META[otherTab].otherLabel)}-Transaktionen hochgeladen.`;
+    let emptyMsg;
+    if (mode === 'internal') {
+      const otherBankTxCount = state.bank.files.reduce((sum, f) => sum + f.transactions.length, 0) - 1; // minus itself
+      emptyMsg = otherBankTxCount > 0 ? 'Keine Treffer für diese Suche.' : 'Noch keine weiteren Bank/PSP-Transaktionen vorhanden.';
+    } else {
+      // TAB_META[tabKey].otherLabel, not TAB_META[otherTab].otherLabel — the
+      // latter names what's on OUR OWN tab from the other side's
+      // perspective (e.g. reads 'Bank / PSP' while sitting on the Bank
+      // tab with no MT5 files uploaded, the exact opposite of what's
+      // actually missing). Caught by the Playwright test for the new
+      // internal-match mode below, while it was exercising this same
+      // empty-state path on the Bank tab.
+      emptyMsg = state[otherTab].files.length
+        ? 'Keine Treffer für diese Suche.'
+        : `Noch keine ${escapeHtml(TAB_META[tabKey].otherLabel)}-Transaktionen hochgeladen.`;
+    }
     listEl.innerHTML = `<div class="match-candidate-empty">${emptyMsg}</div>`;
   } else {
     listEl.innerHTML = candidates.map(c => `
@@ -1529,8 +1593,9 @@ function onMatchSearchInput(value) {
 function pickMatch(otherFileId, otherTxId) {
   if (!matchModalCtx) return;
   const { tabKey, fileId, txId } = matchModalCtx;
-  const otherTabKey = TAB_META[tabKey].otherTab;
-  linkTransactions(tabKey, fileId, txId, otherTabKey, otherFileId, otherTxId, 'manual');
+  const internal = tabKey === 'bank' && matchModalCtx.mode === 'internal';
+  const otherTabKey = internal ? tabKey : TAB_META[tabKey].otherTab;
+  linkTransactions(tabKey, fileId, txId, otherTabKey, otherFileId, otherTxId, internal ? 'manual-internal' : 'manual');
   closeMatchModal();
   renderAll();
 }
@@ -2429,7 +2494,14 @@ function matchPillHtml(tabKey, file, tx) {
     let pillClass = 'match-pill matched';
     let pillLabel = 'Gematcht';
     let pillTitle = 'Match bearbeiten';
-    if (w) {
+    if (tx.match.source === 'manual-internal') {
+      // Never carries a warning/diff (those only ever come from a
+      // Bank/PSP ↔ MT5 amount comparison), so the w/d branches below
+      // simply don't apply — this label/class stands as final.
+      pillClass += ' internal';
+      pillLabel = '🔗 Intern gematcht';
+      pillTitle = 'Intern mit einer anderen Bank/PSP-Transaktion verknüpft — Match bearbeiten';
+    } else if (w) {
       pillClass += w.confirmed ? ' warning-confirmed' : ' warning';
       pillLabel = w.confirmed ? `Gematcht ✓ (${(w.diffPct * 100).toFixed(1)}% bestätigt)` : `⚠ Gematcht (${w.diffPct >= 0 ? '' : '-'}${(w.diffPct * 100).toFixed(1)}%)`;
       pillTitle = w.confirmed
