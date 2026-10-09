@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aggregate Signal | Market Analytics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-primary:    #062434;
+  --bg-secondary:  #0a2e44;
+  --bg-tertiary:   #0e3a54;
+  --bg-hover:      #123f5c;
+  --border:        #1a4d6e;
+  --text-primary:  #E6E9EB;
+  --text-secondary:#8ab8d0;
+  --text-muted:    #4d7a96;
+  --accent:        #2FA3E0;
+  --accent-2:      #51d7ce;
+  --accent-dim:    rgba(47,163,224,0.12);
+  --positive:      #3fb950;
+  --positive-bg:   rgba(63,185,80,0.10);
+  --negative:      #f85149;
+  --negative-bg:   rgba(248,81,73,0.10);
+  --warn:          #e3b341;
+  --warn-bg:       rgba(227,179,65,0.10);
+  --font:          'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono:     'JetBrains Mono', monospace;
+  --radius-sm:     6px;
+  --radius-md:     10px;
+  --radius-lg:     14px;
+}
+
+html { scroll-behavior: smooth; }
+body { font-family: var(--font); background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; font-size: 14px; line-height: 1.5; }
+
+@keyframes pulse   { 0%,100%{opacity:1} 50%{opacity:0.4} }
+@keyframes spin    { to{transform:rotate(360deg)} }
+@keyframes fadeIn  { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+/* ── HEADER ── */
+.header { position:sticky; top:0; z-index:200; background:rgba(6,36,52,0.97); backdrop-filter:blur(12px); border-bottom:1px solid var(--border); }
+.header-inner { max-width:1200px; margin:0 auto; padding:0 24px; height:60px; display:flex; align-items:center; gap:32px; }
+.logo { display:flex; align-items:center; gap:8px; text-decoration:none; color:var(--text-primary); font-size:16px; font-weight:700; white-space:nowrap; }
+.logo-text strong { color:var(--accent); }
+
+.nav { display:flex; gap:1px; flex:1; align-items:center; }
+.nav-link { text-decoration:none; color:var(--text-secondary); padding:6px 9px; border-radius:var(--radius-sm); font-size:12.5px; font-weight:500; transition:all .15s; white-space:nowrap; }
+.nav-link:hover { color:var(--text-primary); background:var(--bg-hover); }
+.nav-link.active { color:var(--accent); background:var(--accent-dim); }
+
+.nav-dropdown { position:relative; }
+.dropdown-btn { background:none; border:none; font-family:var(--font); cursor:pointer; display:flex; align-items:center; gap:5px; color:var(--text-secondary); padding:6px 9px; border-radius:var(--radius-sm); font-size:12.5px; font-weight:500; transition:all .15s; white-space:nowrap; }
+.dropdown-btn:hover { color:var(--text-primary); background:var(--bg-hover); }
+.dropdown-btn.active { color:var(--accent); background:var(--accent-dim); }
+.dropdown-btn svg { transition:transform .2s; }
+.nav-dropdown:hover .dropdown-btn svg,
+.nav-dropdown.open .dropdown-btn svg { transform:rotate(180deg); }
+.dropdown-menu { display:none; position:absolute; top:calc(100% + 6px); left:0; background:rgba(6,36,52,0.99); border:1px solid var(--border); border-radius:var(--radius-md); min-width:190px; padding:4px 0; z-index:300; backdrop-filter:blur(12px); box-shadow:0 8px 24px rgba(0,0,0,0.4); }
+.nav-dropdown:hover .dropdown-menu,
+.nav-dropdown.open .dropdown-menu { display:block; }
+.dropdown-item { display:block; padding:9px 16px; color:var(--text-secondary); text-decoration:none; font-size:12.5px; font-weight:500; transition:all .15s; white-space:nowrap; }
+.dropdown-item:hover { color:var(--text-primary); background:var(--bg-hover); }
+.dropdown-item.active { color:var(--accent); }
+
+.header-actions { display:flex; align-items:center; gap:12px; }
+.live-badge { font-size:11px; font-weight:600; color:var(--positive); letter-spacing:.05em; display:flex; align-items:center; gap:5px; }
+.live-dot { animation:pulse 2s infinite; }
+.btn-primary { background:linear-gradient(135deg,#51d7ce,#2FA3E0); color:#062434; border:none; padding:7px 18px; border-radius:20px; font-size:13px; font-weight:700; cursor:pointer; transition:opacity .15s; font-family:var(--font); }
+.btn-primary:hover { opacity:.88; }
+
+.hamburger { display:none; flex-direction:column; justify-content:center; gap:5px; background:none; border:none; padding:6px; cursor:pointer; border-radius:6px; transition:background .15s; margin-left:auto; }
+.hamburger:hover { background:var(--bg-hover); }
+.hamburger span { display:block; width:22px; height:2px; background:var(--text-primary); border-radius:1px; transition:all .25s; }
+.hamburger.open span:nth-child(1) { transform:translateY(7px) rotate(45deg); }
+.hamburger.open span:nth-child(2) { opacity:0; }
+.hamburger.open span:nth-child(3) { transform:translateY(-7px) rotate(-45deg); }
+
+@media(max-width:980px) {
+  .hamburger { display:flex; }
+  .header-inner { position:relative; flex-wrap:nowrap; }
+  .nav { display:none; position:absolute; top:60px; left:0; right:0; z-index:99; flex-direction:column; align-items:stretch; gap:0; padding:6px 0; background:rgba(6,36,52,0.98); border-bottom:1px solid var(--border); backdrop-filter:blur(12px); }
+  .nav.open { display:flex; }
+  .nav-link { padding:13px 22px; border-radius:0; font-size:14px; border-bottom:1px solid rgba(26,77,110,0.4); }
+  .nav-dropdown { position:static; }
+  .dropdown-btn { padding:13px 22px; border-radius:0; font-size:14px; border-bottom:1px solid rgba(26,77,110,0.4); width:100%; justify-content:space-between; }
+  .dropdown-menu { display:none; position:static; border:none; border-radius:0; padding:0; background:var(--bg-tertiary); box-shadow:none; backdrop-filter:none; }
+  .nav-dropdown.open .dropdown-menu { display:block; }
+  .nav-dropdown:hover .dropdown-menu { display:none; }
+  .nav-dropdown.open .dropdown-menu { display:block; }
+  .dropdown-item { padding:11px 32px; font-size:13px; border-bottom:1px solid rgba(26,77,110,0.3); }
+  .dropdown-item:last-child { border-bottom:none; }
+  .header-actions .btn-primary { display:none; }
+}
+
+/* ── HERO ── */
+.hero { background:linear-gradient(135deg,#062434 0%,#0a2e44 60%,#0d3550 100%); border-bottom:1px solid var(--border); padding:28px 24px; }
+.hero-inner { max-width:1200px; margin:0 auto; }
+.hero h1 { font-size:26px; font-weight:700; }
+.hero h1::after { content:''; display:block; width:40px; height:3px; background:linear-gradient(90deg,#51d7ce,#2FA3E0); border-radius:2px; margin-top:10px; }
+.hero p { color:var(--text-secondary); font-size:15px; margin-top:10px; }
+
+/* ── CONTROLS ── */
+.controls-bar { background:var(--bg-primary); border-bottom:1px solid var(--border); padding:12px 24px; }
+.controls-box { max-width:1248px; margin:0 auto; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); padding:16px 18px; display:flex; flex-direction:column; gap:14px; }
+.ctrl-row { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.ctrl-label { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.07em; white-space:nowrap; min-width:80px; }
+.ctrl-divider { border:none; border-top:1px solid var(--border); margin:0; }
+
+.asset-chips { display:flex; flex-wrap:wrap; gap:5px; flex:1; }
+.asset-chip { padding:4px 10px; border-radius:20px; font-size:12px; font-weight:600; cursor:pointer; transition:all .15s; border:1.5px solid var(--border); color:var(--text-muted); background:var(--bg-tertiary); user-select:none; white-space:nowrap; opacity:.55; }
+.asset-chip:hover { opacity:.85; border-color:var(--text-muted); }
+.asset-chip.active { opacity:1; border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
+.asset-chip.metal.active { border-color:var(--accent-2); color:var(--accent-2); background:rgba(81,215,206,0.10); }
+
+.chip-actions { display:flex; gap:6px; }
+.chip-action-btn { padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; cursor:pointer; border:1px solid var(--border); background:transparent; color:var(--text-muted); font-family:var(--font); transition:all .15s; }
+.chip-action-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+.tf-chips { display:flex; gap:5px; flex-wrap:wrap; }
+.tf-chip { padding:5px 14px; border-radius:20px; font-size:12px; font-weight:700; cursor:pointer; transition:all .15s; border:1.5px solid var(--border); color:var(--text-muted); background:var(--bg-tertiary); user-select:none; opacity:.55; }
+.tf-chip:hover { opacity:.85; }
+.tf-chip.active { opacity:1; border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
+
+.scan-row { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+.scan-meta { font-size:12px; color:var(--text-muted); display:flex; align-items:center; gap:12px; }
+.scan-meta strong { color:var(--accent); }
+.last-update { font-family:var(--font-mono); font-size:11px; color:var(--text-muted); }
+.btn-scan { background:linear-gradient(135deg,#51d7ce,#2FA3E0); color:#062434; border:none; padding:10px 28px; border-radius:20px; font-size:14px; font-weight:700; cursor:pointer; font-family:var(--font); transition:opacity .15s; display:flex; align-items:center; gap:8px; }
+.btn-scan:hover { opacity:.88; }
+.btn-scan:disabled { opacity:.45; cursor:not-allowed; }
+
+/* ── MAIN ── */
+.main { max-width:1248px; margin:0 auto; padding:20px 24px 60px; }
+
+/* ── STATE BOX ── */
+.state-box { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:80px 24px; gap:14px; text-align:center; color:var(--text-muted); background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); }
+.state-icon { font-size:44px; opacity:.3; }
+.state-title { font-size:17px; font-weight:600; color:var(--text-secondary); }
+.state-sub { font-size:13px; max-width:400px; line-height:1.6; }
+
+/* ── SIGNAL GRID ── */
+.signal-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:16px; animation:fadeIn .25s ease; }
+
+/* ── SIGNAL CARD ── */
+.signal-card { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; transition:border-color .2s; }
+.signal-card:hover { border-color:var(--accent); }
+
+.card-header { display:flex; align-items:center; justify-content:space-between; padding:14px 16px 10px; border-bottom:1px solid var(--border); }
+.card-pair { font-family:var(--font-mono); font-size:16px; font-weight:700; color:var(--text-primary); }
+.card-pair.metal { color:var(--accent-2); }
+.card-tf { font-size:11px; font-weight:600; color:var(--text-muted); background:var(--bg-tertiary); padding:2px 8px; border-radius:10px; }
+
+.card-body { padding:16px; display:flex; flex-direction:column; gap:14px; }
+
+/* gauge */
+.gauge-wrap { display:flex; flex-direction:column; align-items:center; gap:8px; }
+.gauge-svg { display:block; }
+
+/* signal badge */
+.signal-badge { font-size:18px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; }
+.signal-badge.strong-buy  { color:#3fb950; }
+.signal-badge.buy         { color:#8dd9a0; }
+.signal-badge.neutral     { color:var(--text-muted); }
+.signal-badge.sell        { color:#f08080; }
+.signal-badge.strong-sell { color:#f85149; }
+
+/* count bar */
+.count-bar-wrap { display:flex; flex-direction:column; gap:6px; }
+.count-bar { height:8px; border-radius:4px; display:flex; overflow:hidden; gap:2px; background:var(--bg-tertiary); }
+.count-bar-buy     { background:#3fb950; border-radius:4px 0 0 4px; transition:width .4s ease; }
+.count-bar-neutral { background:var(--text-muted); transition:width .4s ease; }
+.count-bar-sell    { background:#f85149; border-radius:0 4px 4px 0; transition:width .4s ease; }
+.count-labels { display:flex; justify-content:space-between; }
+.count-label { font-size:11px; font-weight:600; display:flex; align-items:center; gap:4px; }
+.count-label .dot { width:7px; height:7px; border-radius:50%; display:inline-block; }
+.dot-buy     { background:#3fb950; }
+.dot-neutral { background:var(--text-muted); }
+.dot-sell    { background:#f85149; }
+.count-label span { color:var(--text-muted); }
+.count-label strong { color:var(--text-primary); }
+
+/* adx row */
+.adx-row { display:flex; align-items:center; justify-content:space-between; background:var(--bg-tertiary); border-radius:var(--radius-sm); padding:8px 12px; }
+.adx-left { display:flex; flex-direction:column; gap:2px; }
+.adx-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--text-muted); }
+.adx-value { font-family:var(--font-mono); font-size:18px; font-weight:700; color:var(--text-primary); }
+.adx-right { display:flex; flex-direction:column; align-items:flex-end; gap:4px; }
+.adx-strength { font-size:11px; font-weight:700; padding:2px 8px; border-radius:10px; }
+.adx-strength.weak    { color:var(--text-muted); background:rgba(77,122,150,0.15); }
+.adx-strength.moderate{ color:var(--warn); background:var(--warn-bg); }
+.adx-strength.strong  { color:var(--positive); background:var(--positive-bg); }
+.adx-strength.extreme { color:#f85149; background:var(--negative-bg); }
+.trending-badge { font-size:10px; font-weight:600; color:var(--accent); display:flex; align-items:center; gap:3px; }
+.trending-badge svg { flex-shrink:0; }
+
+/* loading state */
+.card-loading { display:flex; align-items:center; justify-content:center; padding:40px; }
+.spinner { width:28px; height:28px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .7s linear infinite; }
+
+/* error state */
+.card-error { padding:20px 16px; text-align:center; color:var(--text-muted); font-size:12px; }
+
+/* ── FOOTER ── */
+.footer { background:var(--bg-secondary); border-top:1px solid var(--border); padding:24px; }
+.footer-inner { max-width:1200px; margin:0 auto; text-align:center; }
+.footer-disclaimer { font-size:12px; color:var(--text-muted); line-height:1.6; }
+.footer-copy { font-size:12px; color:var(--text-muted); margin-top:6px; }
+
+@media(max-width:640px) { .header-inner,.main,.controls-bar { padding-left:16px; padding-right:16px; } }
+  </style>
+</head>
+<body>
+
+  <header class="header">
+    <div class="header-inner">
+      <a href="economic-calendar.html" class="logo">
+        <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+          <defs><linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#51d7ce"/><stop offset="100%" stop-color="#2FA3E0"/></linearGradient></defs>
+          <circle cx="18" cy="18" r="16.5" stroke="url(#lg)" stroke-width="2" fill="none"/>
+          <rect x="8" y="20" width="4" height="8" rx="1" fill="url(#lg)"/>
+          <rect x="14" y="15" width="4" height="13" rx="1" fill="url(#lg)"/>
+          <rect x="20" y="11" width="4" height="17" rx="1" fill="url(#lg)"/>
+          <polyline points="22,9 27,9 27,14" stroke="url(#lg)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <line x1="14" y1="21" x2="27" y2="9" stroke="url(#lg)" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <span class="logo-text">Market<strong>Analytics</strong></span>
+      </a>
+      <nav class="nav" id="mainNav">
+        <a href="economic-calendar.html"    class="nav-link">Economic Calendar</a>
+        <a href="challenges.html"           class="nav-link">Challenges</a>
+        <a href="trend-bias.html"           class="nav-link">Trend Bias</a>
+        <a href="currency-strength.html"    class="nav-link">Currency Strength</a>
+        <a href="volatility-scanner.html"   class="nav-link">Volatility</a>
+        <a href="correlation-matrix.html"   class="nav-link">Correlation</a>
+        <div class="nav-dropdown" id="moreDropdown">
+          <button class="dropdown-btn active" id="moreToolsBtn" onclick="toggleDropdown(event)">
+            More Tools
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><polyline points="2,3 5,7 8,3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div class="dropdown-menu" id="moreToolsMenu">
+            <a href="aggregate-signal.html"         class="dropdown-item active">Aggregate Signal</a>
+            <a href="pattern-recognition.html"      class="dropdown-item">Pattern Recognition</a>
+            <a href="support-resistance.html"       class="dropdown-item">Support / Resistance</a>
+            <a href="trading-sessions.html"         class="dropdown-item">Trading Sessions</a>
+            <a href="position-size-calculator.html" class="dropdown-item">Position Size</a>
+          </div>
+        </div>
+      </nav>
+      <button class="hamburger" id="hamburger" aria-label="Open navigation">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="header-actions">
+        <span class="live-badge"><span class="live-dot">&#9679;</span> LIVE</span>
+        <button class="btn-primary">Open Account</button>
+      </div>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-inner">
+      <h1>Aggregate Signal</h1>
+      <p>Buy / Sell / Neutral consensus from Finnhub's technical indicator engine — signal strength, vote breakdown and ADX trend power per instrument.</p>
+    </div>
+  </section>
+
+  <div class="controls-bar">
+    <div class="controls-box">
+      <div class="ctrl-row">
+        <span class="ctrl-label">Symbols</span>
+        <div class="asset-chips" id="assetChips"></div>
+        <div class="chip-actions">
+          <button class="chip-action-btn" onclick="selectAll()">All</button>
+          <button class="chip-action-btn" onclick="selectNone()">None</button>
+        </div>
+      </div>
+      <hr class="ctrl-divider" />
+      <div class="ctrl-row">
+        <span class="ctrl-label">Timeframe</span>
+        <div class="tf-chips" id="tfChips"></div>
+      </div>
+      <hr class="ctrl-divider" />
+      <div class="scan-row">
+        <div class="scan-meta">
+          <span><strong id="selectedCount">0</strong> symbols selected</span>
+          <span class="last-update" id="lastUpdate"></span>
+        </div>
+        <button class="btn-scan" id="scanBtn" onclick="runScan()">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.8"/><line x1="7" y1="4" x2="7" y2="7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="7" y1="7" x2="9" y2="9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          Scan
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <main class="main" id="mainContent">
+    <div class="state-box" id="stateBox">
+      <div class="state-icon">📡</div>
+      <div class="state-title">Select symbols and hit Scan</div>
+      <div class="state-sub">Choose one or more currency pairs or metals, pick a timeframe, then click Scan to fetch live signals.</div>
+    </div>
+    <div class="signal-grid" id="signalGrid" style="display:none;"></div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+      <p class="footer-disclaimer">Signals are generated algorithmically from market data and are for informational purposes only. Not financial advice. Past performance does not guarantee future results. Trading CFDs and Forex involves significant risk of loss.</p>
+      <p class="footer-copy">© 2025 Market Analytics · Powered by Finnhub</p>
+    </div>
+  </footer>
+
+<script>
+const API_KEY = 'd95lt2pr01qqtvdma7c0d95lt2pr01qqtvdma7cg';
+const BASE    = 'https://finnhub.io/api/v1';
+
+const ASSETS = [
+  { label:'EUR/USD', sym:'OANDA:EUR_USD', type:'fx' },
+  { label:'GBP/USD', sym:'OANDA:GBP_USD', type:'fx' },
+  { label:'USD/JPY', sym:'OANDA:USD_JPY', type:'fx' },
+  { label:'USD/CHF', sym:'OANDA:USD_CHF', type:'fx' },
+  { label:'AUD/USD', sym:'OANDA:AUD_USD', type:'fx' },
+  { label:'NZD/USD', sym:'OANDA:NZD_USD', type:'fx' },
+  { label:'USD/CAD', sym:'OANDA:USD_CAD', type:'fx' },
+  { label:'EUR/GBP', sym:'OANDA:EUR_GBP', type:'fx' },
+  { label:'EUR/JPY', sym:'OANDA:EUR_JPY', type:'fx' },
+  { label:'GBP/JPY', sym:'OANDA:GBP_JPY', type:'fx' },
+  { label:'XAU/USD', sym:'OANDA:XAU_USD', type:'metal' },
+  { label:'XAG/USD', sym:'OANDA:XAG_USD', type:'metal' },
+];
+
+const TIMEFRAMES = [
+  { label:'1m',  res:'1'  },
+  { label:'5m',  res:'5'  },
+  { label:'15m', res:'15' },
+  { label:'30m', res:'30' },
+  { label:'1h',  res:'60' },
+  { label:'D',   res:'D'  },
+  { label:'W',   res:'W'  },
+];
+
+let activeAssets = new Set(['OANDA:EUR_USD','OANDA:GBP_USD','OANDA:USD_JPY','OANDA:XAU_USD']);
+let activeTf = '60';
+let scanning = false;
+let refreshTimer = null;
+
+/* ── BUILD CONTROLS ── */
+function buildControls() {
+  const chips = document.getElementById('assetChips');
+  ASSETS.forEach(a => {
+    const c = document.createElement('span');
+    c.className = 'asset-chip' + (a.type==='metal'?' metal':'') + (activeAssets.has(a.sym)?' active':'');
+    c.textContent = a.label;
+    c.dataset.sym = a.sym;
+    c.onclick = () => toggleAsset(a.sym, c, a.type==='metal');
+    chips.appendChild(c);
+  });
+
+  const tf = document.getElementById('tfChips');
+  TIMEFRAMES.forEach(t => {
+    const c = document.createElement('span');
+    c.className = 'tf-chip' + (t.res===activeTf?' active':'');
+    c.textContent = t.label;
+    c.dataset.res = t.res;
+    c.onclick = () => setTf(t.res, c);
+    tf.appendChild(c);
+  });
+
+  updateCount();
+}
+
+function toggleAsset(sym, el, isMetal) {
+  if (activeAssets.has(sym)) { activeAssets.delete(sym); el.classList.remove('active'); }
+  else { activeAssets.add(sym); el.classList.add('active'); }
+  updateCount();
+}
+
+function setTf(res, el) {
+  activeTf = res;
+  document.querySelectorAll('.tf-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function selectAll() {
+  ASSETS.forEach(a => activeAssets.add(a.sym));
+  document.querySelectorAll('.asset-chip').forEach(c => c.classList.add('active'));
+  updateCount();
+}
+
+function selectNone() {
+  activeAssets.clear();
+  document.querySelectorAll('.asset-chip').forEach(c => c.classList.remove('active'));
+  updateCount();
+}
+
+function updateCount() {
+  document.getElementById('selectedCount').textContent = activeAssets.size;
+}
+
+/* ── GAUGE SVG ── */
+function buildGauge(signal, buy, neutral, sell) {
+  const total = buy + neutral + sell || 1;
+  /* map signal to needle angle: -90deg = strong sell, 0 = neutral, +90 = strong buy */
+  const ratio = (buy - sell) / total; /* -1..+1 */
+  const angle = ratio * 90; /* -90..+90 */
+
+  const cx = 80, cy = 75, r = 60;
+  /* arc segments: strong-sell | sell | neutral | buy | strong-buy */
+  /* from 180deg to 0deg (left to right) */
+  function arc(startDeg, endDeg, color) {
+    const s = (startDeg * Math.PI) / 180;
+    const e = (endDeg   * Math.PI) / 180;
+    const x1 = cx + r * Math.cos(Math.PI - s);
+    const y1 = cy - r * Math.sin(Math.PI - s);
+    const x2 = cx + r * Math.cos(Math.PI - e);
+    const y2 = cy - r * Math.sin(Math.PI - e);
+    const large = (endDeg - startDeg) > 180 ? 1 : 0;
+    return `<path d="M${x1.toFixed(2)},${y1.toFixed(2)} A${r},${r} 0 ${large},1 ${x2.toFixed(2)},${y2.toFixed(2)}" fill="none" stroke="${color}" stroke-width="14" stroke-linecap="butt"/>`;
+  }
+
+  /* needle */
+  const needleAngle = angle; /* degrees from center (0=neutral) */
+  const rad = ((90 - needleAngle) * Math.PI) / 180;
+  const nx = cx + (r - 6) * Math.cos(rad + Math.PI);
+  const ny = cy - (r - 6) * Math.sin(rad + Math.PI);
+
+  return `<svg class="gauge-svg" width="160" height="90" viewBox="0 0 160 90">
+    ${arc(0,36,'#f85149')}
+    ${arc(36,72,'#f08080')}
+    ${arc(72,108,'#4d7a96')}
+    ${arc(108,144,'#8dd9a0')}
+    ${arc(144,180,'#3fb950')}
+    <line x1="${cx}" y1="${cy}" x2="${nx.toFixed(2)}" y2="${ny.toFixed(2)}" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="${cx}" cy="${cy}" r="5" fill="white"/>
+    <text x="12"  y="88" font-size="9" fill="#f85149" font-family="Inter,sans-serif" font-weight="700">SELL</text>
+    <text x="126" y="88" font-size="9" fill="#3fb950" font-family="Inter,sans-serif" font-weight="700"> BUY</text>
+  </svg>`;
+}
+
+/* ── CLASSIFY SIGNAL ── */
+function classify(data) {
+  const sig = (data.technicalAnalysis?.signal || 'neutral').toLowerCase();
+  const buy  = data.technicalAnalysis?.count?.buy     || 0;
+  const neu  = data.technicalAnalysis?.count?.neutral || 0;
+  const sell = data.technicalAnalysis?.count?.sell    || 0;
+  const total = buy + neu + sell || 1;
+  const buyRatio  = buy  / total;
+  const sellRatio = sell / total;
+
+  let label, cls;
+  if (sig === 'buy') {
+    if (buyRatio >= 0.65) { label = 'Strong Buy';  cls = 'strong-buy'; }
+    else                  { label = 'Buy';          cls = 'buy'; }
+  } else if (sig === 'sell') {
+    if (sellRatio >= 0.65){ label = 'Strong Sell'; cls = 'strong-sell'; }
+    else                  { label = 'Sell';         cls = 'sell'; }
+  } else {
+    label = 'Neutral'; cls = 'neutral';
+  }
+  return { label, cls, buy, neu, sell };
+}
+
+function adxStrength(adx) {
+  if (adx >= 75) return { label:'Extreme', cls:'extreme' };
+  if (adx >= 50) return { label:'Very Strong', cls:'strong' };
+  if (adx >= 25) return { label:'Strong', cls:'strong' };
+  return { label:'Weak', cls:'weak' };
+}
+
+/* ── RENDER CARD ── */
+function renderCard(asset, data) {
+  const { label, cls, buy, neu, sell } = classify(data);
+  const total = buy + neu + sell || 1;
+  const adx   = data.trend?.adx ?? null;
+  const trending = data.trend?.trending ?? false;
+  const adxS  = adx !== null ? adxStrength(adx) : null;
+
+  const gauge = buildGauge(cls, buy, neu, sell);
+
+  const buyW  = Math.round(buy  / total * 100);
+  const neuW  = Math.round(neu  / total * 100);
+  const sellW = 100 - buyW - neuW;
+
+  const isMetal = asset.type === 'metal';
+
+  return `
+    <div class="signal-card">
+      <div class="card-header">
+        <span class="card-pair${isMetal?' metal':''}">${asset.label}</span>
+        <span class="card-tf">${tfLabel(activeTf)}</span>
+      </div>
+      <div class="card-body">
+        <div class="gauge-wrap">
+          ${gauge}
+          <span class="signal-badge ${cls}">${label}</span>
+        </div>
+        <div class="count-bar-wrap">
+          <div class="count-bar">
+            <div class="count-bar-buy"     style="width:${buyW}%"></div>
+            <div class="count-bar-neutral" style="width:${neuW}%"></div>
+            <div class="count-bar-sell"    style="width:${sellW}%"></div>
+          </div>
+          <div class="count-labels">
+            <span class="count-label"><span class="dot dot-buy"></span><span>Buy</span> <strong>${buy}</strong></span>
+            <span class="count-label"><span class="dot dot-neutral"></span><span>Neutral</span> <strong>${neu}</strong></span>
+            <span class="count-label"><span class="dot dot-sell"></span><span>Sell</span> <strong>${sell}</strong></span>
+          </div>
+        </div>
+        ${adx !== null ? `
+        <div class="adx-row">
+          <div class="adx-left">
+            <span class="adx-label">ADX</span>
+            <span class="adx-value">${adx.toFixed(1)}</span>
+          </div>
+          <div class="adx-right">
+            <span class="adx-strength ${adxS.cls}">${adxS.label}</span>
+            ${trending ? `<span class="trending-badge"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><polyline points="1,7 4,4 6,6 9,2" stroke="#2FA3E0" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Trending</span>` : ''}
+          </div>
+        </div>` : ''}
+      </div>
+    </div>`;
+}
+
+function tfLabel(res) {
+  const map = {'1':'1m','5':'5m','15':'15m','30':'30m','60':'1h','D':'Daily','W':'Weekly'};
+  return map[res] || res;
+}
+
+/* ── SCAN ── */
+async function runScan() {
+  if (scanning) return;
+  if (activeAssets.size === 0) { alert('Select at least one symbol.'); return; }
+
+  scanning = true;
+  clearTimeout(refreshTimer);
+
+  const btn = document.getElementById('scanBtn');
+  btn.disabled = true;
+  btn.innerHTML = `<div class="spinner" style="width:14px;height:14px;border-width:2px;"></div> Scanning…`;
+
+  document.getElementById('stateBox').style.display   = 'none';
+  const grid = document.getElementById('signalGrid');
+  grid.style.display = 'grid';
+  grid.innerHTML = '';
+
+  /* show skeleton cards */
+  activeAssets.forEach(sym => {
+    const asset = ASSETS.find(a => a.sym === sym);
+    const el = document.createElement('div');
+    el.className = 'signal-card';
+    el.id = 'card-' + sym.replace(/[^a-z0-9]/gi,'_');
+    el.innerHTML = `<div class="card-header"><span class="card-pair${asset?.type==='metal'?' metal':''}">${asset?.label||sym}</span><span class="card-tf">${tfLabel(activeTf)}</span></div><div class="card-loading"><div class="spinner"></div></div>`;
+    grid.appendChild(el);
+  });
+
+  const syms = [...activeAssets];
+
+  await Promise.all(syms.map(async sym => {
+    const asset = ASSETS.find(a => a.sym === sym);
+    const cardId = 'card-' + sym.replace(/[^a-z0-9]/gi,'_');
+    try {
+      const res = await fetch(`${BASE}/scan/technical-indicator?symbol=${encodeURIComponent(sym)}&resolution=${activeTf}&token=${API_KEY}`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      const el = document.getElementById(cardId);
+      if (el) el.outerHTML = renderCard(asset, data);
+    } catch(e) {
+      const el = document.getElementById(cardId);
+      if (el) el.innerHTML = `<div class="card-header"><span class="card-pair${asset?.type==='metal'?' metal':''}">${asset?.label||sym}</span></div><div class="card-error">Could not load data</div>`;
+    }
+  }));
+
+  const now = new Date();
+  document.getElementById('lastUpdate').textContent = 'Updated ' + now.toLocaleTimeString();
+
+  btn.disabled = false;
+  btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.8"/><line x1="7" y1="4" x2="7" y2="7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="7" y1="7" x2="9" y2="9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg> Scan`;
+  scanning = false;
+
+  refreshTimer = setTimeout(runScan, 60000);
+}
+
+/* ── NAV ── */
+function toggleDropdown(e) {
+  e.stopPropagation();
+  const dd = document.getElementById('moreDropdown');
+  dd.classList.toggle('open');
+}
+document.addEventListener('click', () => {
+  document.getElementById('moreDropdown')?.classList.remove('open');
+});
+document.getElementById('hamburger').addEventListener('click', () => {
+  document.getElementById('mainNav').classList.toggle('open');
+  document.getElementById('hamburger').classList.toggle('open');
+});
+
+buildControls();
+</script>
+</body>
+</html>
