@@ -111,7 +111,11 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 .tab-count { font-size:11px; font-weight:700; background:var(--bg-tertiary); border:1px solid var(--border); border-radius:10px; padding:1px 7px; color:var(--text-muted); }
 .tab-btn.active .tab-count { background:var(--accent-dim); border-color:var(--accent); color:var(--accent); }
 
-.tabs-right { margin-left:auto; display:flex; align-items:center; gap:12px; }
+.tabs-right { margin-left:auto; display:flex; align-items:center; gap:10px; }
+.date-chips { display:flex; gap:4px; }
+.date-chip { background:none; border:1.5px solid var(--border); border-radius:20px; padding:3px 10px; font-size:11px; font-weight:700; color:var(--text-muted); font-family:var(--font); cursor:pointer; transition:all .15s; }
+.date-chip:hover { border-color:var(--text-muted); color:var(--text-secondary); }
+.date-chip.active { border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
 .last-update { font-size:11px; color:var(--text-muted); font-family:var(--font-mono); }
 .btn-refresh { background:none; border:1px solid var(--border); border-radius:var(--radius-sm); padding:5px 12px; font-size:12px; font-weight:600; color:var(--text-secondary); font-family:var(--font); cursor:pointer; display:flex; align-items:center; gap:6px; transition:all .15s; }
 .btn-refresh:hover { border-color:var(--accent); color:var(--accent); }
@@ -248,6 +252,12 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
         Gold <span class="tab-count" id="count-gold">—</span>
       </button>
       <div class="tabs-right">
+        <div class="date-chips">
+          <button class="date-chip active" onclick="setDays(1)"  id="days-1">1D</button>
+          <button class="date-chip"        onclick="setDays(3)"  id="days-3">3D</button>
+          <button class="date-chip"        onclick="setDays(5)"  id="days-5">5D</button>
+          <button class="date-chip"        onclick="setDays(7)"  id="days-7">7D</button>
+        </div>
         <span class="last-update" id="lastUpdate"></span>
         <button class="btn-refresh" id="refreshBtn" onclick="loadAll()">
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M10.5 6A4.5 4.5 0 1 1 6 1.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><polyline points="6,1.5 9,1.5 9,4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -311,6 +321,7 @@ const FEEDS = [
 
 let allArticles = [];
 let activeTab = 'all';
+let activeDays = 1;
 let loading = false;
 
 /* ── TIME HELPER ── */
@@ -326,6 +337,12 @@ function stripHtml(html) {
   const d = document.createElement('div');
   d.innerHTML = html;
   return d.textContent || d.innerText || '';
+}
+
+function extractImage(html) {
+  if (!html) return '';
+  const m = html.match(/<img[^>]+src=["']([^"']+)["']/i);
+  return m ? m[1] : '';
 }
 
 /* ── SKELETON ── */
@@ -346,22 +363,26 @@ function showSkeletons(n = 6) {
 
 /* ── FETCH FEED ── */
 async function fetchFeed(feed) {
-  const url = RSS2JSON + encodeURIComponent(feed.url);
+  const url = RSS2JSON + encodeURIComponent(feed.url) + '&count=50';
   const res = await fetch(url);
   const data = await res.json();
   if (data.status !== 'ok') throw new Error(data.message || 'Feed error');
-  return data.items.map(item => ({
-    id:          feed.id,
-    badgeClass:  feed.badgeClass,
-    sourceName:  feed.sourceName,
-    icon:        feed.icon,
-    title:       item.title,
-    description: stripHtml(item.description || item.content || '').slice(0, 200),
-    link:        item.link,
-    pubDate:     item.pubDate,
-    thumbnail:   item.thumbnail || item.enclosure?.thumbnail || '',
-    author:      item.author || '',
-  }));
+  return data.items.map(item => {
+    const rawHtml = item.content || item.description || '';
+    const thumb = item.thumbnail || item.enclosure?.thumbnail || extractImage(rawHtml) || '';
+    return {
+      id:          feed.id,
+      badgeClass:  feed.badgeClass,
+      sourceName:  feed.sourceName,
+      icon:        feed.icon,
+      title:       item.title,
+      description: stripHtml(rawHtml).replace(/\s+/g,' ').trim().slice(0, 220),
+      link:        item.link,
+      pubDate:     item.pubDate,
+      thumbnail:   thumb,
+      author:      item.author || '',
+    };
+  });
 }
 
 /* ── RENDER CARD ── */
@@ -393,15 +414,27 @@ function renderCard(a) {
     </a>`;
 }
 
+/* ── DATE FILTER ── */
+function setDays(days) {
+  activeDays = days;
+  document.querySelectorAll('.date-chip').forEach(c => c.classList.remove('active'));
+  document.getElementById('days-' + days).classList.add('active');
+  if (allArticles.length) { updateCounts(); renderGrid(); }
+}
+
+function withinDays(pubDate) {
+  return (Date.now() - new Date(pubDate).getTime()) <= activeDays * 86400 * 1000;
+}
+
 /* ── RENDER GRID ── */
 function renderGrid() {
-  const filtered = activeTab === 'all'
-    ? allArticles
-    : allArticles.filter(a => a.id === activeTab);
+  const filtered = allArticles
+    .filter(a => activeTab === 'all' || a.id === activeTab)
+    .filter(a => withinDays(a.pubDate));
 
   const grid = document.getElementById('newsGrid');
   if (filtered.length === 0) {
-    grid.innerHTML = `<div class="state-box" style="grid-column:1/-1"><div class="state-icon">📰</div><div class="state-title">No articles</div></div>`;
+    grid.innerHTML = `<div class="state-box" style="grid-column:1/-1"><div class="state-icon">📰</div><div class="state-title">No articles in this period</div><div class="state-sub">Try a wider date range.</div></div>`;
   } else {
     grid.innerHTML = filtered.map(renderCard).join('');
   }
@@ -409,14 +442,11 @@ function renderGrid() {
 
 /* ── UPDATE COUNTS ── */
 function updateCounts() {
-  const total  = allArticles.length;
-  const forex  = allArticles.filter(a => a.id === 'forex').length;
-  const crypto = allArticles.filter(a => a.id === 'crypto').length;
-  const gold   = allArticles.filter(a => a.id === 'gold').length;
-  document.getElementById('count-all').textContent    = total;
-  document.getElementById('count-forex').textContent  = forex;
-  document.getElementById('count-crypto').textContent = crypto;
-  document.getElementById('count-gold').textContent   = gold;
+  const inRange = allArticles.filter(a => withinDays(a.pubDate));
+  document.getElementById('count-all').textContent    = inRange.length;
+  document.getElementById('count-forex').textContent  = inRange.filter(a => a.id === 'forex').length;
+  document.getElementById('count-crypto').textContent = inRange.filter(a => a.id === 'crypto').length;
+  document.getElementById('count-gold').textContent   = inRange.filter(a => a.id === 'gold').length;
 }
 
 /* ── SWITCH TAB ── */
