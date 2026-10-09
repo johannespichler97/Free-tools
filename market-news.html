@@ -132,8 +132,6 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 .news-card:hover { border-color:var(--accent); transform:translateY(-2px); }
 
 .card-img { width:100%; height:160px; object-fit:cover; display:block; background:var(--bg-tertiary); flex-shrink:0; }
-.card-img-placeholder { width:100%; height:120px; background:linear-gradient(135deg,var(--bg-tertiary),var(--bg-hover)); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-.card-img-icon { font-size:32px; opacity:.25; }
 
 .card-body { padding:14px 16px 16px; display:flex; flex-direction:column; gap:8px; flex:1; }
 .card-meta { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
@@ -292,32 +290,37 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 <script>
 const RSS2JSON = 'https://api.rss2json.com/v1/api.json?rss_url=';
 
+/* ForexLive covers all markets — we tag each article by keyword matching */
 const FEEDS = [
   {
-    id: 'forex',
-    label: 'Forex',
-    icon: '💱',
+    id: 'all',
     badgeClass: 'source-forex',
     url: 'https://www.forexlive.com/feed/',
     sourceName: 'ForexLive',
   },
   {
-    id: 'crypto',
-    label: 'Crypto',
-    icon: '₿',
+    id: 'all',
     badgeClass: 'source-crypto',
     url: 'https://cointelegraph.com/rss',
     sourceName: 'CoinTelegraph',
   },
-  {
-    id: 'gold',
-    label: 'Gold',
-    icon: '🥇',
-    badgeClass: 'source-gold',
-    url: 'https://www.kitco.com/rss/news/',
-    sourceName: 'Kitco',
-  },
 ];
+
+/* Keyword sets for category classification */
+const FOREX_KW  = ['eur','usd','gbp','jpy','chf','aud','nzd','cad','forex','fx ','currency','dollar','pound','yen','franc','euro','ecb','fed ','boe ','boj ','rba ','snb ','fomc','rate hike','rate cut','central bank','interest rate','inflation','nfp','payroll','cpi ','pmi '];
+const CRYPTO_KW = ['bitcoin','btc','ethereum','eth','crypto','blockchain','solana','sol','ripple','xrp','coin','token','defi','nft','altcoin','web3','binance','coinbase'];
+const GOLD_KW   = ['gold','xau','silver','xag','precious metal','bullion','commodity','commodities','oil price','crude'];
+
+function classifyArticle(title, desc) {
+  const text = (title + ' ' + desc).toLowerCase();
+  const isCrypto = CRYPTO_KW.some(k => text.includes(k));
+  const isGold   = GOLD_KW.some(k => text.includes(k));
+  const isForex  = FOREX_KW.some(k => text.includes(k));
+  if (isCrypto && !isForex && !isGold) return 'crypto';
+  if (isGold   && !isCrypto)           return 'gold';
+  if (isForex)                          return 'forex';
+  return 'general';
+}
 
 let allArticles = [];
 let activeTab = 'all';
@@ -369,14 +372,19 @@ async function fetchFeed(feed) {
   if (data.status !== 'ok') throw new Error(data.message || 'Feed error');
   return data.items.map(item => {
     const rawHtml = item.content || item.description || '';
-    const thumb = item.thumbnail || item.enclosure?.thumbnail || extractImage(rawHtml) || '';
+    const desc    = stripHtml(rawHtml).replace(/\s+/g,' ').trim().slice(0, 220);
+    const thumb   = item.thumbnail || item.enclosure?.thumbnail || extractImage(rawHtml) || '';
+    const category = classifyArticle(item.title, desc);
+    /* badge class based on category, not feed source */
+    const badgeClass = category === 'crypto' ? 'source-crypto'
+                     : category === 'gold'   ? 'source-gold'
+                     : 'source-forex';
     return {
-      id:          feed.id,
-      badgeClass:  feed.badgeClass,
+      id:          category,
+      badgeClass,
       sourceName:  feed.sourceName,
-      icon:        feed.icon,
       title:       item.title,
-      description: stripHtml(rawHtml).replace(/\s+/g,' ').trim().slice(0, 220),
+      description: desc,
       link:        item.link,
       pubDate:     item.pubDate,
       thumbnail:   thumb,
@@ -387,15 +395,14 @@ async function fetchFeed(feed) {
 
 /* ── RENDER CARD ── */
 function renderCard(a) {
-  const img = a.thumbnail
-    ? `<img class="card-img" src="${a.thumbnail}" alt="" loading="lazy" onerror="this.style.display='none'">`
-    : `<div class="card-img-placeholder"><span class="card-img-icon">${a.icon}</span></div>`;
-
+  const imgHtml = a.thumbnail
+    ? `<img class="card-img" src="${a.thumbnail}" alt="" loading="lazy" onerror="this.parentElement.removeChild(this)">`
+    : '';
   const author = a.author ? `<span class="card-author">· ${a.author}</span>` : '';
 
   return `
     <a class="news-card" href="${a.link}" target="_blank" rel="noopener noreferrer">
-      ${img}
+      ${imgHtml}
       <div class="card-body">
         <div class="card-meta">
           <span class="source-badge ${a.badgeClass}">${a.sourceName}</span>
@@ -429,7 +436,11 @@ function withinDays(pubDate) {
 /* ── RENDER GRID ── */
 function renderGrid() {
   const filtered = allArticles
-    .filter(a => activeTab === 'all' || a.id === activeTab)
+    .filter(a => {
+      if (activeTab === 'all')    return true;
+      if (activeTab === 'forex')  return a.id === 'forex' || a.id === 'general';
+      return a.id === activeTab;
+    })
     .filter(a => withinDays(a.pubDate));
 
   const grid = document.getElementById('newsGrid');
@@ -444,7 +455,7 @@ function renderGrid() {
 function updateCounts() {
   const inRange = allArticles.filter(a => withinDays(a.pubDate));
   document.getElementById('count-all').textContent    = inRange.length;
-  document.getElementById('count-forex').textContent  = inRange.filter(a => a.id === 'forex').length;
+  document.getElementById('count-forex').textContent  = inRange.filter(a => a.id === 'forex' || a.id === 'general').length;
   document.getElementById('count-crypto').textContent = inRange.filter(a => a.id === 'crypto').length;
   document.getElementById('count-gold').textContent   = inRange.filter(a => a.id === 'gold').length;
 }
