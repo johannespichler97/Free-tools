@@ -363,7 +363,7 @@ function showSkeletons(n = 6) {
 
 /* ── FETCH FEED ── */
 async function fetchFeed(feed) {
-  const url = RSS2JSON + encodeURIComponent(feed.url) + '&count=50';
+  const url = RSS2JSON + encodeURIComponent(feed.url);
   const res = await fetch(url);
   const data = await res.json();
   if (data.status !== 'ok') throw new Error(data.message || 'Feed error');
