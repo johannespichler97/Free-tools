@@ -205,6 +205,22 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 /* error state */
 .card-error { padding:20px 16px; text-align:center; color:var(--text-muted); font-size:12px; }
 
+/* ── METHODOLOGY ── */
+.method-card { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); padding:28px; }
+.method-card h2 { font-size:16px; font-weight:700; margin-bottom:20px; color:var(--text-primary); display:flex; align-items:center; gap:10px; }
+.method-card h2::after { content:''; flex:1; height:1px; background:var(--border); }
+.method-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+@media(max-width:700px){ .method-grid { grid-template-columns:1fr; } }
+.method-block { background:var(--bg-tertiary); border:1px solid var(--border); border-radius:var(--radius-md); padding:16px; }
+.method-block h3 { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--accent); margin-bottom:12px; }
+.method-text { font-size:12.5px; color:var(--text-secondary); line-height:1.7; margin-bottom:10px; }
+.method-formula { font-family:var(--font-mono); background:var(--bg-primary); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px 14px; font-size:12px; color:var(--text-primary); margin:10px 0; line-height:1.8; overflow-x:auto; white-space:pre; }
+.method-table { width:100%; border-collapse:collapse; margin-top:10px; }
+.method-table th { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); padding:5px 8px; border-bottom:1px solid var(--border); text-align:left; }
+.method-table td { font-size:12px; padding:6px 8px; border-bottom:1px solid rgba(26,77,110,0.3); color:var(--text-secondary); }
+.method-table tr:last-child td { border-bottom:none; }
+.method-note { font-size:11.5px; color:var(--text-muted); line-height:1.6; margin-top:14px; border-top:1px solid var(--border); padding-top:14px; }
+
 /* ── FOOTER ── */
 .footer { background:var(--bg-secondary); border-top:1px solid var(--border); padding:24px; }
 .footer-inner { max-width:1200px; margin:0 auto; text-align:center; }
@@ -306,6 +322,48 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
     <div class="signal-grid" id="signalGrid" style="display:none;"></div>
   </main>
 
+  <!-- ── METHODOLOGY ── -->
+  <div style="max-width:1248px;margin:0 auto;padding:0 24px 48px;">
+    <div class="method-card">
+      <h2>Methodology</h2>
+      <div class="method-grid">
+
+        <div class="method-block">
+          <h3>ADX — Average Directional Index</h3>
+          <p class="method-text">ADX measures the <strong>strength</strong> of a trend — not its direction. It is derived from the smoothed difference between the +DI (upward directional movement) and −DI (downward directional movement) relative to the Average True Range over 14 periods.</p>
+          <div class="method-formula">ADX = SMA₁₄( |+DI − −DI| / (+DI + −DI) × 100 )</div>
+          <table class="method-table">
+            <thead><tr><th>ADX Range</th><th>Trend Strength</th></tr></thead>
+            <tbody>
+              <tr><td>0 – 25</td><td style="color:var(--text-muted)">Weak / No Trend</td></tr>
+              <tr><td>25 – 50</td><td style="color:var(--positive)">Strong</td></tr>
+              <tr><td>50 – 75</td><td style="color:var(--positive)">Very Strong</td></tr>
+              <tr><td>75 – 100</td><td style="color:var(--negative)">Extreme</td></tr>
+            </tbody>
+          </table>
+          <p class="method-note">A high ADX with a Neutral signal means the market is moving with energy but technical indicators are split on direction — a common early-trend or reversal scenario.</p>
+        </div>
+
+        <div class="method-block">
+          <h3>Buy / Sell Signal — Technical Indicators</h3>
+          <p class="method-text">The aggregate signal is a consensus vote across <strong>16 technical indicators</strong> provided by Finnhub's engine. Each indicator casts a Buy, Neutral or Sell vote. The majority outcome determines the overall signal.</p>
+          <table class="method-table">
+            <thead><tr><th>Category</th><th>Indicators</th></tr></thead>
+            <tbody>
+              <tr><td>Oscillators</td><td>RSI, STOCH %K, CCI, Momentum, MACD, Williams %R</td></tr>
+              <tr><td>Moving Averages</td><td>EMA 10/20/30/50/100/200, SMA 10/20/30/50/100/200</td></tr>
+            </tbody>
+          </table>
+          <div class="method-formula">Signal = majority(Buy votes, Neutral votes, Sell votes)
+Strong Buy  → ≥ 65% of votes are Buy
+Strong Sell → ≥ 65% of votes are Sell</div>
+          <p class="method-note">The signal reflects the <em>current</em> snapshot at the selected timeframe. Higher timeframes (1h, D) produce more reliable signals than 1m or 5m.</p>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
   <footer class="footer">
     <div class="footer-inner">
       <p class="footer-disclaimer">Signals are generated algorithmically from market data and are for informational purposes only. Not financial advice. Past performance does not guarantee future results. Trading CFDs and Forex involves significant risk of loss.</p>
@@ -327,7 +385,22 @@ const ASSETS = [
   { label:'USD/CAD', sym:'OANDA:USD_CAD', type:'fx' },
   { label:'EUR/GBP', sym:'OANDA:EUR_GBP', type:'fx' },
   { label:'EUR/JPY', sym:'OANDA:EUR_JPY', type:'fx' },
+  { label:'EUR/CHF', sym:'OANDA:EUR_CHF', type:'fx' },
+  { label:'EUR/AUD', sym:'OANDA:EUR_AUD', type:'fx' },
+  { label:'EUR/CAD', sym:'OANDA:EUR_CAD', type:'fx' },
+  { label:'EUR/NZD', sym:'OANDA:EUR_NZD', type:'fx' },
   { label:'GBP/JPY', sym:'OANDA:GBP_JPY', type:'fx' },
+  { label:'GBP/CHF', sym:'OANDA:GBP_CHF', type:'fx' },
+  { label:'GBP/AUD', sym:'OANDA:GBP_AUD', type:'fx' },
+  { label:'GBP/CAD', sym:'OANDA:GBP_CAD', type:'fx' },
+  { label:'GBP/NZD', sym:'OANDA:GBP_NZD', type:'fx' },
+  { label:'AUD/JPY', sym:'OANDA:AUD_JPY', type:'fx' },
+  { label:'AUD/NZD', sym:'OANDA:AUD_NZD', type:'fx' },
+  { label:'AUD/CAD', sym:'OANDA:AUD_CAD', type:'fx' },
+  { label:'AUD/CHF', sym:'OANDA:AUD_CHF', type:'fx' },
+  { label:'NZD/JPY', sym:'OANDA:NZD_JPY', type:'fx' },
+  { label:'CAD/JPY', sym:'OANDA:CAD_JPY', type:'fx' },
+  { label:'CHF/JPY', sym:'OANDA:CHF_JPY', type:'fx' },
   { label:'XAU/USD', sym:'OANDA:XAU_USD', type:'metal' },
   { label:'XAG/USD', sym:'OANDA:XAG_USD', type:'metal' },
 ];
@@ -345,7 +418,6 @@ const TIMEFRAMES = [
 let activeAssets = new Set(['OANDA:EUR_USD','OANDA:GBP_USD','OANDA:USD_JPY','OANDA:XAU_USD']);
 let activeTf = '60';
 let scanning = false;
-let refreshTimer = null;
 
 /* ── BUILD CONTROLS ── */
 function buildControls() {
@@ -559,15 +631,27 @@ async function runScan() {
   const syms = [...activeAssets];
 
   const delay = ms => new Promise(r => setTimeout(r, ms));
+  async function fetchWithRetry(url, retries = 2) {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        return data;
+      } catch(e) {
+        if (attempt < retries) await delay(600);
+        else throw e;
+      }
+    }
+  }
+
   for (let i = 0; i < syms.length; i++) {
     const sym = syms[i];
     const asset = ASSETS.find(a => a.sym === sym);
     const cardId = 'card-' + sym.replace(/[^a-z0-9]/gi,'_');
-    if (i > 0) await delay(350);
+    if (i > 0) await delay(250);
     try {
-      const res = await fetch(`${BASE}/scan/technical-indicator?symbol=${encodeURIComponent(sym)}&resolution=${activeTf}&token=${API_KEY}`);
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
+      const data = await fetchWithRetry(`${BASE}/scan/technical-indicator?symbol=${encodeURIComponent(sym)}&resolution=${activeTf}&token=${API_KEY}`);
       const el = document.getElementById(cardId);
       if (el) el.outerHTML = renderCard(asset, data);
     } catch(e) {
@@ -582,8 +666,6 @@ async function runScan() {
   btn.disabled = false;
   btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.8"/><line x1="7" y1="4" x2="7" y2="7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="7" y1="7" x2="9" y2="9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg> Scan`;
   scanning = false;
-
-  refreshTimer = setTimeout(runScan, 60000);
 }
 
 /* ── NAV ── */
