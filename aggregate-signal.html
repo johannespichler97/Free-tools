@@ -280,7 +280,7 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
   <section class="hero">
     <div class="hero-inner">
       <h1>Aggregate Signal <span style="font-size:14px;font-weight:400;color:var(--text-muted)">v2</span></h1>
-      <p>Buy / Sell / Neutral consensus from Finnhub's technical indicator engine — signal strength, vote breakdown and ADX trend power per instrument.</p>
+      <p>Buy / Sell / Neutral consensus from our technical indicator engine — signal strength, vote breakdown and ADX trend power per instrument.</p>
     </div>
   </section>
 
@@ -346,7 +346,7 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 
         <div class="method-block">
           <h3>Buy / Sell Signal — Technical Indicators</h3>
-          <p class="method-text">The aggregate signal is a consensus vote across <strong>16 technical indicators</strong> provided by Finnhub's engine. Each indicator casts a Buy, Neutral or Sell vote. The majority outcome determines the overall signal.</p>
+          <p class="method-text">The aggregate signal is a consensus vote across <strong>16 technical indicators</strong>. Each indicator casts a Buy, Neutral or Sell vote. The majority outcome determines the overall signal.</p>
           <table class="method-table">
             <thead><tr><th>Category</th><th>Indicators</th></tr></thead>
             <tbody>
@@ -367,7 +367,7 @@ Strong Sell → ≥ 65% of votes are Sell</div>
   <footer class="footer">
     <div class="footer-inner">
       <p class="footer-disclaimer">Signals are generated algorithmically from market data and are for informational purposes only. Not financial advice. Past performance does not guarantee future results. Trading CFDs and Forex involves significant risk of loss.</p>
-      <p class="footer-copy">© 2025 Market Analytics · Powered by Finnhub</p>
+      <p class="footer-copy">© 2025 Market Analytics</p>
     </div>
   </footer>
 
@@ -644,19 +644,22 @@ async function runScan() {
     });
 
     const syms = [...activeAssets];
-    for (let i = 0; i < syms.length; i++) {
-      const sym = syms[i];
-      const asset = ASSETS.find(a => a.sym === sym);
-      const cardId = 'card-' + sym.replace(/[^a-z0-9]/gi,'_');
-      if (i > 0) await delay(250);
-      try {
-        const data = await fetchWithRetry(`${BASE}/scan/technical-indicator?symbol=${encodeURIComponent(sym)}&resolution=${activeTf}&token=${API_KEY}`);
-        const el = document.getElementById(cardId);
-        if (el) el.outerHTML = renderCard(asset, data);
-      } catch(e) {
-        const el = document.getElementById(cardId);
-        if (el) el.innerHTML = `<div class="card-header"><span class="card-pair${asset?.type==='metal'?' metal':''}">${asset?.label||sym}</span></div><div class="card-error">Could not load data</div>`;
-      }
+    const CONCURRENCY = 3;
+    for (let i = 0; i < syms.length; i += CONCURRENCY) {
+      const batch = syms.slice(i, i + CONCURRENCY);
+      await Promise.all(batch.map(async sym => {
+        const asset = ASSETS.find(a => a.sym === sym);
+        const cardId = 'card-' + sym.replace(/[^a-z0-9]/gi,'_');
+        try {
+          const data = await fetchWithRetry(`${BASE}/scan/technical-indicator?symbol=${encodeURIComponent(sym)}&resolution=${activeTf}&token=${API_KEY}`);
+          const el = document.getElementById(cardId);
+          if (el) el.outerHTML = renderCard(asset, data);
+        } catch(e) {
+          const el = document.getElementById(cardId);
+          if (el) el.innerHTML = `<div class="card-header"><span class="card-pair${asset?.type==='metal'?' metal':''}">${asset?.label||sym}</span></div><div class="card-error">Could not load data</div>`;
+        }
+      }));
+      if (i + CONCURRENCY < syms.length) await delay(200);
     }
 
     document.getElementById('lastUpdate').textContent = 'Updated ' + new Date().toLocaleTimeString();
