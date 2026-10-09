@@ -422,10 +422,10 @@ function buildGauge(signal, buy, neutral, sell) {
   }
 
   /* needle */
-  const needleAngle = angle; /* degrees from center (0=neutral) */
+  const needleAngle = angle;
   const rad = ((90 - needleAngle) * Math.PI) / 180;
-  const nx = cx + (r - 6) * Math.cos(rad + Math.PI);
-  const ny = cy - (r - 6) * Math.sin(rad + Math.PI);
+  const nx = cx + (r - 6) * Math.cos(rad);
+  const ny = cy - (r - 6) * Math.sin(rad);
 
   return `<svg class="gauge-svg" width="160" height="90" viewBox="0 0 160 90">
     ${arc(0,36,'#f85149')}
@@ -558,9 +558,12 @@ async function runScan() {
 
   const syms = [...activeAssets];
 
-  await Promise.all(syms.map(async sym => {
+  const delay = ms => new Promise(r => setTimeout(r, ms));
+  for (let i = 0; i < syms.length; i++) {
+    const sym = syms[i];
     const asset = ASSETS.find(a => a.sym === sym);
     const cardId = 'card-' + sym.replace(/[^a-z0-9]/gi,'_');
+    if (i > 0) await delay(350);
     try {
       const res = await fetch(`${BASE}/scan/technical-indicator?symbol=${encodeURIComponent(sym)}&resolution=${activeTf}&token=${API_KEY}`);
       const data = await res.json();
@@ -571,7 +574,7 @@ async function runScan() {
       const el = document.getElementById(cardId);
       if (el) el.innerHTML = `<div class="card-header"><span class="card-pair${asset?.type==='metal'?' metal':''}">${asset?.label||sym}</span></div><div class="card-error">Could not load data</div>`;
     }
-  }));
+  }
 
   const now = new Date();
   document.getElementById('lastUpdate').textContent = 'Updated ' + now.toLocaleTimeString();
