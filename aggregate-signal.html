@@ -607,7 +607,6 @@ async function runScan() {
   if (activeAssets.size === 0) { alert('Select at least one symbol.'); return; }
 
   scanning = true;
-  clearTimeout(refreshTimer);
 
   const btn = document.getElementById('scanBtn');
   btn.disabled = true;
