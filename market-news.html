@@ -23,8 +23,6 @@
   --accent-2:      #51d7ce;
   --accent-dim:    rgba(47,163,224,0.12);
   --positive:      #3fb950;
-  --positive-bg:   rgba(63,185,80,0.10);
-  --negative:      #f85149;
   --warn:          #e3b341;
   --font:          'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono:     'JetBrains Mono', monospace;
@@ -36,7 +34,10 @@
 html { scroll-behavior: smooth; }
 body { font-family: var(--font); background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; font-size: 14px; line-height: 1.5; }
 
-@keyframes pulse  { 0%,100%{opacity:1} 50%{opacity:0.4} }
+@keyframes pulse   { 0%,100%{opacity:1} 50%{opacity:0.4} }
+@keyframes spin    { to{transform:rotate(360deg)} }
+@keyframes fadeIn  { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+@keyframes shimmer { 0%{background-position:-400px 0} 100%{background-position:400px 0} }
 
 /* ── HEADER ── */
 .header { position:sticky; top:0; z-index:200; background:rgba(6,36,52,0.97); backdrop-filter:blur(12px); border-bottom:1px solid var(--border); }
@@ -100,20 +101,78 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 .hero h1::after { content:''; display:block; width:40px; height:3px; background:linear-gradient(90deg,#51d7ce,#2FA3E0); border-radius:2px; margin-top:10px; }
 .hero p { color:var(--text-secondary); font-size:15px; margin-top:10px; }
 
-/* ── TABS ── */
-.tabs-bar { background:var(--bg-primary); border-bottom:1px solid var(--border); padding:0 24px; }
-.tabs-inner { max-width:1248px; margin:0 auto; display:flex; align-items:center; gap:0; }
-.tab-btn { background:none; border:none; font-family:var(--font); cursor:pointer; padding:14px 18px; font-size:13px; font-weight:600; color:var(--text-muted); border-bottom:2px solid transparent; transition:all .15s; display:flex; align-items:center; gap:7px; white-space:nowrap; }
+/* ── CONTROLS BAR ── */
+.controls-bar { background:var(--bg-primary); border-bottom:1px solid var(--border); }
+.controls-inner { max-width:1248px; margin:0 auto; padding:0 24px; }
+
+/* tabs row */
+.tabs-row { display:flex; align-items:center; border-bottom:1px solid var(--border); }
+.tab-btn { background:none; border:none; font-family:var(--font); cursor:pointer; padding:14px 18px; font-size:13px; font-weight:600; color:var(--text-muted); border-bottom:2px solid transparent; margin-bottom:-1px; transition:all .15s; white-space:nowrap; }
 .tab-btn:hover { color:var(--text-secondary); }
 .tab-btn.active { color:var(--accent); border-bottom-color:var(--accent); }
-.tab-count { font-size:11px; font-weight:700; background:var(--bg-tertiary); border:1px solid var(--border); border-radius:10px; padding:1px 7px; color:var(--text-muted); }
-.tab-btn.active .tab-count { background:var(--accent-dim); border-color:var(--accent); color:var(--accent); }
+
+/* day filter on the right of tabs */
+.day-filter { margin-left:auto; display:flex; gap:4px; align-items:center; }
+.day-btn { background:none; border:1.5px solid var(--border); border-radius:20px; padding:3px 11px; font-size:11px; font-weight:700; color:var(--text-muted); font-family:var(--font); cursor:pointer; transition:all .15s; white-space:nowrap; }
+.day-btn:hover { border-color:var(--text-muted); color:var(--text-secondary); }
+.day-btn.active { border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
+
+/* asset chips row */
+.asset-row { display:flex; align-items:center; gap:6px; padding:10px 0; overflow-x:auto; scrollbar-width:none; }
+.asset-row::-webkit-scrollbar { display:none; }
+.asset-chip { background:none; border:1.5px solid var(--border); border-radius:20px; padding:4px 12px; font-size:11.5px; font-weight:600; color:var(--text-muted); font-family:var(--font-mono); cursor:pointer; transition:all .15s; white-space:nowrap; flex-shrink:0; }
+.asset-chip:hover { border-color:var(--text-secondary); color:var(--text-secondary); }
+.asset-chip.active { border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
 
 /* ── MAIN ── */
 .main { max-width:1248px; margin:0 auto; padding:24px 24px 60px; }
 
-/* ── WIDGET PANE ── */
-.widget-pane { height:calc(100vh - 260px); min-height:700px; }
+/* ── TOOLBAR ── */
+.toolbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; gap:12px; }
+.result-count { font-size:12px; color:var(--text-muted); }
+.result-count strong { color:var(--text-secondary); }
+.btn-refresh { background:none; border:1px solid var(--border); border-radius:var(--radius-sm); padding:5px 14px; font-size:12px; font-weight:600; color:var(--text-secondary); font-family:var(--font); cursor:pointer; display:flex; align-items:center; gap:6px; transition:all .15s; }
+.btn-refresh:hover { border-color:var(--accent); color:var(--accent); }
+.btn-refresh:disabled { opacity:.4; cursor:not-allowed; }
+.spin-icon { animation:spin .7s linear infinite; display:inline-block; }
+
+/* ── NEWS GRID ── */
+.news-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(340px, 1fr)); gap:16px; animation:fadeIn .2s ease; }
+
+/* ── NEWS CARD ── */
+.news-card { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; display:flex; flex-direction:column; transition:border-color .2s, transform .15s; cursor:pointer; text-decoration:none; }
+.news-card:hover { border-color:var(--accent); transform:translateY(-2px); }
+
+.card-img { width:100%; height:160px; object-fit:cover; display:block; background:var(--bg-tertiary); flex-shrink:0; }
+
+.card-body { padding:14px 16px 16px; display:flex; flex-direction:column; gap:8px; flex:1; }
+.card-meta { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.source-badge { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; padding:2px 8px; border-radius:10px; white-space:nowrap; background:var(--accent-dim); color:var(--accent); border:1px solid rgba(47,163,224,0.3); }
+.card-time { font-size:11px; color:var(--text-muted); font-family:var(--font-mono); }
+
+.card-title { font-size:14px; font-weight:600; color:var(--text-primary); line-height:1.45; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+.card-summary { font-size:12.5px; color:var(--text-secondary); line-height:1.6; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+
+.card-footer { margin-top:auto; padding-top:10px; border-top:1px solid var(--border); }
+.read-more { font-size:12px; font-weight:600; color:var(--accent); display:flex; align-items:center; gap:4px; }
+
+/* ── STATES ── */
+.spinner-wrap { display:flex; justify-content:center; padding:80px 24px; }
+.spinner { width:36px; height:36px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .7s linear infinite; }
+.state-box { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:80px 24px; gap:14px; text-align:center; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); }
+.state-icon { font-size:44px; opacity:.3; }
+.state-title { font-size:17px; font-weight:600; color:var(--text-secondary); }
+.state-sub { font-size:13px; color:var(--text-muted); max-width:400px; line-height:1.6; }
+.btn-retry { margin-top:8px; background:var(--accent-dim); border:1px solid var(--accent); color:var(--accent); border-radius:20px; padding:8px 20px; font-size:13px; font-weight:600; cursor:pointer; font-family:var(--font); transition:opacity .15s; }
+.btn-retry:hover { opacity:.8; }
+
+/* ── SKELETON ── */
+.skel { background:linear-gradient(90deg, var(--bg-tertiary) 25%, var(--bg-hover) 50%, var(--bg-tertiary) 75%); background-size:400px 100%; animation:shimmer 1.4s infinite; border-radius:4px; }
+.skeleton-card { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; }
+.skel-img  { height:120px; border-radius:0; }
+.skel-body { padding:14px 16px 16px; display:flex; flex-direction:column; gap:10px; }
+.skel-line { height:12px; }
+.skel-title { height:16px; }
 
 /* ── FOOTER ── */
 .footer { background:var(--bg-secondary); border-top:1px solid var(--border); padding:24px; }
@@ -122,8 +181,10 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 .footer-copy { font-size:12px; color:var(--text-muted); margin-top:6px; }
 
 @media(max-width:640px) {
-  .header-inner,.main,.tabs-bar { padding-left:16px; padding-right:16px; }
-  .widget-pane { height:80vh; min-height:500px; }
+  .header-inner,.main,.controls-inner { padding-left:16px; padding-right:16px; }
+  .news-grid { grid-template-columns:1fr; }
+  .day-filter { gap:3px; }
+  .day-btn { padding:3px 8px; font-size:10px; }
 }
   </style>
 </head>
@@ -178,81 +239,269 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
   <section class="hero">
     <div class="hero-inner">
       <h1>Market News</h1>
-      <p>Latest headlines from Forex, Crypto and Gold markets — curated from leading financial news sources.</p>
+      <p>Latest headlines from Forex, Crypto and Gold markets — filter by asset and date range.</p>
     </div>
   </section>
 
-  <div class="tabs-bar">
-    <div class="tabs-inner">
-      <button class="tab-btn active" onclick="switchTab('forex')"  id="tab-forex">Forex</button>
-      <button class="tab-btn"        onclick="switchTab('crypto')" id="tab-crypto">Crypto</button>
-      <button class="tab-btn"        onclick="switchTab('gold')"   id="tab-gold">Gold &amp; Commodities</button>
+  <div class="controls-bar">
+    <div class="controls-inner">
+      <!-- Tabs + Day filter on same row -->
+      <div class="tabs-row">
+        <button class="tab-btn active" onclick="switchTab('forex')"  id="tab-forex">Forex</button>
+        <button class="tab-btn"        onclick="switchTab('crypto')" id="tab-crypto">Crypto</button>
+        <button class="tab-btn"        onclick="switchTab('gold')"   id="tab-gold">Gold &amp; Commodities</button>
+        <div class="day-filter" id="dayFilter">
+          <button class="day-btn active" onclick="setDays(1)"  id="day-1">1D</button>
+          <button class="day-btn"        onclick="setDays(3)"  id="day-3">3D</button>
+          <button class="day-btn"        onclick="setDays(5)"  id="day-5">5D</button>
+          <button class="day-btn"        onclick="setDays(7)"  id="day-7">7D</button>
+        </div>
+      </div>
+      <!-- Asset chips -->
+      <div class="asset-row" id="assetRow"></div>
     </div>
   </div>
 
   <main class="main">
-    <div class="widget-pane" id="pane-forex"></div>
-    <div class="widget-pane" id="pane-crypto"  style="display:none;"></div>
-    <div class="widget-pane" id="pane-gold"    style="display:none;"></div>
+    <div class="toolbar">
+      <span class="result-count" id="resultCount"></span>
+      <button class="btn-refresh" id="refreshBtn" onclick="reload()">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M11 2.5A5.5 5.5 0 1 0 12 6.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><polyline points="9,0.5 12,2.5 9.5,5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Refresh
+      </button>
+    </div>
+    <div id="newsContent"></div>
   </main>
 
   <footer class="footer">
     <div class="footer-inner">
       <p class="footer-disclaimer">News articles are sourced from third-party publishers and are for informational purposes only. Not financial advice.</p>
-      <p class="footer-copy">© 2025 Market Analytics</p>
+      <p class="footer-copy">&copy; 2025 Market Analytics</p>
     </div>
   </footer>
 
 <script>
-const TV_MARKETS = { forex: 'forex', crypto: 'crypto', gold: 'futures' };
-const initialized = {};
+const API_KEY = 'd95lt2pr01qqtvdma7c0d95lt2pr01qqtvdma7cg';
 
-function injectWidget(paneId, market) {
-  const pane = document.getElementById(paneId);
-  if (!pane) return;
+const TAB_CONFIG = {
+  forex: {
+    category: 'forex',
+    assets: ['EUR/USD','GBP/USD','USD/JPY','USD/CHF','AUD/USD','NZD/USD','USD/CAD','EUR/GBP','EUR/JPY','GBP/JPY','XAU/USD']
+  },
+  crypto: {
+    category: 'crypto',
+    assets: ['BTC/USD','ETH/USD','SOL/USD','XRP/USD','ADA/USD','BNB/USD','DOT/USD','AVAX/USD','DOGE/USD']
+  },
+  gold: {
+    category: 'general',
+    assets: ['XAU/USD','XAG/USD','WTI Oil','Nat. Gas','Copper']
+  }
+};
 
-  const container = document.createElement('div');
-  container.className = 'tradingview-widget-container';
-  container.style.height = '100%';
+const ASSET_KW = {
+  'EUR/USD':  ['eur/usd','eurusd','euro dollar','euro','ecb','european central bank','eurozone'],
+  'GBP/USD':  ['gbp/usd','gbpusd','pound dollar','sterling','cable','boe','bank of england'],
+  'USD/JPY':  ['usd/jpy','usdjpy','dollar yen','yen','boj','bank of japan'],
+  'USD/CHF':  ['usd/chf','usdchf','dollar franc','franc','snb','swiss national bank'],
+  'AUD/USD':  ['aud/usd','audusd','aussie','rba','reserve bank of australia'],
+  'NZD/USD':  ['nzd/usd','nzdusd','kiwi','rbnz','reserve bank of new zealand'],
+  'USD/CAD':  ['usd/cad','usdcad','loonie','boc','bank of canada','canadian dollar'],
+  'EUR/GBP':  ['eur/gbp','eurgbp'],
+  'EUR/JPY':  ['eur/jpy','eurjpy'],
+  'GBP/JPY':  ['gbp/jpy','gbpjpy'],
+  'XAU/USD':  ['gold','xau/usd','xauusd','bullion'],
+  'BTC/USD':  ['bitcoin','btc','btcusd','btc/usd'],
+  'ETH/USD':  ['ethereum','eth','ether','ethusd','eth/usd'],
+  'SOL/USD':  ['solana','sol ','solusd','sol/usd'],
+  'XRP/USD':  ['ripple','xrp','xrpusd','xrp/usd'],
+  'ADA/USD':  ['cardano','ada ','adausd','ada/usd'],
+  'BNB/USD':  ['binance coin','bnb ','bnbusd','bnb/usd'],
+  'DOT/USD':  ['polkadot','dot ','dotusd','dot/usd'],
+  'AVAX/USD': ['avalanche','avax','avaxusd','avax/usd'],
+  'DOGE/USD': ['dogecoin','doge','dogeusd','doge/usd'],
+  'XAG/USD':  ['silver','xag','xagusd','xag/usd'],
+  'WTI Oil':  ['crude oil','wti','brent','oil price','petroleum'],
+  'Nat. Gas': ['natural gas','natgas','lng'],
+  'Copper':   ['copper','hg ','hgf'],
+};
 
-  const inner = document.createElement('div');
-  inner.className = 'tradingview-widget-container__widget';
-  inner.style.height = '100%';
-  container.appendChild(inner);
+/* state */
+let activeTab   = 'forex';
+let activeAsset = null; // null = All
+let activeDays  = 1;
+let cache       = {}; // { 'forex:1': [...], ... }
+let loading     = false;
 
-  const script = document.createElement('script');
-  script.type = 'text/javascript';
-  script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-timeline.js';
-  script.async = true;
-  script.innerHTML = JSON.stringify({
-    feedMode: 'market',
-    market: market,
-    colorTheme: 'dark',
-    isTransparent: true,
-    displayMode: 'regular',
-    width: '100%',
-    height: '100%',
-    locale: 'en'
-  });
-  container.appendChild(script);
-
-  pane.appendChild(container);
+/* ── date helpers ── */
+function fmtDate(d) { return d.toISOString().split('T')[0]; }
+function timeAgo(ts) {
+  const diff = (Date.now() - ts * 1000) / 1000;
+  if (diff < 60)    return 'just now';
+  if (diff < 3600)  return Math.floor(diff / 60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+  return Math.floor(diff / 86400) + 'd ago';
 }
 
-function switchTab(tab) {
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('tab-' + tab).classList.add('active');
+/* ── asset filter ── */
+function matchesAsset(article, asset) {
+  if (!asset) return true;
+  const keywords = ASSET_KW[asset] || [];
+  const text = ((article.headline || '') + ' ' + (article.summary || '')).toLowerCase();
+  return keywords.some(k => text.includes(k));
+}
 
-  document.querySelectorAll('.widget-pane').forEach(p => p.style.display = 'none');
-  const paneId = 'pane-' + tab;
-  document.getElementById(paneId).style.display = 'block';
+/* ── fetch ── */
+async function fetchNews() {
+  const { category } = TAB_CONFIG[activeTab];
+  const cacheKey = `${category}:${activeDays}`;
+  if (cache[cacheKey]) return cache[cacheKey];
 
-  if (!initialized[tab]) {
-    initialized[tab] = true;
-    injectWidget(paneId, TV_MARKETS[tab]);
+  const to   = new Date();
+  const from = new Date(Date.now() - activeDays * 86400000);
+  const url  = `https://finnhub.io/api/v1/news?category=${category}&from=${fmtDate(from)}&to=${fmtDate(to)}&token=${API_KEY}`;
+  const res  = await fetch(url);
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const data = await res.json();
+  if (!Array.isArray(data)) throw new Error('Unexpected response');
+
+  /* sort newest first */
+  data.sort((a, b) => b.datetime - a.datetime);
+  cache[cacheKey] = data;
+  return data;
+}
+
+/* ── render ── */
+function skeletons(n = 6) {
+  return Array.from({length: n}, () => `
+    <div class="skeleton-card">
+      <div class="skel skel-img"></div>
+      <div class="skel-body">
+        <div class="skel skel-line" style="width:55%"></div>
+        <div class="skel skel-title"></div>
+        <div class="skel skel-title" style="width:80%"></div>
+        <div class="skel skel-line" style="width:60%"></div>
+      </div>
+    </div>`).join('');
+}
+
+function renderCard(a) {
+  const img = a.image
+    ? `<img class="card-img" src="${a.image}" alt="" loading="lazy" onerror="this.style.display='none'">`
+    : '';
+  const summary = a.summary
+    ? `<div class="card-summary">${a.summary.slice(0,220)}</div>`
+    : '';
+  return `
+    <a class="news-card" href="${a.url}" target="_blank" rel="noopener noreferrer">
+      ${img}
+      <div class="card-body">
+        <div class="card-meta">
+          <span class="source-badge">${a.source || 'News'}</span>
+          <span class="card-time">${timeAgo(a.datetime)}</span>
+        </div>
+        <div class="card-title">${a.headline}</div>
+        ${summary}
+        <div class="card-footer">
+          <span class="read-more">Read article
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><line x1="2" y1="6" x2="10" y2="6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><polyline points="7,3 10,6 7,9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+        </div>
+      </div>
+    </a>`;
+}
+
+function renderGrid(articles) {
+  const el = document.getElementById('newsContent');
+  if (articles.length === 0) {
+    el.innerHTML = `<div class="state-box"><div class="state-icon">📰</div><div class="state-title">No articles found</div><div class="state-sub">Try a wider date range or select a different asset.</div></div>`;
+    document.getElementById('resultCount').innerHTML = '';
+  } else {
+    el.innerHTML = `<div class="news-grid">${articles.map(renderCard).join('')}</div>`;
+    document.getElementById('resultCount').innerHTML = `Showing <strong>${articles.length}</strong> article${articles.length !== 1 ? 's' : ''}`;
   }
 }
 
+/* ── asset chips ── */
+function buildAssetChips() {
+  const assets = TAB_CONFIG[activeTab].assets;
+  const row = document.getElementById('assetRow');
+  row.innerHTML = `<button class="asset-chip${activeAsset === null ? ' active' : ''}" onclick="setAsset(null)">All</button>` +
+    assets.map(a => `<button class="asset-chip${activeAsset === a ? ' active' : ''}" onclick="setAsset('${a}')">${a}</button>`).join('');
+}
+
+/* ── load & display ── */
+async function load() {
+  if (loading) return;
+  loading = true;
+
+  const btn = document.getElementById('refreshBtn');
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spin-icon">↻</span> Loading…`;
+  document.getElementById('newsContent').innerHTML = `<div class="news-grid">${skeletons(9)}</div>`;
+  document.getElementById('resultCount').innerHTML = '';
+
+  try {
+    const all = await fetchNews();
+    const filtered = all.filter(a => matchesAsset(a, activeAsset));
+    renderGrid(filtered);
+  } catch(err) {
+    document.getElementById('newsContent').innerHTML = `
+      <div class="state-box">
+        <div class="state-icon">⚠️</div>
+        <div class="state-title">Could not load news</div>
+        <div class="state-sub">${err.message}</div>
+        <button class="btn-retry" onclick="reload()">Try again</button>
+      </div>`;
+    document.getElementById('resultCount').innerHTML = '';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M11 2.5A5.5 5.5 0 1 0 12 6.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><polyline points="9,0.5 12,2.5 9.5,5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Refresh`;
+    loading = false;
+  }
+}
+
+/* ── controls ── */
+function switchTab(tab) {
+  if (tab === activeTab) return;
+  activeTab   = tab;
+  activeAsset = null;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  buildAssetChips();
+  load();
+}
+
+function setDays(days) {
+  if (days === activeDays) return;
+  activeDays = days;
+  /* clear cache for current tab so fresh data is fetched with new range */
+  const { category } = TAB_CONFIG[activeTab];
+  delete cache[`${category}:${days}`];
+  document.querySelectorAll('.day-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('day-' + days).classList.add('active');
+  load();
+}
+
+function setAsset(asset) {
+  activeAsset = asset;
+  buildAssetChips();
+  /* filter already-cached data — no new fetch needed */
+  const { category } = TAB_CONFIG[activeTab];
+  const cacheKey = `${category}:${activeDays}`;
+  if (cache[cacheKey]) {
+    renderGrid(cache[cacheKey].filter(a => matchesAsset(a, activeAsset)));
+    const count = cache[cacheKey].filter(a => matchesAsset(a, activeAsset)).length;
+    document.getElementById('resultCount').innerHTML = `Showing <strong>${count}</strong> article${count !== 1 ? 's' : ''}`;
+  }
+}
+
+function reload() {
+  const { category } = TAB_CONFIG[activeTab];
+  delete cache[`${category}:${activeDays}`];
+  load();
+}
+
+/* ── nav ── */
 function toggleDropdown(e) {
   e.stopPropagation();
   document.getElementById('moreDropdown').classList.toggle('open');
@@ -265,9 +514,9 @@ document.getElementById('hamburger').addEventListener('click', () => {
   document.getElementById('hamburger').classList.toggle('open');
 });
 
-/* load forex widget on page open */
-initialized['forex'] = true;
-injectWidget('pane-forex', TV_MARKETS['forex']);
+/* ── init ── */
+buildAssetChips();
+load();
 </script>
 </body>
 </html>
