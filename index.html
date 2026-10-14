@@ -235,7 +235,7 @@ section { position:relative; }
 .wl-list .ic { width:40px; height:40px; border-radius:12px; display:grid; place-items:center; background:rgba(81,215,206,.1); border:1px solid rgba(81,215,206,.28); color:var(--accent-2); }
 .wl-list b { display:block; font-size:15px; }
 .wl-list span { color:var(--text-2); font-size:14px; }
-.domain { display:inline-flex; align-items:center; gap:0; margin-top:28px; padding:10px 16px; border-radius:12px; background:rgba(4,27,40,.7); border:1px solid var(--border); font-family:var(--mono); font-size:13px; color:var(--text-2); }
+.domain { display:inline-flex; align-items:center; gap:0; white-space:nowrap; max-width:100%; overflow:hidden; margin-top:28px; padding:10px 16px; border-radius:12px; background:rgba(4,27,40,.7); border:1px solid var(--border); font-family:var(--mono); font-size:13px; color:var(--text-2); }
 .domain b { color:var(--accent-2); font-weight:600; }
 .domain .caret { width:2px; height:15px; margin:0 1px; background:var(--accent-2); animation:blink 1s steps(1) infinite; }
 @keyframes blink { 50%{opacity:0} }
@@ -312,6 +312,8 @@ section { position:relative; }
   .dash-row { grid-template-columns:1fr; }
   .float-card { display:none; }
   .f-row, .ch-meta { grid-template-columns:1fr; }
+  .domain { font-size:10.5px; padding:10px 12px; letter-spacing:-.01em; }
+  .ct-info { padding:32px 22px; }
   .ch-meta { gap:8px; }
   .hero-meta { gap:20px; }
   .btn { padding:13px 22px; }
@@ -349,13 +351,13 @@ section { position:relative; }
 
   <div class="wrap hero-inner">
     <div>
-      <span class="pill"><b>B2B</b><span class="live"></span> White-label trading analytics for your brand</span>
+      <span class="pill"><b>B2B</b><span class="live"></span> Trading analytics for brokers, prop firms &amp; fintechs</span>
       <h1>
         <span class="line"><span>Trade with</span></span>
         <span class="line"><span class="grad-text">clarity.</span></span>
         <span class="line"><span>Not noise.</span></span>
       </h1>
-      <p class="hero-sub">A complete suite of trading tools — economic calendar, currency strength, signals, news and trading challenges — delivered under your logo, on your own subdomain, for your clients.</p>
+      <p class="hero-sub">A complete suite of trading tools — economic calendar, currency strength, signals, news and trading challenges — on a dedicated subdomain for your company, ready for your clients.</p>
       <div class="hero-cta">
         <a href="#contact" class="btn btn-solid">Request a demo
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -427,7 +429,7 @@ section { position:relative; }
 <!-- STATS -->
 <section class="stats">
   <div class="wrap stats-grid">
-    <div class="stat reveal"><b><span data-count="12">0</span></b><span>Tools in one white-label suite</span></div>
+    <div class="stat reveal"><b><span data-count="12">0</span></b><span>Tools in one B2B licence</span></div>
     <div class="stat reveal d1"><b><span data-count="27">0</span></b><span>Forex &amp; metal pairs scanned</span></div>
     <div class="stat reveal d2"><b><span data-count="16">0</span></b><span>Indicators in every signal</span></div>
     <div class="stat reveal d3"><b><span data-count="24">0</span>/5</b><span>Coverage across all sessions</span></div>
@@ -442,7 +444,7 @@ section { position:relative; }
         <span class="eyebrow reveal">The toolkit</span>
         <h2 class="h2 reveal d1">Everything your clients check<br/>before they click <span class="grad-text">buy</span>.</h2>
       </div>
-      <p class="lead reveal d2">Twelve focused tools for forex, crypto and gold traders — all included in one licence and branded as your own.</p>
+      <p class="lead reveal d2">Twelve focused tools for forex, crypto and gold traders — all included in one licence, on your company's own subdomain.</p>
     </div>
     <div class="tools-grid" id="toolsGrid"></div>
   </div>
@@ -550,7 +552,7 @@ section { position:relative; }
         <li><span><b>Live leaderboard</b> — ranked by % gain and updated automatically.</span></li>
         <li><span><b>Read-only connection</b> — participants share only their investor password. Trading credentials are never requested.</span></li>
         <li><span><b>Recurring rounds</b> — launch new challenges with their own timeframe and prizes.</span></li>
-        <li><span><b>Fully branded</b> — runs on your subdomain, under your logo.</span></li>
+        <li><span><b>Your own instance</b> — runs on your company's subdomain, e.g. yourcompany.market-analytics.io.</span></li>
       </ul>
     </div>
     <div class="panel reveal d2" id="chPanel">
@@ -580,7 +582,7 @@ section { position:relative; }
     <h2 class="h2 reveal d1">Live on your domain<br/>in three steps.</h2>
     <div class="steps-grid">
       <div class="step reveal"><div class="n">01</div><h3>Talk to us</h3><p>Tell us about your business and your clients. We walk you through the full suite in a live demo.</p></div>
-      <div class="step reveal d1"><div class="n">02</div><h3>We brand it</h3><p>Your logo, your colours, your subdomain — for example analytics.yourbrand.com.</p></div>
+      <div class="step reveal d1"><div class="n">02</div><h3>We set it up</h3><p>Your company gets its own subdomain — for example yourcompany.market-analytics.io — with every tool ready to use.</p></div>
       <div class="step reveal d2"><div class="n">03</div><h3>Go live</h3><p>Your clients get professional trading tools under your name. You get engagement and loyalty.</p></div>
     </div>
   </div>
@@ -593,12 +595,12 @@ section { position:relative; }
       <div class="ct-info">
         <img src="https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=1400&q=80&auto=format&fit=crop" alt="" loading="lazy" />
         <span class="eyebrow">For businesses</span>
-        <h2 class="h2">Your brand.<br/><span class="grad-text">Our analytics.</span></h2>
-        <p class="lead">Market Analytics is a B2B product. We license the complete tool suite to brokers, prop firms, fintechs and trading communities as a white-label solution — fully branded and running on your own subdomain.</p>
-        <div class="domain">https://<b id="domainText">analytics.yourbrand</b><span class="caret"></span>.com</div>
+        <h2 class="h2">Your clients.<br/><span class="grad-text">Our analytics.</span></h2>
+        <p class="lead">Market Analytics is a B2B product. We license the complete tool suite to brokers, prop firms, fintechs and trading communities. Every company gets its own dedicated subdomain, ready to share with its clients.</p>
+        <div class="domain">https://<b id="domainText">yourcompany</b><span class="caret"></span>.market-analytics.io</div>
         <ul class="wl-list">
-          <li><span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span><div><b>Your own subdomain</b><span>The suite runs on your domain — no Market Analytics branding.</span></div></li>
-          <li><span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.5-.8 1.5-1.6 0-1.3-1-1.6-1-2.6 0-.9.7-1.3 1.6-1.3H16a5 5 0 0 0 5-5c0-4.1-4-7.5-9-7.5z"/><circle cx="7.5" cy="11" r="1"/><circle cx="11" cy="7.5" r="1"/><circle cx="15.5" cy="8.5" r="1"/></svg></span><div><b>Your logo &amp; colours</b><span>Every tool matches your corporate design.</span></div></li>
+          <li><span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span><div><b>Your own subdomain</b><span>A dedicated address for your company, e.g. yourcompany.market-analytics.io.</span></div></li>
+          <li><span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.5-.8 1.5-1.6 0-1.3-1-1.6-1-2.6 0-.9.7-1.3 1.6-1.3H16a5 5 0 0 0 5-5c0-4.1-4-7.5-9-7.5z"/><circle cx="7.5" cy="11" r="1"/><circle cx="11" cy="7.5" r="1"/><circle cx="15.5" cy="8.5" r="1"/></svg></span><div><b>Professional design, zero effort</b><span>The proven Market Analytics look — nothing for you to build or maintain.</span></div></li>
           <li><span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span><div><b>All tools, one licence</b><span>Calendar, signals, news, challenges and more.</span></div></li>
         </ul>
         <div class="b2b-note"><b>Business enquiries only.</b> We don't sell individual licences to private traders. If you are a trader, ask your broker whether they offer Market Analytics.</div>
@@ -639,7 +641,7 @@ section { position:relative; }
           <div class="field"><label for="f-web">Company website <small>(optional)</small></label><input id="f-web" name="website" type="url" autocomplete="url" placeholder="https://company.com" /></div>
           <div class="field"><span class="lbl">I'm interested in</span>
             <div class="chips">
-              <label class="chip"><input type="checkbox" name="interest" value="White-label suite" checked /><span>White-label suite</span></label>
+              <label class="chip"><input type="checkbox" name="interest" value="Full tool suite" checked /><span>Full tool suite</span></label>
               <label class="chip"><input type="checkbox" name="interest" value="Trading challenges" /><span>Trading challenges</span></label>
               <label class="chip"><input type="checkbox" name="interest" value="Selected tools only" /><span>Selected tools only</span></label>
             </div>
@@ -873,7 +875,7 @@ setInterval(() => {
 
 /* typing subdomain */
 const domEl = document.getElementById('domainText');
-const BRANDS = ['analytics.yourbrand','tools.fxbroker','signals.propfirm','markets.yourbank'];
+const BRANDS = ['yourcompany','fxbroker','propfirm','tradingclub'];
 if (!reduceMotion) {
   let bi = 0, ci = BRANDS[0].length, dir = -1, hold = 30;
   setInterval(() => {
