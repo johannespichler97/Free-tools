@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Analytics Platform — Solantis</title>
+<meta name="description" content="Solantis Advanced Analytics Platform: economic calendar, currency strength, aggregate signals, volatility, correlation and more — twelve professional trading tools in one place.">
+<link rel="icon" href="assets/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&family=Instrument+Sans:wght@400..700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+
+<header class="nav" id="nav">
+  <div class="wrap nav-in">
+    <a href="https://solantis.pro/" class="logo" aria-label="Solantis home"><img src="assets/logo.svg" alt="Solantis" width="122" height="28"></a>
+    <ul class="menu">
+      <li><a href="index.html">Home</a></li>
+      <li><button aria-haspopup="true">Trading <svg class="chev" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1.5 3.5 5 7l3.5-3.5"/></svg></button>
+        <div class="drop">
+          <a href="https://solantis.pro/trading-solutions/">Trading Solutions</a>
+          <a href="analytics.html" class="cur">Analytics Platform</a>
+          <a href="https://solantis.pro/account-types/">Account Types</a>
+          <a href="https://solantis.pro/trading-platform/">Trading Platform</a>
+          <a href="https://solantis.pro/deposit-withdrawal/">Deposit &amp; Withdrawal</a>
+        </div>
+      </li>
+      <li><button aria-haspopup="true">Company <svg class="chev" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1.5 3.5 5 7l3.5-3.5"/></svg></button>
+        <div class="drop">
+          <a href="https://solantis.pro/about-us/">About us</a>
+          <a href="https://solantis.pro/legal-documents/">Legal Documents</a>
+        </div>
+      </li>
+      <li><a href="https://solantis.pro/copy-trading/">Copy Trading</a></li>
+      <li><a href="https://solantis.pro/support/">Support</a></li>
+    </ul>
+    <div class="nav-cta">
+      <a class="login" href="https://register.solantis.pro/login">Login</a>
+      <a class="btn btn-primary" href="https://register.solantis.pro/register">Open Account <svg class="arr" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9h12M10 4l5 5-5 5"/></svg></a>
+    </div>
+    <button class="burger" id="burger" aria-label="Open menu"><span></span></button>
+  </div>
+</header>
+
+<nav class="mobile" aria-label="Mobile">
+  <a href="https://solantis.pro/">Home</a>
+  <a href="https://solantis.pro/trading-solutions/">Trading</a>
+  <a class="sub" href="analytics.html">Analytics Platform</a>
+  <a class="sub" href="https://solantis.pro/account-types/">Account Types</a>
+  <a class="sub" href="https://solantis.pro/trading-platform/">Trading Platform</a>
+  <a class="sub" href="https://solantis.pro/deposit-withdrawal/">Deposit &amp; Withdrawal</a>
+  <a href="https://solantis.pro/about-us/">Company</a>
+  <a class="sub" href="https://solantis.pro/legal-documents/">Legal Documents</a>
+  <a href="https://solantis.pro/copy-trading/">Copy Trading</a>
+  <a href="https://solantis.pro/support/">Support</a>
+  <a href="https://register.solantis.pro/login">Login</a>
+  <a class="btn btn-primary" href="https://register.solantis.pro/register">Open Account</a>
+</nav>
+
+<main>
+<section class="page-hero" id="top">
+  <canvas id="pagebg" aria-hidden="true"></canvas>
+  <div class="wrap">
+    <span class="eyebrow">Advanced Analytics Platform</span>
+    <h1 class="display split">Trade with clarity.<br><span class="grad">Not noise.</span></h1>
+    <p class="lead rv">A complete suite of professional analysis tools for Solantis traders — economic calendar, currency strength, consensus signals, news, volatility, correlation and trading challenges. Everything you check before you click buy, in one place.</p>
+    <div class="actions rv rv-d1">
+      <a class="btn btn-primary" href="https://register.solantis.pro/register">Open account <svg class="arr" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9h12M10 4l5 5-5 5"/></svg></a>
+      <a class="btn btn-ghost" href="#tools">Browse the tools</a>
+    </div>
+    <div class="stats rv rv-d2">
+      <div class="stat"><b data-countup="12">12</b><span>Trading tools</span></div>
+      <div class="stat"><b data-countup="27">27</b><span>FX &amp; metal pairs</span></div>
+      <div class="stat"><b data-countup="16">16</b><span>Indicators per signal</span></div>
+      <div class="stat"><b data-countup="7">7</b><span>Timeframes, M1 to W1</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="sec" id="tools" style="padding-top:40px">
+  <div class="wrap">
+    <div class="sec-head split-head">
+      <div>
+        <span class="eyebrow rv">The toolkit</span>
+        <h2 class="display h2 split" style="margin-top:20px">Twelve tools.<br>One platform.</h2>
+      </div>
+      <p class="lead rv rv-d1">Fundamentals, technicals, signals, risk and timing — focused tools for forex, crypto and gold traders. Filter by what you need right now.</p>
+    </div>
+    <div class="filter rv" data-tool-filter></div>
+    <div class="tool-grid" data-tool-grid></div>
+  </div>
+</section>
+
+<section class="sec" style="padding-top:0">
+  <div class="wrap">
+    <div class="deep">
+      <div>
+        <span class="eyebrow rv">Aggregate Signal</span>
+        <h3 class="split">Sixteen indicators.<br>One verdict.</h3>
+        <p class="rv">Stop flipping between RSI, MACD and a dozen moving averages. The tool polls them all and shows where the consensus lands — with ADX revealing whether the trend is strong enough to trust.</p>
+        <ul class="rv rv-d1">
+          <li><span><b>Oscillators &amp; MAs combined</b> — RSI, Stochastic, CCI, MACD, Williams %R and 12 moving averages.</span></li>
+          <li><span><b>Seven timeframes</b> — from 1-minute scalps to weekly swings.</span></li>
+          <li><span><b>Trend strength built in</b> — ADX separates real trends from chop.</span></li>
+        </ul>
+      </div>
+      <div class="panel rv">
+        <div class="wdg" style="background:none;padding:0;min-height:0"><h4>Aggregate Signal <small>EUR/USD · H1</small></h4></div>
+        <div class="gauge" data-gauge data-big></div>
+        <div class="ind-row"><i class="ind-dot"></i><i class="ind-dot"></i><i class="ind-dot"></i><i class="ind-dot"></i><i class="ind-dot"></i><i class="ind-dot"></i><i class="ind-dot"></i><i class="ind-dot"></i><i class="ind-dot"></i><i class="ind-dot"></i><i class="ind-dot"></i><i class="ind-dot"></i><i class="ind-dot"></i><i class="ind-dot"></i><i class="ind-dot"></i><i class="ind-dot"></i></div>
+        <div class="ind-count"><div><b data-count="buy">0</b><small>Buy</small></div><div><b data-count="neu">0</b><small>Neutral</small></div><div><b data-count="sell">0</b><small>Sell</small></div></div>
+        <p class="panel-note">Demo data</p>
+      </div>
+    </div>
+
+    <div class="deep flip">
+      <div>
+        <span class="eyebrow rv">Currency Strength</span>
+        <h3 class="split">Pair the strongest<br>with the <span class="grad">weakest.</span></h3>
+        <p class="rv">The oldest edge in forex, made instant. All eight major currencies ranked live, so you find the pair with the most momentum behind it.</p>
+        <ul class="rv rv-d1">
+          <li><span><b>All 8 majors ranked</b> — USD, EUR, GBP, JPY, CHF, AUD, NZD, CAD.</span></li>
+          <li><span><b>Pair it with Trend Bias</b> — confirm direction across timeframes before entry.</span></li>
+        </ul>
+      </div>
+      <div class="panel rv">
+        <div class="wdg" style="background:none;padding:0;min-height:0"><h4>Currency Strength <small>Live ranking</small></h4></div>
+        <div class="strength" data-strength="8"></div>
+        <p class="panel-note">Demo data</p>
+      </div>
+    </div>
+
+    <div class="deep">
+      <div>
+        <span class="eyebrow rv">Economic Calendar</span>
+        <h3 class="split">Never get surprised<br>by the news.</h3>
+        <p class="rv">High-impact releases, forecasts and actuals — filtered by currency and impact, with a countdown to the next market-moving event.</p>
+        <ul class="rv rv-d1">
+          <li><span><b>Impact rating</b> — focus on the releases that actually move price.</span></li>
+          <li><span><b>Filter by currency</b> — see only what matters for the pairs you trade.</span></li>
+        </ul>
+      </div>
+      <div class="panel rv">
+        <div class="wdg" style="background:none;padding:0;min-height:0"><h4>Economic Calendar <small>Today</small></h4>
+          <div class="cal-row"><time>08:00</time><span class="cc">GBP</span><span>GDP m/m</span><span class="imp m"><i></i><i></i><i></i></span></div>
+          <div class="cal-row"><time>10:00</time><span class="cc">EUR</span><span>ZEW Economic Sentiment</span><span class="imp m"><i></i><i></i><i></i></span></div>
+          <div class="cal-row"><time>14:30</time><span class="cc">USD</span><span>CPI m/m</span><span class="imp h"><i></i><i></i><i></i></span></div>
+          <div class="cal-row"><time>16:00</time><span class="cc">EUR</span><span>ECB President speaks</span><span class="imp m"><i></i><i></i><i></i></span></div>
+          <div class="cal-row"><time>20:00</time><span class="cc">USD</span><span>FOMC minutes</span><span class="imp h"><i></i><i></i><i></i></span></div>
+          <div class="cal-row"><time>23:45</time><span class="cc">NZD</span><span>Trade balance</span><span class="imp l"><i></i><i></i><i></i></span></div>
+          <div class="next"><span>Next high-impact event</span><b data-countdown="8049">02:14:09</b></div>
+        </div>
+        <p class="panel-note">Demo data</p>
+      </div>
+    </div>
+
+    <div class="deep flip">
+      <div>
+        <span class="eyebrow rv">Trading Challenges</span>
+        <h3 class="split">Compete. Climb.<br><span class="grad">Win.</span></h3>
+        <p class="rv">Join regular trading challenges. Connect your account read-only, and a live leaderboard ranks every participant by percentage gain — the best performers win.</p>
+        <ul class="rv rv-d1">
+          <li><span><b>Live leaderboard</b> — ranked by % gain and updated automatically.</span></li>
+          <li><span><b>Read-only connection</b> — you share only your investor password. Trading credentials are never requested.</span></li>
+          <li><span><b>Recurring rounds</b> — new challenges with their own timeframe and prizes.</span></li>
+        </ul>
+      </div>
+      <div class="panel rv">
+        <div class="lb-head"><b>Monthly FX Challenge</b><span class="live">LIVE</span></div>
+        <div id="lb"></div>
+        <div class="next" style="margin-top:16px"><span>Ends in</span><b data-countdown="570130">06d 14:22:10</b></div>
+        <p class="panel-note">Example data</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CTA ================= -->
+<section class="cta">
+  <canvas id="aurora" aria-hidden="true"></canvas>
+  <div class="wrap">
+    <span class="eyebrow rv">Open your account</span>
+    <h2 class="display split">Start building<br><span class="grad">your future</span></h2>
+    <p class="lead rv rv-d1">Open an account and get the full analytics suite alongside MetaTrader 5 and copy trading.</p>
+    <div class="rv rv-d2"><span class="magnet" id="magnet"><a class="btn btn-primary" href="https://register.solantis.pro/register">Start now <svg class="arr" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9h12M10 4l5 5-5 5"/></svg></a></span></div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="f-grid">
+      <div>
+        <img src="assets/logo.svg" alt="Solantis" width="130" height="30" style="height:30px;width:auto;margin-bottom:20px">
+        <p>Solantis LTD<br>Robin Kelton Building, Choc Bay<br>Castries, Saint Lucia<br>Registration no. 202500785</p>
+      </div>
+      <div>
+        <h5>Explore</h5>
+        <ul>
+          <li><a href="https://solantis.pro/about-us/">About us</a></li>
+          <li><a href="https://solantis.pro/trading-solutions/">Trading Solutions</a></li>
+          <li><a href="analytics.html">Analytics Platform</a></li>
+          <li><a href="https://solantis.pro/account-types/">Account Types</a></li>
+          <li><a href="https://solantis.pro/trading-platform/">Trading Platform</a></li>
+          <li><a href="https://solantis.pro/copy-trading/">Copy Trading</a></li>
+          <li><a href="https://solantis.pro/support/">Support</a></li>
+        </ul>
+      </div>
+      <div>
+        <h5>Legal</h5>
+        <ul class="legal-cols">
+          <li><a href="https://solantis.pro/wp-content/uploads/2026/03/01_Terms-of-Use.pdf">Terms of Use</a></li>
+          <li><a href="https://solantis.pro/wp-content/uploads/2026/01/01_Best-Order-Execution-Policy.pdf">Best Order Execution Policy</a></li>
+          <li><a href="https://solantis.pro/wp-content/uploads/2026/01/02_GDPR-Privacy-Policy.pdf">GDPR &amp; Privacy Policy</a></li>
+          <li><a href="https://solantis.pro/wp-content/uploads/2026/01/03_Risk-Disclosure-Policy-Disclaimer.pdf">Risk Disclosure &amp; Disclaimer</a></li>
+          <li><a href="https://solantis.pro/wp-content/uploads/2026/01/04_Leverage-Policy.pdf">Leverage Policy</a></li>
+          <li><a href="https://solantis.pro/wp-content/uploads/2026/01/05_Fee-Policy.pdf">Fee Policy</a></li>
+          <li><a href="https://solantis.pro/wp-content/uploads/2026/01/06_Client-Categorization-Policy.pdf">Client Categorization Policy</a></li>
+          <li><a href="https://solantis.pro/wp-content/uploads/2026/01/07_Cookies-Policy.pdf">Cookies Policy</a></li>
+          <li><a href="https://solantis.pro/wp-content/uploads/2026/01/08_Complaints-Handling-Policy.pdf">Complaints Handling Policy</a></li>
+          <li><a href="https://solantis.pro/wp-content/uploads/2026/01/09_Account-Type-and-Charges-Policy-1.pdf">Account Type &amp; Charges Policy</a></li>
+          <li><a href="https://solantis.pro/wp-content/uploads/2026/09/Solantis-Deposit-Bonus-Agreement.pdf">Deposit Bonus Agreement</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="risk">
+      <p><strong>Risk warning:</strong> Trading Forex and CFDs carries a high level of risk to your capital and may not be suitable for all investors. Only trade with money you can afford to lose. The information on this website is of a general nature and does not constitute personal financial advice. Solantis is not responsible for any trading losses.</p>
+      <p><strong>Regulatory information:</strong> Solantis Ltd. is registered under number 202500785 and incorporated under the laws of Saint Lucia.</p>
+      <p><strong>Restricted regions:</strong> Solantis does not provide services to residents of the United States, Canada, Israel, Ukraine, Russia, Pakistan, Lebanon, New Zealand, Yemen, Zimbabwe, Kenya, Sudan, South Sudan, Myanmar, Bangladesh, Venezuela, Syria, Afghanistan, Egypt, Turkey, Iran, Cuba, North Korea, or any jurisdiction where such distribution or use would be contrary to local law or regulation. You must be at least 18 years old, or of legal age in your country, to use our services.</p>
+    </div>
+    <div class="f-bottom"><span>© 2026 Solantis LTD. All Rights Reserved.</span><a href="#top">Back to top ↑</a></div>
+  </div>
+</footer>
+
+<script src="assets/core.js"></script>
+<script src="assets/widgets.js"></script>
+<script>
+(() => {
+const { $, $$, lerp, loop, fitCanvas } = SOL;
+
+/* hero background: flowing price lines */
+const c = $('#pagebg'); let S = fitCanvas(c);
+addEventListener('resize', () => S = fitCanvas(c));
+const lines = Array.from({ length: 9 }, (_, i) => ({ y: .2 + i * .085, sp: .2 + Math.random() * .3, ph: Math.random() * 6, amp: 18 + Math.random() * 40 }));
+loop(c, t => {
+  const { ctx, w, h } = S; ctx.clearRect(0, 0, w, h);
+  ctx.strokeStyle = 'rgba(230,233,235,.035)'; ctx.lineWidth = 1;
+  for (let x = (t * 20) % 80; x < w; x += 80) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
+  lines.forEach((l, k) => {
+    ctx.beginPath();
+    for (let i = 0; i <= 120; i++) {
+      const x = i / 120 * w, u = i / 120;
+      const y = h * l.y + Math.sin(u * 7 + t * l.sp + l.ph) * l.amp + Math.sin(u * 23 - t * l.sp * 2 + k) * l.amp * .25 - u * 60;
+      i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    }
+    const g = ctx.createLinearGradient(0, 0, w, 0);
+    g.addColorStop(0, 'rgba(53,162,220,0)'); g.addColorStop(.55, `rgba(53,162,220,${.08 + k * .012})`); g.addColorStop(1, `rgba(103,194,194,${.25 + k * .03})`);
+    ctx.strokeStyle = g; ctx.lineWidth = 1.3; ctx.stroke();
+  });
+});
+
+/* leaderboard (example data), gains drift and rows re-rank */
+const lb = $('#lb');
+const people = [['Trader A', 18.4, 'linear-gradient(135deg,#f0c27b,#4b1248)'], ['Trader B', 14.9, 'linear-gradient(135deg,#67c2c2,#35a2dc)'], ['Trader C', 11.2, 'linear-gradient(135deg,#a1ffce,#2b5876)'], ['Trader D', 9.7, 'linear-gradient(135deg,#ffd194,#1e6f7a)'], ['Trader E', 7.3, 'linear-gradient(135deg,#8ff0e6,#06161f)']];
+lb.style.position = 'relative'; lb.style.height = (people.length * 61) + 'px';
+const rows = people.map(([n, g, bg]) => {
+  const r = document.createElement('div'); r.className = 'lb-row';
+  r.style.cssText = 'position:absolute;left:0;right:0;top:0;transition:transform .8s cubic-bezier(.2,.75,.15,1)';
+  r.innerHTML = `<span class="rk"></span><span class="av" style="background:${bg}">${n.split(' ')[1]}</span><span>${n}</span><span class="g"></span>`;
+  lb.append(r); return { r, g };
+});
+const render = () => {
+  [...rows].sort((a, b) => b.g - a.g).forEach((o, i) => { o.r.style.transform = `translateY(${i * 61}px)`; $('.rk', o.r).textContent = String(i + 1).padStart(2, '0'); $('.g', o.r).textContent = '+' + o.g.toFixed(1) + '%'; });
+};
+render();
+setInterval(() => { rows.forEach(o => o.g = Math.max(.5, o.g + (Math.random() - .45) * 1.6)); render(); }, 2400);
+})();
+</script>
+</body>
+</html>
