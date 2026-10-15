@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trading Solutions — Solantis</title>
+<meta name="description" content="Explore a world of financial instruments tailored to your trading interests: Forex, Metals and Crypto.">
+<link rel="icon" href="assets/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&family=Instrument+Sans:wght@400..700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+
+<header class="nav" id="nav">
+  <div class="wrap nav-in">
+    <a href="index.html" class="logo" aria-label="Solantis home"><img src="assets/logo.svg" alt="Solantis" width="122" height="28"></a>
+    <ul class="menu">
+      <li><a href="index.html">Home</a></li>
+      <li><button aria-haspopup="true" class="cur">Trading <svg class="chev" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1.5 3.5 5 7l3.5-3.5"/></svg></button>
+        <div class="drop">
+          <a href="trading-solutions.html" class="cur">Trading Solutions</a>
+          <a href="analytics.html">Analytics Platform</a>
+          <a href="account-types.html">Account Types</a>
+          <a href="trading-platform.html">Trading Platform</a>
+          <a href="deposit-withdrawal.html">Deposit &amp; Withdrawal</a>
+        </div>
+      </li>
+      <li><button aria-haspopup="true" class="">Company <svg class="chev" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1.5 3.5 5 7l3.5-3.5"/></svg></button>
+        <div class="drop">
+          <a href="about-us.html">About us</a>
+          <a href="legal-documents.html">Legal Documents</a>
+        </div>
+      </li>
+      <li><a href="copy-trading.html">Copy Trading</a></li>
+      <li><a href="support.html">Support</a></li>
+    </ul>
+    <div class="nav-cta">
+      <a class="login" href="https://register.solantis.pro/login">Login</a>
+      <a class="btn btn-primary" href="https://register.solantis.pro/register">Open Account <svg class="arr" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9h12M10 4l5 5-5 5"/></svg></a>
+    </div>
+    <button class="burger" id="burger" aria-label="Open menu"><span></span></button>
+  </div>
+</header>
+
+<nav class="mobile" aria-label="Mobile">
+  <a href="index.html">Home</a>
+  <a href="trading-solutions.html">Trading</a>
+  <a class="sub" href="trading-solutions.html">Trading Solutions</a>
+  <a class="sub" href="analytics.html">Analytics Platform</a>
+  <a class="sub" href="account-types.html">Account Types</a>
+  <a class="sub" href="trading-platform.html">Trading Platform</a>
+  <a class="sub" href="deposit-withdrawal.html">Deposit &amp; Withdrawal</a>
+  <a href="about-us.html">Company</a>
+  <a class="sub" href="about-us.html">About us</a>
+  <a class="sub" href="legal-documents.html">Legal Documents</a>
+  <a href="copy-trading.html">Copy Trading</a>
+  <a href="support.html">Support</a>
+  <a href="https://register.solantis.pro/login">Login</a>
+  <a class="btn btn-primary" href="https://register.solantis.pro/register">Open Account</a>
+</nav>
+
+<main>
+<section class="page-hero" id="top">
+  <canvas id="pagebg" aria-hidden="true"></canvas>
+  <div class="wrap ph-grid has-vis">
+    <div>
+      <span class="eyebrow">All in one place</span>
+      <h1 class="display split sm">Trading solutions for every strategy</h1>
+      <p class="lead rv">Explore a world of financial instruments tailored to your trading interests with our extensive market offerings.</p>
+      <div class="actions rv rv-d1"><a class="btn btn-primary" href="https://register.solantis.pro/register">Start now <svg class="arr" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9h12M10 4l5 5-5 5"/></svg></a><a class="btn btn-ghost" href="#markets">Explore markets</a></div>
+    </div>
+    <div class="ph-vis rv rv-d2"><div style="display:grid;gap:12px;width:100%;max-width:460px">
+      <div class="dash" style="padding:16px"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px"><b style="font-family:var(--display)">EUR/USD</b><span id="o1" class="up"></span></div><canvas data-chart="line" data-start="1.0854" data-vol="0.00025" data-dec="5" data-out="o1" data-n="90" style="width:100%;height:90px"></canvas></div>
+      <div class="dash" style="padding:16px;margin-left:30px"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px"><b style="font-family:var(--display)">XAU/USD</b><span id="o2" class="up"></span></div><canvas data-chart="candles" data-start="2384" data-vol="1.4" data-out="o2" data-n="40" style="width:100%;height:90px"></canvas></div>
+      <div class="dash" style="padding:16px"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px"><b style="font-family:var(--display)">BTC/USD</b><span id="o3" class="up"></span></div><canvas data-chart="line" data-start="67250" data-vol="60" data-dec="1" data-out="o3" data-n="90" data-c1="#f0b860" data-c2="#8ff0e6" style="width:100%;height:90px"></canvas></div>
+    </div></div>
+  </div>
+</section>
+
+<section class="sec" id="markets" style="padding-top:20px">
+  <div class="wrap">
+    <div class="mkt">
+      <div>
+        <span class="eyebrow rv">Currencies</span>
+        <h2 class="split">Forex</h2>
+        <p class="rv">The Forex market is the largest and most liquid financial market in the world, with over $7 trillion traded daily. Open 24 hours a day, five days a week, it connects major financial centers across the globe and offers traders constant opportunities to profit from currency movements.</p>
+        <div class="facts rv rv-d1"><span>Over $7 trillion traded daily</span><span>24 hours a day, 5 days a week</span><span>Leverage up to 1:500 on major FX pairs</span></div>
+      </div>
+      <div class="vis-box rv" style="min-height:320px"><canvas data-chart="candles" data-start="1.0854" data-vol="0.0004" data-n="56"></canvas></div>
+    </div>
+    <div class="mkt flip">
+      <div>
+        <span class="eyebrow rv">Gold</span>
+        <h2 class="split">Metals</h2>
+        <p class="rv">Gold has long been one of the most trusted forms of currency. Gold trading attracts investors because of its unique blend of volatility &amp; stability and presents opportunities through its strong inverse relationship with other major assets.</p>
+        <div class="facts rv rv-d1"><span>Volatility &amp; stability</span><span>Inverse relationship with major assets</span></div>
+      </div>
+      <div class="vis-box rv" style="min-height:320px"><canvas data-chart="line" data-start="2384" data-vol="1.6" data-n="120" data-c1="#b8862f" data-c2="#f0d27b"></canvas></div>
+    </div>
+    <div class="mkt">
+      <div>
+        <span class="eyebrow rv">Digital assets</span>
+        <h2 class="split">Crypto</h2>
+        <p class="rv">Cryptocurrencies are a modern alternative to traditional money, traded 24/7 across global markets. Crypto assets offer high growth potential. While volatile, crypto markets provide unique opportunities driven by innovation, adoption, and global demand.</p>
+        <div class="facts rv rv-d1"><span>Traded 24/7</span><span>Innovation, adoption &amp; global demand</span></div>
+      </div>
+      <div class="vis-box rv" style="min-height:320px"><canvas data-chart="candles" data-start="67250" data-vol="90" data-n="48"></canvas></div>
+    </div>
+    <div class="rv" style="margin-top:20px"><a class="btn btn-ghost" href="account-types.html">Learn more <svg class="arr" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9h12M10 4l5 5-5 5"/></svg></a></div>
+  </div>
+</section>
+
+<section class="sec" style="padding-top:0">
+  <div class="wrap">
+    <div class="sec-head split-head">
+      <div>
+        <span class="eyebrow rv">Why Solantis</span>
+        <h2 class="display sec-title split" style="margin-top:20px">Why Solantis stands out</h2>
+      </div>
+      <p class="lead rv rv-d1">Benefit from our experience and our partners with your trading.</p>
+    </div>
+    <div class="grid-3"><article class="fcard rv"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><path d="M5 16 19 8"/><circle cx="12" cy="12" r="2"/><path d="M12 14v6"/></svg></div><h3>Flexible Leverages</h3><p>Adjust your leverage to between 1:100 &amp; 1:500 on major FX pairs.</p></article>
+<article class="fcard rv rv-d1"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11Z"/></svg></div><h3>Top-Tier Liquidity</h3><p>Due to the relationships formed over years of business, our top-tier liquidity ensures clients have access to the best pricing available.</p></article>
+<article class="fcard rv rv-d2"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="9" cy="7" rx="6" ry="3"/><path d="M3 7v5c0 1.7 2.7 3 6 3s6-1.3 6-3V7"/><path d="M15 11.5c3.3 0 6 1.3 6 3v4c0 1.7-2.7 3-6 3-2 0-3.8-.5-4.9-1.3"/></svg></div><h3>Low Trading Costs</h3><p>Our spreads for CFDs are some of the lowest in the industry, and can go as low as 0.0 pips.</p></article>
+<article class="fcard rv"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="2.5" y="13" width="4" height="6" rx="1.5"/><rect x="17.5" y="13" width="4" height="6" rx="1.5"/><path d="M20 19c0 1.5-2 2.5-5 2.5"/></svg></div><h3>Unparalleled Support</h3><p>Effortlessly get the customer support you need through our omnichannel system.</p></article>
+<article class="fcard rv rv-d1"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15.5" r="1.5"/></svg></div><h3>Secure Trading Platform</h3><p>Trade CFDs with peace of mind from a trusted and registered provider.</p></article>
+<article class="fcard rv rv-d2"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="15" height="11" rx="1.5"/><path d="M6 19h7M9.5 15v4"/><rect x="17" y="9" width="5" height="11" rx="1.5"/></svg></div><h3>Advanced Platforms</h3><p>Trade CFDs on our powerful, intuitive mobile app, or with the popular MetaTrader 5.</p></article></div>
+  </div>
+</section>
+<section class="cta">
+  <canvas id="aurora" aria-hidden="true"></canvas>
+  <div class="wrap">
+    <span class="eyebrow rv">Register now</span>
+    <h2 class="display split">Sign up for a<br><span class="grad">Solantis trading account</span></h2>
+    <p class="lead rv rv-d1">Start trading with a trusted and registered broker. Trade CFDs with low spreads and fast execution. Make a change today and start building your future.</p>
+    <div class="rv rv-d2"><span class="magnet" id="magnet"><a class="btn btn-primary" href="https://register.solantis.pro/register">Start now <svg class="arr" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9h12M10 4l5 5-5 5"/></svg></a></span></div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="f-grid">
+      <div>
+        <img src="assets/logo.svg" alt="Solantis" width="130" height="30" style="height:30px;width:auto;margin-bottom:20px">
+        <p>Solantis LTD<br>Robin Kelton Building, Choc Bay<br>Castries, Saint Lucia<br>Registration no. 202500785</p>
+        <p style="margin-top:14px"><a href="mailto:support@solantis.pro">support@solantis.pro</a></p>
+      </div>
+      <div>
+        <h5>Explore</h5>
+        <ul>
+          <li><a href="about-us.html">About us</a></li>
+          <li><a href="trading-solutions.html">Trading Solutions</a></li>
+          <li><a href="analytics.html">Analytics Platform</a></li>
+          <li><a href="account-types.html">Account Types</a></li>
+          <li><a href="trading-platform.html">Trading Platform</a></li>
+          <li><a href="deposit-withdrawal.html">Deposit &amp; Withdrawal</a></li>
+          <li><a href="copy-trading.html">Copy Trading</a></li>
+          <li><a href="support.html">Support</a></li>
+        </ul>
+      </div>
+      <div>
+        <h5>Legal</h5>
+        <ul class="legal-cols">
+          <li><a href="https://solantis.pro/wp-content/uploads/2026/03/01_Terms-of-Use.pdf" target="_blank" rel="noopener">Terms of Use</a></li>
+          <li><a href="https://solantis.pro/wp-content/uploads/2026/01/01_Best-Order-Execution-Policy.pdf" target="_blank" rel="noopener">Best Order Execution Policy</a></li>
+          <li><a href="https://solantis.pro/wp-content/uploads/2026/01/02_GDPR-Privacy-Policy.pdf" target="_blank" rel="noopener">GDPR &amp; Privacy Policy</a></li>
+          <li><a href="https://solantis.pro/wp-content/uploads/2026/01/03_Risk-Disclosure-Policy-Disclaimer.pdf" target="_blank" rel="noopener">Risk Disclosure &amp; Disclaimer</a></li>
+          <li><a href="https://solantis.pro/wp-content/uploads/2026/01/04_Leverage-Policy.pdf" target="_blank" rel="noopener">Leverage Policy</a></li>
+          <li><a href="https://solantis.pro/wp-content/uploads/2026/01/05_Fee-Policy.pdf" target="_blank" rel="noopener">Fee Policy</a></li>
+          <li><a href="https://solantis.pro/wp-content/uploads/2026/01/06_Client-Categorization-Policy.pdf" target="_blank" rel="noopener">Client Categorization Policy</a></li>
+          <li><a href="https://solantis.pro/wp-content/uploads/2026/01/07_Cookies-Policy.pdf" target="_blank" rel="noopener">Cookies Policy</a></li>
+          <li><a href="https://solantis.pro/wp-content/uploads/2026/01/08_Complaints-Handling-Policy.pdf" target="_blank" rel="noopener">Complaints Handling Policy</a></li>
+          <li><a href="https://solantis.pro/wp-content/uploads/2026/01/09_Account-Type-and-Charges-Policy-1.pdf" target="_blank" rel="noopener">Account Type &amp; Charges Policy</a></li>
+          <li><a href="https://solantis.pro/wp-content/uploads/2026/09/Solantis-Deposit-Bonus-Agreement.pdf" target="_blank" rel="noopener">Deposit Bonus Agreement</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="risk">
+      <p><strong>Risk warning:</strong> Trading Forex and CFDs carries a high level of risk to your capital and may not be suitable for all investors. Only trade with money you can afford to lose. The information on this website is of a general nature and does not constitute personal financial advice. Solantis is not responsible for any trading losses.</p>
+      <p><strong>Regulatory information:</strong> Solantis Ltd. is registered under number 202500785 and incorporated under the laws of Saint Lucia.</p>
+      <p><strong>Restricted regions:</strong> Solantis does not provide services to residents of the United States, Canada, Israel, Ukraine, Russia, Pakistan, Lebanon, New Zealand, Yemen, Zimbabwe, Kenya, Sudan, South Sudan, Myanmar, Bangladesh, Venezuela, Syria, Afghanistan, Egypt, Turkey, Iran, Cuba, North Korea, or any jurisdiction where such distribution or use would be contrary to local law or regulation. You must be at least 18 years old, or of legal age in your country, to use our services.</p>
+    </div>
+    <div class="f-bottom"><span>© 2026 Solantis LTD. All Rights Reserved.</span><a href="#top">Back to top ↑</a></div>
+  </div>
+</footer>
+
+<script src="assets/core.js"></script>
+</body>
+</html>

@@ -67,7 +67,7 @@ const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting
 $$('.rv,.split').forEach(el => io.observe(el));
 
 /* ---------- benefit cards: spotlight + tilt ---------- */
-$$('.card').forEach(card => {
+$$('.card,.fcard').forEach(card => {
   card.addEventListener('pointermove', e => {
     const r = card.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
     card.style.setProperty('--mx', x + 'px'); card.style.setProperty('--my', y + 'px');
@@ -79,7 +79,7 @@ $$('.card').forEach(card => {
 /* easy start: switches flip in sequence */
 /* ---------- CTA aurora + magnetic button ---------- */
 (() => {
-  const c = $('#aurora'); let S = fitCanvas(c);
+  const c = $('#aurora'); if (!c) return; let S = fitCanvas(c);
   addEventListener('resize', () => S = fitCanvas(c));
   loop(c, t => {
     const { ctx, w, h } = S; ctx.clearRect(0, 0, w, h);
@@ -106,6 +106,72 @@ $$('.card').forEach(card => {
     zone.addEventListener('pointerleave', () => mag.style.transform = '');
   }
 })();
+
+/* ---------- subpage hero background: flowing price lines ---------- */
+(() => {
+  const c = $('#pagebg'); if (!c) return;
+  let S = fitCanvas(c);
+  addEventListener('resize', () => S = fitCanvas(c));
+  const lines = Array.from({ length: 9 }, (_, i) => ({ y: .2 + i * .085, sp: .2 + Math.random() * .3, ph: Math.random() * 6, amp: 18 + Math.random() * 40 }));
+  loop(c, t => {
+    const { ctx, w, h } = S; ctx.clearRect(0, 0, w, h);
+    ctx.strokeStyle = 'rgba(230,233,235,.035)'; ctx.lineWidth = 1;
+    for (let x = (t * 20) % 80; x < w; x += 80) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
+    lines.forEach((l, k) => {
+      ctx.beginPath();
+      for (let i = 0; i <= 120; i++) {
+        const x = i / 120 * w, u = i / 120;
+        const y = h * l.y + Math.sin(u * 7 + t * l.sp + l.ph) * l.amp + Math.sin(u * 23 - t * l.sp * 2 + k) * l.amp * .25 - u * 60;
+        i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+      }
+      const g = ctx.createLinearGradient(0, 0, w, 0);
+      g.addColorStop(0, 'rgba(53,162,220,0)'); g.addColorStop(.55, `rgba(53,162,220,${.08 + k * .012})`); g.addColorStop(1, `rgba(103,194,194,${.25 + k * .03})`);
+      ctx.strokeStyle = g; ctx.lineWidth = 1.3; ctx.stroke();
+    });
+  });
+})();
+
+/* ---------- reusable live line/candle chart: <canvas data-chart="line|candles" data-start="1.0854" data-vol="0.0004"> ---------- */
+$$('canvas[data-chart]').forEach(c => {
+  let S = fitCanvas(c);
+  addEventListener('resize', () => S = fitCanvas(c));
+  const kind = c.dataset.chart, vol = +c.dataset.vol || 1, N = +c.dataset.n || 60;
+  let p = +c.dataset.start || 100;
+  const candles = [];
+  for (let i = 0; i < N; i++) { const o = p; let hi = o, lo = o; for (let k = 0; k < 5; k++) { p += (Math.random() - .47) * vol; hi = Math.max(hi, p); lo = Math.min(lo, p); } candles.push({ o, c: p, h: hi, l: lo }); }
+  let cur = candles[N - 1], last = 0;
+  loop(c, t => {
+    const { ctx, w, h } = S;
+    if (t - last > (kind === 'line' ? .12 : 1.6)) { last = t; if (kind === 'line') { candles.shift(); const n = candles[candles.length - 1].c + (Math.random() - .48) * vol; candles.push({ o: n, c: n, h: n, l: n }); cur = candles[candles.length - 1]; } else { candles.shift(); cur = { o: cur.c, c: cur.c, h: cur.c, l: cur.c }; candles.push(cur); } }
+    if (kind !== 'line') { cur.c += (Math.random() - .48) * vol * .25; cur.h = Math.max(cur.h, cur.c); cur.l = Math.min(cur.l, cur.c); }
+    ctx.clearRect(0, 0, w, h);
+    let hi = -Infinity, lo = Infinity; candles.forEach(k => { hi = Math.max(hi, k.h); lo = Math.min(lo, k.l); });
+    const pad = (hi - lo) * .15 || 1; hi += pad; lo -= pad;
+    const Y = v => h - (v - lo) / (hi - lo) * h, cw = w / candles.length;
+    ctx.strokeStyle = 'rgba(230,233,235,.05)'; ctx.lineWidth = 1;
+    for (let i = 1; i < 5; i++) { ctx.beginPath(); ctx.moveTo(0, h * i / 5); ctx.lineTo(w, h * i / 5); ctx.stroke(); }
+    if (kind === 'line') {
+      ctx.beginPath(); candles.forEach((k, i) => { const x = i * cw; i ? ctx.lineTo(x, Y(k.c)) : ctx.moveTo(x, Y(k.c)); });
+      const lg = ctx.createLinearGradient(0, 0, w, 0); lg.addColorStop(0, c.dataset.c1 || '#35a2dc'); lg.addColorStop(1, c.dataset.c2 || '#8ff0e6');
+      ctx.strokeStyle = lg; ctx.lineWidth = 2; ctx.stroke();
+      ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.closePath();
+      const fg = ctx.createLinearGradient(0, 0, 0, h); fg.addColorStop(0, 'rgba(103,194,194,.25)'); fg.addColorStop(1, 'rgba(103,194,194,0)');
+      ctx.fillStyle = fg; ctx.fill();
+    } else {
+      candles.forEach((k, i) => {
+        const x = i * cw + cw / 2, up = k.c >= k.o;
+        ctx.strokeStyle = ctx.fillStyle = up ? '#4fd6a8' : '#ef6f6c';
+        ctx.beginPath(); ctx.moveTo(x, Y(k.h)); ctx.lineTo(x, Y(k.l)); ctx.stroke();
+        const y1 = Y(Math.max(k.o, k.c)), y2 = Y(Math.min(k.o, k.c));
+        ctx.fillRect(x - cw * .3, y1, cw * .6, Math.max(1.5, y2 - y1));
+      });
+    }
+    const ly = Y(cur.c);
+    ctx.setLineDash([3, 4]); ctx.strokeStyle = 'rgba(143,240,230,.5)'; ctx.beginPath(); ctx.moveTo(0, ly); ctx.lineTo(w, ly); ctx.stroke(); ctx.setLineDash([]);
+    const out = c.dataset.out && document.getElementById(c.dataset.out);
+    if (out) out.textContent = fmt(cur.c, +c.dataset.dec || 2);
+  });
+});
 
 window.SOL = { reduce, $, $$, clamp, lerp, fmt, loop, fitCanvas };
 })();
