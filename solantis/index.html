@@ -83,7 +83,7 @@
         <a class="btn btn-ghost" href="#analytics">Learn more</a>
       </div>
       <div class="trust-row">
-        <div><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 2 3 5v5c0 4 3 7 7 8 4-1 7-4 7-8V5l-7-3Z"/><path d="m7 10 2 2 4-4"/></svg>Registered in Saint Lucia</div>
+        <a href="analytics.html"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 17h14"/><path d="M5 13v2M9 9v6M13 11v4M17 5v10"/><path d="m4 9 4-4 3 3 5-5"/></svg>Advanced Analytics Platform</a>
         <div><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="14" height="10" rx="1.5"/><path d="M7 17h6M10 14v3"/></svg>MetaTrader 5</div>
         <div><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="6" cy="7" r="3"/><circle cx="14" cy="13" r="3"/><path d="M8.5 8.5l3 3"/></svg>Copy Trading</div>
       </div>
@@ -313,7 +313,6 @@
           <div><span>1-star</span><i><em style="--w:1%"></em></i><span>1%</span></div>
         </div>
         <a class="btn btn-primary" href="https://www.trustpilot.com/review/solantis.pro" target="_blank" rel="noopener" style="--c:#00b67a">Read all reviews on Trustpilot <svg class="arr" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9h12M10 4l5 5-5 5"/></svg></a>
-        <p class="note">TrustScore and reviews as published on Trustpilot, October 2026.</p>
       </div>
       <div class="rev-list">
         <article class="rev rv"><div class="stars" aria-label="5 out of 5 stars"><i><svg viewBox="0 0 20 20" fill="#fff"><path d="M10 1.8l2.45 5.6 6.05.55-4.6 4 1.38 5.95L10 14.8l-5.28 3.1L6.1 11.95l-4.6-4 6.05-.55z"/></svg></i><i><svg viewBox="0 0 20 20" fill="#fff"><path d="M10 1.8l2.45 5.6 6.05.55-4.6 4 1.38 5.95L10 14.8l-5.28 3.1L6.1 11.95l-4.6-4 6.05-.55z"/></svg></i><i><svg viewBox="0 0 20 20" fill="#fff"><path d="M10 1.8l2.45 5.6 6.05.55-4.6 4 1.38 5.95L10 14.8l-5.28 3.1L6.1 11.95l-4.6-4 6.05-.55z"/></svg></i><i><svg viewBox="0 0 20 20" fill="#fff"><path d="M10 1.8l2.45 5.6 6.05.55-4.6 4 1.38 5.95L10 14.8l-5.28 3.1L6.1 11.95l-4.6-4 6.05-.55z"/></svg></i><i><svg viewBox="0 0 20 20" fill="#fff"><path d="M10 1.8l2.45 5.6 6.05.55-4.6 4 1.38 5.95L10 14.8l-5.28 3.1L6.1 11.95l-4.6-4 6.05-.55z"/></svg></i></div><h4>The best broker ever!</h4><div class="who"><span class="av">J</span><div><b>Justyna G.</b>PL · Sep 22, 2026</div></div></article>
@@ -529,17 +528,25 @@ function walker(p, vol) { return () => (p += (Math.random() - .5) * vol + (Math.
   }
 })();
 
-/* ---------- ticker ---------- */
+/* ---------- ticker: symbols with dummy sparklines (green up, red down) ---------- */
 (() => {
-  const syms = [['EUR/USD', 1.0854, 5], ['GBP/USD', 1.2731, 5], ['USD/JPY', 151.42, 3], ['XAU/USD', 2384.2, 2], ['US30', 39120, 1], ['NAS100', 18240, 1], ['GER40', 18410, 1], ['BTC/USD', 67250, 1], ['ETH/USD', 3480, 2], ['BRENT', 82.4, 2], ['AUD/USD', .6612, 5], ['XAG/USD', 28.41, 3]];
+  const syms = ['EUR/USD', 'GBP/USD', 'USD/JPY', 'XAU/USD', 'NZD/USD', 'USD/CAD', 'XAG/USD', 'GBP/JPY', 'EUR/JPY', 'BTC/USD', 'ETH/USD', 'SOL/USD', 'AUD/USD', 'US30', 'NAS100', 'GER40'];
+  const N = 24, W = 56, H = 18;
   const tr = $('#ticker');
-  const items = [...syms, ...syms].map(([n, p, d]) => { const el = document.createElement('div'); el.className = 'tk'; el.innerHTML = `<b>${n}</b><span>${fmt(p, d)}</span><em class="up">+0.00%</em>`; tr.append(el); return { el, p, p0: p, d }; });
-  setInterval(() => items.forEach((it, i) => {
-    if (i >= syms.length) { const src = items[i - syms.length]; it.el.innerHTML = src.el.innerHTML; return; }
-    it.p *= 1 + (Math.random() - .5) * .0008;
-    const ch = (it.p - it.p0) / it.p0 * 100;
-    it.el.innerHTML = `<b>${syms[i][0]}</b><span>${fmt(it.p, it.d)}</span><em class="${ch >= 0 ? 'up' : 'down'}">${ch >= 0 ? '+' : ''}${ch.toFixed(2)}%</em>`;
-  }), 1200);
+  const series = syms.map(() => { let v = 0; const pts = []; for (let i = 0; i < N; i++) { v += (Math.random() - .5) * 1.2; pts.push(v); } return pts; });
+  const els = [...syms, ...syms].map(n => {
+    const el = document.createElement('div'); el.className = 'tk';
+    el.innerHTML = `<i class="tk-dot"></i><b>${n}</b><svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><path/></svg>`;
+    tr.append(el); return el;
+  });
+  const draw = () => syms.forEach((_, k) => {
+    const pts = series[k], lo = Math.min(...pts), hi = Math.max(...pts), rng = hi - lo || 1;
+    const d = pts.map((v, i) => (i ? 'L' : 'M') + (i / (N - 1) * W).toFixed(1) + ' ' + (H - 2 - (v - lo) / rng * (H - 4)).toFixed(1)).join('');
+    const cls = 'tk ' + (pts[N - 1] >= pts[0] ? 'up' : 'down');
+    [els[k], els[k + syms.length]].forEach(el => { el.className = cls; el.querySelector('path').setAttribute('d', d); });
+  });
+  draw();
+  setInterval(() => { series.forEach(pts => { pts.shift(); pts.push(pts[pts.length - 1] + (Math.random() - .5) * 1.2); }); draw(); }, 1400);
 })();
 
 (() => {
