@@ -281,7 +281,7 @@ section{position:relative}
 .kin-text{font-size:clamp(40px,7.6vw,118px)}
 .kin-text .kw{color:rgba(230,233,235,.1);transition:color .5s}
 .kin-text .kw.lit{color:var(--ink)}
-.kin-text .kw.lit.acc{color:var(--teal)}
+.kin-text .kw.lit.kw-hl{color:var(--teal)}
 .cond-grid{display:grid;gap:16px;margin-top:80px}
 @media (min-width:860px){.cond-grid{grid-template-columns:repeat(3,1fr)}}
 .cond{position:relative;padding:30px;border-radius:12px;border:1px solid var(--line);overflow:hidden}
@@ -595,9 +595,9 @@ footer a:hover{color:var(--teal)}
 
 /* platform feature chips */
 .chips{display:flex;flex-wrap:wrap;gap:10px}
-.chip{display:inline-flex;align-items:center;gap:9px;padding:11px 16px;border-radius:8px;border:1px solid var(--line-2);background:rgba(230,233,235,.03);font-size:15px;transition:border-color .3s,background .3s,transform .4s var(--ease)}
-.chip:hover{border-color:var(--teal);background:rgba(103,194,194,.08);transform:translateY(-2px)}
-.chip svg{width:16px;height:16px;color:var(--teal)}
+.fchip{display:inline-flex;align-items:center;gap:9px;padding:11px 16px;border-radius:8px;border:1px solid var(--line-2);background:rgba(230,233,235,.03);font-size:15px;transition:border-color .3s,background .3s,transform .4s var(--ease)}
+.fchip:hover{border-color:var(--teal);background:rgba(103,194,194,.08);transform:translateY(-2px)}
+.fchip svg{width:16px;height:16px;color:var(--teal)}
 .term{position:relative;border-radius:16px;border:1px solid var(--line-2);background:#04121a;overflow:hidden;box-shadow:0 40px 120px -40px rgba(53,162,220,.45)}
 .term-bar{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--line);font-size:12px;color:var(--mute)}
 .term-bar i{width:9px;height:9px;border-radius:50%;background:rgba(230,233,235,.15)}
@@ -695,10 +695,11 @@ footer a:hover{color:var(--teal)}
 .seg .wall{position:absolute;left:50%;top:28px;bottom:28px;width:2px;margin-left:-1px;background:repeating-linear-gradient(180deg,var(--teal) 0 6px,transparent 6px 12px)}
 .seg .lock{position:absolute;left:50%;top:50%;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;display:grid;place-items:center;background:var(--bg);border:1px solid var(--teal);color:var(--teal);z-index:2}
 .seg .lock svg{width:20px;height:20px}
-.seg .drop{position:absolute;width:8px;height:8px;border-radius:50%;background:var(--teal-hi);box-shadow:0 0 12px var(--teal);left:50%;top:-10px;animation:fall 2.4s ease-in infinite}
+.seg .drip{position:absolute;width:8px;height:8px;border-radius:50%;background:var(--teal-hi);box-shadow:0 0 12px var(--teal);left:50%;top:-10px;animation:fall 2.4s ease-in infinite}
 @keyframes fall{to{transform:translateY(240px);opacity:0}}
 .menu>li>button.cur{color:var(--ink)}
 /* gradient words inside split headings: clip per word so it paints during the reveal */
 .split .grad{background:none;animation:none;color:inherit}
 .split .grad .w>span{background:linear-gradient(100deg,var(--teal-hi) 0%,var(--teal) 35%,var(--blue) 70%,var(--teal-hi) 100%);background-size:220% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:sheen 7s linear infinite}
 @media (max-width:520px){.acc{padding:24px}.acc .hl b{font-size:15px}.acc .hl small{font-size:11px}.specs div{font-size:13.5px}}
+@media (max-width:640px){.floater{display:none}}

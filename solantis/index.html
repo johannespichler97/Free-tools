@@ -614,7 +614,7 @@ function walker(p, vol) { return () => (p += (Math.random() - .5) * vol + (Math.
 (() => {
   const el = $('#kin');
   const words = el.textContent.trim().split(/\s+/);
-  el.innerHTML = words.map(w => `<span class="kw${/Low|Zero|Fast/.test(w) ? ' acc' : ''}">${w}</span>`).join(' ');
+  el.innerHTML = words.map(w => `<span class="kw${/Low|Zero|Fast/.test(w) ? ' kw-hl' : ''}">${w}</span>`).join(' ');
   const kws = $$('.kw', el);
   const onScroll = () => {
     const r = el.getBoundingClientRect();
@@ -650,7 +650,7 @@ function walker(p, vol) { return () => (p += (Math.random() - .5) * vol + (Math.
   loop(orbit, t => {
     const R = orbit.clientWidth / 2;
     els.forEach(e => {
-      const r = e.ring ? R * .64 : R, a = e.a + t * (e.ring ? -.12 : .08);
+      const r = (e.ring ? R * .64 : R) * (innerWidth < 640 ? .74 : 1), a = e.a + t * (e.ring ? -.12 : .08);
       e.pm.style.transform = `translate(${Math.cos(a) * r}px,${Math.sin(a) * r}px)`;
     });
   });

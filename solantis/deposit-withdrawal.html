@@ -174,7 +174,7 @@ const els = items.map(([n, ic], i) => {
   pm.innerHTML = `<div class="pm-in"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">${icon[ic]}</svg>${n}</div>`;
   orbit.append(pm); return { pm, a: i / items.length * Math.PI * 2 - Math.PI / 2 };
 });
-loop(orbit, t => { const R = orbit.clientWidth / 2 * .82; els.forEach(e => { const a = e.a + t * .12; e.pm.style.transform = `translate(${Math.cos(a) * R}px,${Math.sin(a) * R}px)`; }); });
+loop(orbit, t => { const R = orbit.clientWidth / 2 * (innerWidth < 640 ? .7 : .82); els.forEach(e => { const a = e.a + t * .12; e.pm.style.transform = `translate(${Math.cos(a) * R}px,${Math.sin(a) * R}px)`; }); });
 })();
 </script>
 </body>
