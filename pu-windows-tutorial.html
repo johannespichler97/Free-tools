@@ -60,15 +60,8 @@ strong, b { color:var(--head); font-weight:700; }
 .top .wrap { height:100%; display:flex; align-items:center; gap:20px; }
 .top-logo img { height:26px; width:auto; }
 .top-spacer { flex:1; }
-.top-progress { white-space:nowrap; display:flex; align-items:center; gap:10px; font-family:var(--display); font-size:13px; color:var(--head); padding:6px 14px 6px 6px; border-radius:999px; border:1px solid var(--line); background:rgba(255,255,255,.03); text-decoration:none; }
-.ring { width:34px; height:34px; transform:rotate(-90deg); }
-.ring circle { fill:none; stroke-width:3.5; }
-.ring .ring-bg { stroke:rgba(255,255,255,.1); }
-.ring .ring-fg { stroke:url(#ringGrad); stroke-linecap:round; stroke-dasharray:100.53; stroke-dashoffset:100.53; transition:stroke-dashoffset .8s var(--spring); }
-.top-progress small { display:block; color:var(--muted); font-size:11px; font-family:var(--body); line-height:1.2; }
 .top-help { font-family:var(--display); font-size:13px; font-weight:700; padding:10px 16px; }
-@media (max-width:640px){ .top-help span { display:none; } .top-help { padding:10px 12px; } .top-progress small{display:none} }
-
+@media (max-width:640px){ .top-help span { display:none; } .top-help { padding:10px 12px; } }
 /* mobile step bar */
 .stepbar { position:fixed; left:0; right:0; top:var(--header-h); z-index:49; background:rgba(0,0,0,.82); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); border-bottom:1px solid var(--line); transform:translateY(-110%); opacity:0; visibility:hidden; transition:transform .4s var(--ease), opacity .3s, visibility .4s; display:none; }
 .stepbar.show { transform:none; opacity:1; visibility:visible; }
@@ -111,7 +104,6 @@ strong, b { color:var(--head); font-weight:700; }
 /* hero roadmap */
 .roadmap { position:relative; margin:64px auto 0; max-width:1000px; }
 .roadmap-track { position:absolute; left:calc(100%/14); right:calc(100%/14); top:27px; height:2px; background:rgba(255,255,255,.1); border-radius:2px; overflow:hidden; }
-.roadmap-track span { position:absolute; inset:0; background:var(--grad); transform-origin:left; transform:scaleX(0); transition:transform 1s var(--ease); }
 .roadmap ol { list-style:none; display:grid; grid-template-columns:repeat(7,1fr); position:relative; }
 .roadmap a { display:flex; flex-direction:column; align-items:center; gap:12px; text-decoration:none; padding:0 4px; }
 .rm-node { position:relative; width:56px; height:56px; border-radius:18px; display:grid; place-items:center; background:var(--surface); border:1px solid var(--line-2); color:var(--purple-l); transition:transform .4s var(--spring), background .3s, border-color .3s, color .3s, box-shadow .3s; }
@@ -119,10 +111,6 @@ strong, b { color:var(--head); font-weight:700; }
 .rm-node::after { content:''; position:absolute; inset:-6px; border-radius:22px; border:1px solid rgba(156,132,255,.4); opacity:0; transform:scale(.85); transition:.4s var(--ease); }
 .roadmap a:hover .rm-node { transform:translateY(-6px) rotate(-4deg); background:var(--purple); color:#fff; box-shadow:0 14px 30px -10px rgba(113,82,236,.9); }
 .roadmap a:hover .rm-node::after { opacity:1; transform:none; }
-.rm-node .chk { position:absolute; top:-7px; right:-7px; width:22px; height:22px; border-radius:50%; background:var(--teal); color:#00110f; display:grid; place-items:center; transform:scale(0); transition:transform .4s var(--spring); }
-.rm-node .chk svg { width:12px; height:12px; }
-.is-done .rm-node .chk { transform:scale(1); }
-.is-done .rm-node { border-color:rgba(25,182,172,.5); }
 .rm-label { font-family:var(--display); font-size:12.5px; line-height:1.3; color:var(--text); text-align:center; max-width:12ch; transition:color .3s; }
 .rm-num, .rm-label { text-shadow:0 0 6px #000, 0 0 12px #000; }
 .rm-num { font-family:var(--display); font-size:11px; color:var(--muted); letter-spacing:.08em; }
@@ -142,7 +130,7 @@ strong, b { color:var(--head); font-weight:700; }
 
 /* ── how it works strip ── */
 .howto { padding:40px 0 10px; }
-.howto-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+.howto-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:16px; }
 .howto-item { display:flex; gap:14px; align-items:flex-start; padding:20px; border-radius:20px; border:1px solid var(--line); background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,0)); }
 .howto-item .ic { flex:none; width:42px; height:42px; border-radius:12px; display:grid; place-items:center; background:rgba(113,82,236,.14); color:var(--purple-l); }
 .howto-item .ic svg { width:20px; height:20px; }
@@ -168,37 +156,20 @@ strong, b { color:var(--head); font-weight:700; }
 .rail li.passed .rail-dot { border-color:var(--purple); color:var(--purple-l); }
 .rail li.current a { color:var(--head); }
 .rail li.current .rail-dot { border-color:var(--purple-l); background:var(--purple); color:#fff; transform:scale(1.15); box-shadow:0 0 0 6px rgba(113,82,236,.18); }
-.rail li.is-done .rail-dot { border-color:var(--teal); background:var(--teal); color:#00110f; }
-.rail li.is-done .rail-dot span { display:none; }
-.rail li.is-done .rail-dot svg { display:block; }
 .rail-opt { margin-left:auto; font-size:10px; color:var(--gold); border:1px solid rgba(255,154,30,.35); border-radius:99px; padding:1px 7px; }
-.rail-progress { margin-top:26px; padding:16px; border-radius:16px; border:1px solid var(--line); background:var(--surface); font-size:13px; }
-.rail-progress b { font-family:var(--display); font-size:22px; color:var(--head); display:block; }
-.rail-progress .bar { margin-top:10px; height:6px; border-radius:6px; background:rgba(255,255,255,.08); overflow:hidden; }
-.rail-progress .bar span { display:block; height:100%; width:0; background:var(--grad); border-radius:6px; transition:width .8s var(--spring); }
 
 /* ── step cards ── */
-.steps { display:flex; flex-direction:column; gap:90px; min-width:0; }
+.steps { display:flex; flex-direction:column; min-width:0; }
+.step { padding:56px 0; }
+.step:first-child { padding-top:0; }
+.step + .step { border-top:1px solid var(--line); }
+@media (max-width:640px){ .step { padding:40px 0; } }
 .step { position:relative; scroll-margin-top:calc(var(--header-h) + 60px); }
-.step-head { display:flex; align-items:flex-end; gap:20px; margin-bottom:26px; }
-.step-num { font-family:var(--display); font-weight:700; font-size:clamp(64px,9vw,112px); line-height:.8; letter-spacing:-.06em; color:transparent; -webkit-text-stroke:1.5px rgba(156,132,255,.45); position:relative; flex:none; }
-.step-num::after { content:attr(data-n); position:absolute; inset:0; color:var(--purple-l); -webkit-text-stroke:0; clip-path:inset(100% 0 0 0); transition:clip-path 1.1s var(--ease); background:var(--grad); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
-.step.in .step-num::after { clip-path:inset(0 0 0 0); }
-.step-titles { flex:1; min-width:0; padding-bottom:4px; }
-.tags { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px; }
-.tag { font-family:var(--display); font-size:11.5px; font-weight:700; padding:4px 10px; border-radius:99px; border:1px solid var(--line-2); color:var(--purple-l); background:rgba(113,82,236,.08); letter-spacing:.02em; }
-.tag.gold { color:var(--gold); border-color:rgba(255,154,30,.35); background:rgba(255,154,30,.08); }
-.tag.teal { color:var(--teal); border-color:rgba(25,182,172,.35); background:rgba(25,182,172,.08); }
-.tag.red { color:var(--red); border-color:rgba(255,93,108,.35); background:rgba(255,93,108,.08); }
-.step h2 { font-family:var(--display); color:var(--head); font-size:clamp(26px,3.4vw,40px); line-height:1.1; letter-spacing:-.025em; }
-.done-btn { flex:none; align-self:center; display:inline-flex; align-items:center; gap:10px; padding:10px 16px 10px 10px; border-radius:999px; border:1px solid var(--line); background:rgba(255,255,255,.03); font-family:var(--display); font-size:13px; font-weight:700; color:var(--text); transition:all .3s var(--ease); }
-.done-btn .box { width:24px; height:24px; border-radius:50%; border:2px solid rgba(255,255,255,.25); display:grid; place-items:center; transition:all .35s var(--spring); }
-.done-btn .box svg { width:13px; height:13px; stroke-dasharray:20; stroke-dashoffset:20; transition:stroke-dashoffset .4s .1s var(--ease); }
-.done-btn:hover { border-color:var(--teal); color:var(--head); }
-.done-btn[aria-pressed="true"] { border-color:rgba(25,182,172,.5); background:rgba(25,182,172,.1); color:var(--teal); }
-.done-btn[aria-pressed="true"] .box { background:var(--teal); border-color:var(--teal); color:#00110f; transform:scale(1.08); }
-.done-btn[aria-pressed="true"] .box svg { stroke-dashoffset:0; }
-@media (max-width:640px){ .step-head { flex-wrap:wrap; } .done-btn { order:3; } }
+.step-head { display:flex; align-items:center; gap:18px; margin-bottom:24px; }
+.step-num { flex:none; width:56px; height:56px; border-radius:16px; display:grid; place-items:center; background:var(--purple); color:#fff; font-family:var(--display); font-weight:700; font-size:20px; box-shadow:0 10px 24px -10px rgba(113,82,236,.9); }
+.step h2 { font-family:var(--display); color:var(--head); font-size:clamp(22px,3vw,34px); line-height:1.15; letter-spacing:-.02em; }
+.step-opt { display:inline-block; margin-left:12px; vertical-align:middle; font-size:12px; font-weight:700; letter-spacing:.04em; color:var(--gold); border:1px solid rgba(255,154,30,.4); border-radius:99px; padding:3px 10px; }
+@media (max-width:640px){ .step-head { gap:14px; margin-bottom:18px; } .step-num { width:44px; height:44px; border-radius:13px; font-size:16px; } .step-opt { margin:6px 0 0; display:table; } }
 
 .card { position:relative; border-radius:28px; border:1px solid var(--line); background:linear-gradient(180deg,var(--surface-3),var(--surface) 60%); overflow:hidden; isolation:isolate; }
 .card::before { content:''; position:absolute; inset:0; z-index:-1; pointer-events:none; background:radial-gradient(500px circle at var(--mx,50%) var(--my,0%),rgba(113,82,236,.16),transparent 45%); opacity:0; transition:opacity .4s; }
@@ -405,14 +376,6 @@ footer nav a:hover { color:var(--purple-l); }
 .foot-bottom { display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap; margin-top:26px; }
 .foot-bottom img { height:20px; width:auto; opacity:.8; }
 
-/* toast + confetti */
-.toast { position:fixed; left:50%; bottom:24px; z-index:80; transform:translate(-50%,140%); display:flex; align-items:center; gap:12px; padding:12px 18px 12px 12px; border-radius:16px; background:rgba(20,18,30,.92); border:1px solid var(--line-2); backdrop-filter:blur(10px); color:var(--head); font-family:var(--display); font-size:14px; box-shadow:0 20px 50px -10px rgba(0,0,0,.8); transition:transform .5s var(--spring); max-width:calc(100% - 32px); }
-.toast.show { transform:translate(-50%,0); }
-.toast i { flex:none; width:32px; height:32px; border-radius:10px; display:grid; place-items:center; background:var(--teal); color:#00110f; }
-.toast i svg { width:16px; height:16px; }
-.confetti { position:fixed; inset:0; pointer-events:none; z-index:90; overflow:hidden; }
-.confetti span { position:absolute; top:-20px; width:9px; height:14px; border-radius:2px; animation:fall linear forwards; }
-@keyframes fall { to { transform:translate(var(--dx),110vh) rotate(var(--r)); } }
 
 @media (prefers-reduced-motion:reduce){
   *, *::before, *::after { animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; scroll-behavior:auto !important; }
@@ -425,7 +388,6 @@ footer nav a:hover { color:var(--purple-l); }
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
-    <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7152ec"/><stop offset="1" stop-color="#19b6ac"/></linearGradient>
     <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 4v15M6 13l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
@@ -463,10 +425,6 @@ footer nav a:hover { color:var(--purple-l); }
       <img src="https://the-algorithmic-trader.com/cdn/shop/t/5/assets/202407-Logo-Edit-Alchemist-Quer-white-1362x242.png?v=76938868237994771051792413148" alt="FXAlchemist" width="146" height="26" />
     </a>
     <div class="top-spacer"></div>
-    <a class="top-progress" href="#steps" aria-live="polite">
-      <svg class="ring" viewBox="0 0 36 36" aria-hidden="true"><circle class="ring-bg" cx="18" cy="18" r="16"/><circle class="ring-fg" cx="18" cy="18" r="16"/></svg>
-      <span><span data-count>0</span>/6 done<small>Your setup progress</small></span>
-    </a>
     <a class="btn btn-ghost top-help" href="#faq"><svg aria-hidden="true"><use href="#i-info"/></svg><span>FAQ</span></a>
   </div>
 </header>
@@ -503,15 +461,15 @@ footer nav a:hover { color:var(--purple-l); }
     </div>
 
     <nav class="roadmap" aria-label="Tutorial steps">
-      <div class="roadmap-track"><span data-roadmap-fill></span></div>
+      <div class="roadmap-track"></div>
       <ol>
-        <li style="animation-delay:.9s"  data-step="1"><a href="#step-1"><span class="rm-node"><svg><use href="#i-bell"/></svg><span class="chk"><svg><use href="#i-check"/></svg></span></span><span class="rm-num">01</span><span class="rm-label">Before you start</span></a></li>
-        <li style="animation-delay:1s"   data-step="2"><a href="#step-2"><span class="rm-node"><svg><use href="#i-chart"/></svg><span class="chk"><svg><use href="#i-check"/></svg></span></span><span class="rm-num">02</span><span class="rm-label">Passive income</span></a></li>
-        <li style="animation-delay:1.1s" data-step="3"><a href="#step-3"><span class="rm-node"><svg><use href="#i-user"/></svg><span class="chk"><svg><use href="#i-check"/></svg></span></span><span class="rm-num">03</span><span class="rm-label">Trading account</span></a></li>
-        <li style="animation-delay:1.2s" data-step="4"><a href="#step-4"><span class="rm-node"><svg><use href="#i-monitor"/></svg><span class="chk"><svg><use href="#i-check"/></svg></span></span><span class="rm-num">04</span><span class="rm-label">Download MT4</span></a></li>
-        <li style="animation-delay:1.3s" data-step="5"><a href="#step-5"><span class="rm-node"><svg><use href="#i-key"/></svg><span class="chk"><svg><use href="#i-check"/></svg></span></span><span class="rm-num">05</span><span class="rm-label">Activate license</span></a></li>
-        <li style="animation-delay:1.4s" data-step="6"><a href="#step-6"><span class="rm-node"><svg><use href="#i-cpu"/></svg><span class="chk"><svg><use href="#i-check"/></svg></span></span><span class="rm-num">06</span><span class="rm-label">Install algorithm</span></a></li>
-        <li style="animation-delay:1.5s" data-step="7"><a href="#step-7"><span class="rm-node"><svg><use href="#i-server"/></svg><span class="chk"><svg><use href="#i-check"/></svg></span></span><span class="rm-num">07</span><span class="rm-label">Server (optional)</span></a></li>
+        <li style="animation-delay:.9s"  data-step="1"><a href="#step-1"><span class="rm-node"><svg><use href="#i-bell"/></svg></span><span class="rm-num">01</span><span class="rm-label">Before you start</span></a></li>
+        <li style="animation-delay:1s"   data-step="2"><a href="#step-2"><span class="rm-node"><svg><use href="#i-chart"/></svg></span><span class="rm-num">02</span><span class="rm-label">Passive income</span></a></li>
+        <li style="animation-delay:1.1s" data-step="3"><a href="#step-3"><span class="rm-node"><svg><use href="#i-user"/></svg></span><span class="rm-num">03</span><span class="rm-label">Trading account</span></a></li>
+        <li style="animation-delay:1.2s" data-step="4"><a href="#step-4"><span class="rm-node"><svg><use href="#i-monitor"/></svg></span><span class="rm-num">04</span><span class="rm-label">Download MT4</span></a></li>
+        <li style="animation-delay:1.3s" data-step="5"><a href="#step-5"><span class="rm-node"><svg><use href="#i-key"/></svg></span><span class="rm-num">05</span><span class="rm-label">Activate license</span></a></li>
+        <li style="animation-delay:1.4s" data-step="6"><a href="#step-6"><span class="rm-node"><svg><use href="#i-cpu"/></svg></span><span class="rm-num">06</span><span class="rm-label">Install algorithm</span></a></li>
+        <li style="animation-delay:1.5s" data-step="7"><a href="#step-7"><span class="rm-node"><svg><use href="#i-server"/></svg></span><span class="rm-num">07</span><span class="rm-label">Server (optional)</span></a></li>
       </ol>
     </nav>
   </div>
@@ -522,8 +480,7 @@ footer nav a:hover { color:var(--purple-l); }
 <section class="howto">
   <div class="wrap howto-grid">
     <div class="howto-item reveal"><span class="ic"><svg><use href="#i-play"/></svg></span><div><h3>Watch in order</h3><p>Each step builds on the one before. Don't skip ahead.</p></div></div>
-    <div class="howto-item reveal d1"><span class="ic"><svg><use href="#i-check"/></svg></span><div><h3>Tick off each step</h3><p>Mark a step as done. Your progress is saved in this browser.</p></div></div>
-    <div class="howto-item reveal d2"><span class="ic"><svg><use href="#i-info"/></svg></span><div><h3>Subtitles in your language</h3><p>Click <span class="cc-key">CC</span> in the player. If nothing shows, open ⚙️ Settings → Subtitles.</p></div></div>
+    <div class="howto-item reveal d1"><span class="ic"><svg><use href="#i-info"/></svg></span><div><h3>Subtitles in your language</h3><p>Click <span class="cc-key">CC</span> in the player. If nothing shows, open ⚙️ Settings → Subtitles.</p></div></div>
   </div>
 </section>
 
@@ -544,10 +501,6 @@ footer nav a:hover { color:var(--purple-l); }
         <li data-step="7"><a href="#step-7"><span class="rail-dot"><span>7</span><svg><use href="#i-check"/></svg></span>Server<span class="rail-opt">optional</span></a></li>
       </ol>
       </div>
-      <div class="rail-progress">
-        <b><span data-count>0</span> / 6</b>required steps done
-        <div class="bar"><span data-bar></span></div>
-      </div>
     </aside>
 
     <div class="steps">
@@ -555,12 +508,8 @@ footer nav a:hover { color:var(--purple-l); }
       <!-- STEP 1 -->
       <article class="step" id="step-1" data-step="1" data-title="Before you start">
         <div class="step-head">
-          <span class="step-num" data-n="01">01</span>
-          <div class="step-titles">
-            <div class="tags"><span class="tag">Step 01</span><span class="tag teal">Telegram</span></div>
-            <h2>Before you start</h2>
-          </div>
-          <button class="done-btn" data-done="1" aria-pressed="false"><span class="box"><svg><use href="#i-check"/></svg></span>Mark as done</button>
+          <span class="step-num">01</span>
+          <h2>Before you start</h2>
         </div>
         <div class="card reveal">
           <div class="card-grid">
@@ -596,12 +545,8 @@ footer nav a:hover { color:var(--purple-l); }
       <!-- STEP 2 -->
       <article class="step" id="step-2" data-step="2" data-title="Generate passive income">
         <div class="step-head">
-          <span class="step-num" data-n="02">02</span>
-          <div class="step-titles">
-            <div class="tags"><span class="tag">Step 02</span><span class="tag">Intro video</span></div>
-            <h2>Generate passive income</h2>
-          </div>
-          <button class="done-btn" data-done="2" aria-pressed="false"><span class="box"><svg><use href="#i-check"/></svg></span>Mark as done</button>
+          <span class="step-num">02</span>
+          <h2>Generate passive income</h2>
         </div>
         <div class="card reveal">
           <div class="card-grid">
@@ -619,12 +564,8 @@ footer nav a:hover { color:var(--purple-l); }
       <!-- STEP 3 -->
       <article class="step" id="step-3" data-step="3" data-title="Open the right trading account">
         <div class="step-head">
-          <span class="step-num" data-n="03">03</span>
-          <div class="step-titles">
-            <div class="tags"><span class="tag">Step 03</span><span class="tag">Video 1/4</span><span class="tag red">Essential</span></div>
-            <h2>Open the right trading account</h2>
-          </div>
-          <button class="done-btn" data-done="3" aria-pressed="false"><span class="box"><svg><use href="#i-check"/></svg></span>Mark as done</button>
+          <span class="step-num">03</span>
+          <h2>Open the right trading account</h2>
         </div>
         <div class="card reveal">
           <div class="card-grid">
@@ -669,12 +610,8 @@ footer nav a:hover { color:var(--purple-l); }
       <!-- STEP 4 -->
       <article class="step" id="step-4" data-step="4" data-title="Download MT4">
         <div class="step-head">
-          <span class="step-num" data-n="04">04</span>
-          <div class="step-titles">
-            <div class="tags"><span class="tag">Step 04</span><span class="tag">Video 2/4</span></div>
-            <h2>Download MT4</h2>
-          </div>
-          <button class="done-btn" data-done="4" aria-pressed="false"><span class="box"><svg><use href="#i-check"/></svg></span>Mark as done</button>
+          <span class="step-num">04</span>
+          <h2>Download MT4</h2>
         </div>
         <div class="card reveal">
           <div class="card-grid">
@@ -694,12 +631,8 @@ footer nav a:hover { color:var(--purple-l); }
       <!-- STEP 5 -->
       <article class="step" id="step-5" data-step="5" data-title="Activate your license">
         <div class="step-head">
-          <span class="step-num" data-n="05">05</span>
-          <div class="step-titles">
-            <div class="tags"><span class="tag">Step 05</span><span class="tag">Video 3/4</span></div>
-            <h2>Activate your license</h2>
-          </div>
-          <button class="done-btn" data-done="5" aria-pressed="false"><span class="box"><svg><use href="#i-check"/></svg></span>Mark as done</button>
+          <span class="step-num">05</span>
+          <h2>Activate your license</h2>
         </div>
         <div class="card reveal">
           <div class="card-grid">
@@ -716,12 +649,8 @@ footer nav a:hover { color:var(--purple-l); }
       <!-- STEP 6 -->
       <article class="step" id="step-6" data-step="6" data-title="Download Trading Algorithm">
         <div class="step-head">
-          <span class="step-num" data-n="06">06</span>
-          <div class="step-titles">
-            <div class="tags"><span class="tag">Step 06</span><span class="tag">Video 4/4</span><span class="tag teal">Final step</span></div>
-            <h2>Download the trading algorithm</h2>
-          </div>
-          <button class="done-btn" data-done="6" aria-pressed="false"><span class="box"><svg><use href="#i-check"/></svg></span>Mark as done</button>
+          <span class="step-num">06</span>
+          <h2>Download the trading algorithm</h2>
         </div>
         <div class="card reveal">
           <div class="card-grid">
@@ -738,12 +667,8 @@ footer nav a:hover { color:var(--purple-l); }
       <!-- STEP 7 -->
       <article class="step" id="step-7" data-step="7" data-title="How to use a server">
         <div class="step-head">
-          <span class="step-num" data-n="07">07</span>
-          <div class="step-titles">
-            <div class="tags"><span class="tag">Step 07</span><span class="tag gold">Optional</span></div>
-            <h2>How to use a server</h2>
-          </div>
-          <button class="done-btn" data-done="7" aria-pressed="false"><span class="box"><svg><use href="#i-check"/></svg></span>Mark as done</button>
+          <span class="step-num">07</span>
+          <h2>How to use a server<span class="step-opt">Optional</span></h2>
         </div>
         <div class="card reveal">
           <div class="card-grid">
@@ -934,15 +859,11 @@ footer nav a:hover { color:var(--purple-l); }
   </div>
 </footer>
 
-<div class="toast" role="status" aria-live="polite" data-toast><i><svg><use href="#i-check"/></svg></i><span data-toast-text></span></div>
-
 <script>
 (() => {
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const REQUIRED = [1, 2, 3, 4, 5, 6];
-  const KEY = 'fxa-pu-win-progress';
 
   $('[data-year]').textContent = new Date().getFullYear();
 
@@ -956,74 +877,6 @@ footer nav a:hover { color:var(--purple-l); }
   }), { threshold: .15 });
   $$('.reveal, .step').forEach(el => io.observe(el));
 
-  /* ── progress (localStorage) ── */
-  let done;
-  try { done = new Set(JSON.parse(localStorage.getItem(KEY)) || []); } catch (e) { done = new Set(); }
-  const save = () => { try { localStorage.setItem(KEY, JSON.stringify([...done])); } catch (e) {} };
-
-  const toast = $('[data-toast]');
-  let toastT;
-  const showToast = msg => {
-    $('[data-toast-text]').textContent = msg;
-    toast.classList.add('show');
-    clearTimeout(toastT);
-    toastT = setTimeout(() => toast.classList.remove('show'), 2800);
-  };
-
-  const render = () => {
-    const n = REQUIRED.filter(s => done.has(s)).length;
-    $$('[data-count]').forEach(el => el.textContent = n);
-    $('.ring-fg').style.strokeDashoffset = 100.53 * (1 - n / REQUIRED.length);
-    $('[data-bar]').style.width = (n / REQUIRED.length * 100) + '%';
-    $$('[data-done]').forEach(b => {
-      const on = done.has(+b.dataset.done);
-      b.setAttribute('aria-pressed', on);
-      b.lastChild.textContent = on ? 'Done' : 'Mark as done';
-    });
-    $$('.roadmap li, .rail li').forEach(li => li.classList.toggle('is-done', done.has(+li.dataset.step)));
-    const doneSteps = [...done].filter(s => s <= 7);
-    const maxDone = doneSteps.length ? Math.max(...doneSteps) : 0;
-    $('[data-roadmap-fill]').style.transform = `scaleX(${maxDone ? (maxDone - 1) / 6 : 0})`;
-    return n;
-  };
-
-  const confetti = () => {
-    if (reduced) return;
-    const box = document.createElement('div');
-    box.className = 'confetti';
-    const cols = ['#7152ec', '#9c84ff', '#19b6ac', '#ff9a1e', '#ffffff'];
-    for (let i = 0; i < 90; i++) {
-      const s = document.createElement('span');
-      s.style.left = Math.random() * 100 + 'vw';
-      s.style.background = cols[i % cols.length];
-      s.style.setProperty('--dx', (Math.random() * 200 - 100) + 'px');
-      s.style.setProperty('--r', (Math.random() * 900 - 450) + 'deg');
-      s.style.animationDuration = (2.2 + Math.random() * 2) + 's';
-      s.style.animationDelay = Math.random() * .5 + 's';
-      box.appendChild(s);
-    }
-    document.body.appendChild(box);
-    setTimeout(() => box.remove(), 5000);
-  };
-
-  $$('[data-done]').forEach(b => b.addEventListener('click', () => {
-    const s = +b.dataset.done;
-    const was = render();
-    done.has(s) ? done.delete(s) : done.add(s);
-    save();
-    const n = render();
-    if (!done.has(s)) return;
-    if (n === REQUIRED.length && was < n) {
-      showToast("All set! Your algorithm is ready to trade.");
-      confetti();
-    } else if (s < 7) {
-      const next = $('#step-' + (s + 1));
-      showToast(`Step ${s} done. Next: ${next.dataset.title}`);
-    } else {
-      showToast('Server step done.');
-    }
-  }));
-  render();
 
   /* ── video facades ── */
   const rng = seed => () => (seed = (seed * 16807) % 2147483647) / 2147483647;
