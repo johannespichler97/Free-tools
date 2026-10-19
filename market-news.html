@@ -93,11 +93,14 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
 .day-btn { background:none;border:1.5px solid var(--border);border-radius:20px;padding:3px 11px;font-size:11px;font-weight:700;color:var(--text-muted);font-family:var(--font);cursor:pointer;transition:all .15s;white-space:nowrap; }
 .day-btn:hover { border-color:var(--text-muted);color:var(--text-secondary); }
 .day-btn.active { border-color:var(--accent);color:var(--accent);background:var(--accent-dim); }
-.asset-row { display:flex;align-items:center;gap:6px;padding:10px 0;overflow-x:auto;scrollbar-width:none; }
+.asset-row { display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:10px 0; }
 .asset-row::-webkit-scrollbar { display:none; }
 .asset-chip { background:none;border:1.5px solid var(--border);border-radius:20px;padding:4px 12px;font-size:11.5px;font-weight:600;color:var(--text-muted);font-family:var(--font-mono);cursor:pointer;transition:all .15s;white-space:nowrap;flex-shrink:0; }
 .asset-chip:hover { border-color:var(--text-secondary);color:var(--text-secondary); }
 .asset-chip.active { border-color:var(--accent);color:var(--accent);background:var(--accent-dim); }
+.asset-chip .cnt { margin-left:7px;font-size:10px;font-weight:700;opacity:.7; }
+.asset-chip.empty { opacity:.38; }
+.asset-chip.empty.active { opacity:1; }
 
 /* MAIN */
 .main { max-width:1248px;margin:0 auto;padding:24px 24px 60px; }
@@ -154,6 +157,7 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
   .tabs-scroll { flex-basis:100%; }
   .day-filter { margin-left:0;padding:10px 0 2px; }
   .tab-btn { padding:14px 12px; }
+  .asset-row { flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 85%,transparent);mask-image:linear-gradient(90deg,#000 85%,transparent);padding-right:24px; }
   .header-inner,.main,.controls-inner { padding-left:16px;padding-right:16px; }
   .news-grid { grid-template-columns:1fr; }
   .day-btn { padding:3px 8px;font-size:10px; }
@@ -262,41 +266,59 @@ const RSS_FX = [
 ];
 
 const FX_RE   = /\b(forex|fx|currenc(y|ies)|us dollar|dollar index|dxy|greenback|euro|eurozone|yen|sterling|swiss franc|yuan|renminbi|aussie|loonie|ecb|fed|federal reserve|fomc|boj|boe|snb|rba|rbnz|bank of (england|japan|canada)|central banks?|rate (cut|hike)s?|interest rates?|inflation|cpi|nonfarm|payrolls|powell|lagarde|ueda|bailey)\b/i;
-const GOLD_RE = /\b(gold|xau|silver|xag|bullion|precious metals?|oil|crude|brent|wti|opec|copper|natural gas|lng|commodit(y|ies))\b/i;
+const GOLD_RE = /\b(gold|xau|silver|xag|platinum|palladium|bullion|precious metals?|oil|crude|brent|wti|opec|copper|natural gas|lng|commodit(y|ies))\b/i;
+
+const FX_PAIRS = ['EUR/USD','GBP/USD','USD/JPY','USD/CHF','AUD/USD','NZD/USD','USD/CAD',
+  'EUR/GBP','EUR/JPY','EUR/CHF','EUR/AUD','EUR/CAD','EUR/NZD',
+  'GBP/JPY','GBP/CHF','GBP/AUD','GBP/CAD','GBP/NZD',
+  'AUD/JPY','AUD/NZD','AUD/CAD','AUD/CHF','NZD/JPY','CAD/JPY','CHF/JPY','XAU/USD','XAG/USD'];
 
 const TAB_ASSETS = {
-  forex:  ['EUR/USD','GBP/USD','USD/JPY','USD/CHF','AUD/USD','NZD/USD','USD/CAD','EUR/GBP','EUR/JPY','GBP/JPY','XAU/USD'],
-  crypto: ['BTC/USD','ETH/USD','SOL/USD','XRP/USD','ADA/USD','BNB/USD','DOT/USD','AVAX/USD','DOGE/USD'],
-  gold:   ['XAU/USD','XAG/USD','WTI Oil','Nat. Gas','Copper'],
+  forex:  FX_PAIRS,
+  crypto: ['BTC/USD','ETH/USD','SOL/USD','XRP/USD','BNB/USD','ADA/USD','DOGE/USD','TRX/USD','TON/USD','AVAX/USD','LINK/USD','DOT/USD','LTC/USD','BCH/USD','SHIB/USD','XLM/USD','SUI/USD'],
+  gold:   ['XAU/USD','XAG/USD','Platinum','Palladium','WTI Oil','Brent','Nat. Gas','Copper'],
   general:['Stocks','Central Banks','Economy','Energy','Tech','Geopolitics'],
   merger: [],
 };
 
+/* terms that identify a currency in a headline */
+const CCY = {
+  USD: ['usd','us dollar','u.s. dollar','greenback','dxy','dollar index'],
+  EUR: ['eur','euro','euros','eurozone','euro zone','ecb','european central bank','lagarde'],
+  GBP: ['gbp','pound','sterling','boe','bank of england','bailey'],
+  JPY: ['jpy','yen','boj','bank of japan','ueda'],
+  CHF: ['chf','franc','swiss franc','snb','swiss national bank'],
+  AUD: ['aud','aussie','australian dollar','rba','reserve bank of australia'],
+  NZD: ['nzd','kiwi','new zealand dollar','rbnz'],
+  CAD: ['cad','loonie','canadian dollar','boc','bank of canada'],
+  XAU: ['gold','xau','bullion'],
+  XAG: ['silver','xag'],
+};
+
 const ASSET_KW = {
-  'EUR/USD': ['eur/usd','eurusd','euro','ecb','eurozone','european central bank','lagarde'],
-  'GBP/USD': ['gbp/usd','gbpusd','pound','sterling','boe','bank of england','bailey'],
-  'USD/JPY': ['usd/jpy','usdjpy','yen','boj','bank of japan','ueda'],
-  'USD/CHF': ['usd/chf','usdchf','swiss franc','snb','swiss national bank'],
-  'AUD/USD': ['aud/usd','audusd','aussie','australian dollar','rba','reserve bank of australia'],
-  'NZD/USD': ['nzd/usd','nzdusd','kiwi','new zealand dollar','rbnz'],
-  'USD/CAD': ['usd/cad','usdcad','loonie','canadian dollar','boc','bank of canada'],
-  'EUR/GBP': ['eur/gbp','eurgbp'],
-  'EUR/JPY': ['eur/jpy','eurjpy'],
-  'GBP/JPY': ['gbp/jpy','gbpjpy'],
-  'BTC/USD': ['bitcoin','btc','btcusd'],
-  'ETH/USD': ['ethereum','ether','eth','ethusd'],
+  'BTC/USD': ['bitcoin','btc'],
+  'ETH/USD': ['ethereum','ether','eth'],
   'SOL/USD': ['solana','sol'],
   'XRP/USD': ['ripple','xrp'],
-  'ADA/USD': ['cardano','ada'],
   'BNB/USD': ['bnb','binance coin'],
-  'DOT/USD': ['polkadot'],
-  'AVAX/USD':['avalanche','avax'],
+  'ADA/USD': ['cardano','ada'],
   'DOGE/USD':['dogecoin','doge'],
-  'XAU/USD': ['gold','xau','xau/usd','xauusd','bullion'],
-  'XAG/USD': ['silver','xag','xag/usd','xagusd'],
-  'WTI Oil': ['oil','crude','wti','brent','opec'],
-  'Nat. Gas':['natural gas','natgas','lng'],
-  'Copper':  ['copper'],
+  'TRX/USD': ['tron','trx'],
+  'TON/USD': ['toncoin','ton blockchain','the open network'],
+  'AVAX/USD':['avalanche','avax'],
+  'LINK/USD':['chainlink'],
+  'DOT/USD': ['polkadot'],
+  'LTC/USD': ['litecoin','ltc'],
+  'BCH/USD': ['bitcoin cash','bch'],
+  'SHIB/USD':['shiba inu','shib'],
+  'XLM/USD': ['stellar','xlm'],
+  'SUI/USD': ['sui'],
+  'Platinum':  ['platinum'],
+  'Palladium': ['palladium'],
+  'WTI Oil':   ['wti','crude','oil'],
+  'Brent':     ['brent'],
+  'Nat. Gas':  ['natural gas','natgas','lng'],
+  'Copper':    ['copper'],
   'Stocks':        ['stock','stocks','shares','equities','s&p 500','nasdaq','dow','wall street','earnings'],
   'Central Banks': ['fed','federal reserve','fomc','ecb','boj','boe','central bank','central banks','rate cut','rate hike','interest rates','powell','lagarde'],
   'Economy':       ['economy','economic','gdp','inflation','cpi','jobs','unemployment','payrolls','recession','tariff','tariffs','imf'],
@@ -305,8 +327,57 @@ const ASSET_KW = {
   'Geopolitics':   ['war','iran','russia','ukraine','china','israel','sanctions','military','election','hormuz'],
 };
 const reEsc = s => s.replace(/[.*+?^${}()|[\]\\\/]/g, '\\$&');
-const ASSET_RE = Object.fromEntries(Object.entries(ASSET_KW).map(([k, kws]) =>
-  [k, new RegExp('\\b(' + kws.map(reEsc).join('|') + ')\\b', 'i')]));
+const wordRe = kws => new RegExp('\\b(' + kws.map(reEsc).join('|') + ')\\b', 'i');
+
+/* pairs match an explicit mention (EUR/GBP, EURGBP, EUR-GBP); otherwise USD pairs
+   match on the other currency and crosses need both currencies mentioned */
+function pairTest(pair) {
+  const [b, q] = pair.split('/');
+  const explicit = wordRe([`${b}/${q}`, `${b}${q}`, `${b}-${q}`]);
+  const bRe = wordRe(CCY[b]), qRe = wordRe(CCY[q]);
+  if (q === 'USD') return t => explicit.test(t) || bRe.test(t);
+  if (b === 'USD') return t => explicit.test(t) || qRe.test(t);
+  return t => explicit.test(t) || (bRe.test(t) && qRe.test(t));
+}
+const ASSET_TEST = {};
+FX_PAIRS.forEach(p => ASSET_TEST[p] = pairTest(p));
+Object.entries(ASSET_KW).forEach(([k, kws]) => { const re = wordRe(kws); ASSET_TEST[k] = t => re.test(t); });
+
+/* topic photos for articles that ship without a usable image */
+const U = id => `https://images.unsplash.com/photo-${id}?w=800&q=75&auto=format&fit=crop`;
+const COVERS = {
+  crypto:  ['1622630998477-20aa696ecb05','1605792657660-596af9009e82','1516245834210-c4c142787335','1634704784915-aacf363b021f','1621761191319-c6fb62004040','1639762681485-074b7f938ba0'],
+  gold:    ['1610375461369-d613b564f4c4','1624365169364-0640dd10e180','1610375461246-83df859d849d'],
+  metals:  ['1534951009808-766178b47a4f','1624365169364-0640dd10e180'],
+  oil:     ['1516937941344-00b4e0337589','1611273426858-450d8e3c9fce','1474487548417-781cb71495f3'],
+  central: ['1541354329998-f4d9a9f9297f','1501167786227-4cba60f6d58f'],
+  fx:      ['1580519542036-c47de6196ba5','1621981386829-9b458a2cddde','1580048915913-4f8f5cb481c4','1565514020179-026b92b84bb6'],
+  mna:     ['1521791136064-7986c2920216','1600880292203-757bb62b4baf','1529400971008-f566de0e6dfc','1556761175-5973dc0f32e7'],
+  tech:    ['1518770660439-4636190af475','1550751827-4bd374c3f58b'],
+  world:   ['1526778548025-fa2f459cd5c1','1529107386315-e1a2ed48a620','1446776811953-b23d57bd21aa','1451187580459-43490279c0fa'],
+  news:    ['1504711434969-e33886168f5c','1579532537598-459ecdaf39cc'],
+  stocks:  ['1612178991541-b48cc8e92a4d','1569025690938-a00729c9e1f9','1526628953301-3e589a6a8b74','1611974789855-9c2a0a7236a3','1590283603385-17ffb3a7f29f','1535320903710-d993d3d77d29'],
+};
+const TOPICS = [
+  ['crypto',  /\b(crypto\w*|bitcoin|btc|ethereum|ether|blockchain|stablecoins?|defi|altcoins?|solana|xrp|nft|tokeni[sz]\w*)\b/i],
+  ['mna',     /\b(acquir\w*|acquisitions?|mergers?|merges?|takeovers?|buyouts?)\b/i],
+  ['gold',    /\b(gold|bullion|xau)\b/i],
+  ['metals',  /\b(silver|platinum|palladium|copper|xag|metals?)\b/i],
+  ['oil',     /\b(oil|crude|brent|wti|opec|natural gas|lng|refiner(y|ies)|barrels?|petrol|diesel|gasoline|fuel)\b/i],
+  ['central', /\b(fed|federal reserve|fomc|ecb|boj|boe|snb|rba|rbnz|central banks?|rate (cut|hike)s?|interest rates?|powell|lagarde)\b/i],
+  ['fx',      /\b(forex|fx|currenc(y|ies)|dollar|euro|yen|sterling|pound|franc|yuan|usd|eur|gbp|jpy|chf|aud|nzd|cad|(usd|eur|gbp|jpy|chf|aud|nzd|cad)\/?(usd|eur|gbp|jpy|chf|aud|nzd|cad))\b/i],
+  ['tech',    /\b(ai|tech\w*|chips?|semiconductors?|nvidia|software|cyber\w*|cloud)\b/i],
+  ['world',   /\b(war|military|iran|russia|ukraine|china|israel|sanctions?|elections?|tariffs?|geopolitic\w*|hormuz|saudi|yemen|egypt|lebanon|hezbollah|iraq|syria|gaza|nato|taiwan|korea|parliament|minister|president|congress|white house|government)\b/i],
+  ['stocks',  /\b(stocks?|shares|equities|nasdaq|s&p|dow|earnings|ipo|wall street)\b/i],
+];
+const TAB_TOPIC = { forex:'fx', crypto:'crypto', gold:'gold', general:'news', merger:'mna' };
+const hash = s => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
+function coverFor(a, tab) {
+  const hit = TOPICS.find(([, re]) => re.test(a.title)) || TOPICS.find(([, re]) => re.test(a.description));
+  const pool = COVERS[hit ? hit[0] : TAB_TOPIC[tab]];
+  return U(pool[hash(a.title) % pool.length]);
+}
+const LOGO_RE = /\/logo|hmpimage|logobbg|whirlpooldata/i;
 
 /* ── STATE ── */
 let activeTab   = 'forex';
@@ -334,7 +405,7 @@ function withinDays(ts) {
 }
 
 function matchesAsset(article, asset) {
-  return !asset || ASSET_RE[asset].test(textOf(article));
+  return !asset || ASSET_TEST[asset](textOf(article));
 }
 
 /* ── FETCH ── */
@@ -416,9 +487,15 @@ async function loadForTab(tab) {
   if (failed.length === results.length) throw new Error(failed[0].reason?.message || 'All news sources failed');
   const seen = new Set();
   const key = a => a.title.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-  return results.flatMap(r => r.status === 'fulfilled' ? r.value : [])
+  const list = results.flatMap(r => r.status === 'fulfilled' ? r.value : [])
     .filter(a => { const k = key(a); if (seen.has(k) || seen.has(a.link)) return false; seen.add(k); seen.add(a.link); return true; })
     .sort((a, b) => b.ts - a.ts);
+  /* publisher logos (known patterns, or one image reused across many articles) are not article photos */
+  const uses = {};
+  list.forEach(a => { if (a.thumbnail) uses[a.thumbnail] = (uses[a.thumbnail] || 0) + 1; });
+  return list.map(a => ({ ...a,
+    thumbnail: a.thumbnail && !LOGO_RE.test(a.thumbnail) && uses[a.thumbnail] < 3 ? a.thumbnail : '',
+    cover: coverFor(a, tab) }));
 }
 
 /* ── RENDER ── */
@@ -438,7 +515,7 @@ function skeletons(n = 6) {
 function renderCard(a) {
   const img = `<div class="card-img-wrap">
       <div class="card-ph"><svg width="34" height="22" viewBox="0 0 34 22" fill="none"><path d="M1 18l7-7 6 5 8-10 11 9" stroke="#51d7ce" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>${esc(a.source)}</span></div>
-      ${a.thumbnail ? `<img class="card-img" src="${esc(a.thumbnail)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : ''}
+      <img class="card-img" src="${esc(a.thumbnail || a.cover)}" data-fallback="${esc(a.cover)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="if(this.src!==this.dataset.fallback){this.src=this.dataset.fallback}else{this.remove()}">
     </div>`;
   const sum = a.description ? `<div class="card-summary">${esc(a.description)}</div>` : '';
   return `
@@ -461,6 +538,8 @@ function renderCard(a) {
 }
 
 function showFiltered(all) {
+  const inRange = all.filter(a => withinDays(a.ts));
+  buildChips(Object.fromEntries(TAB_ASSETS[activeTab].map(k => [k, inRange.filter(a => matchesAsset(a, k)).length])), inRange.length);
   const filtered = all.filter(a => withinDays(a.ts) && matchesAsset(a, activeAsset));
   const el = document.getElementById('newsContent');
   const count = document.getElementById('resultCount');
@@ -505,12 +584,16 @@ async function load(forceRefresh) {
 }
 
 /* ── CONTROLS ── */
-function buildChips() {
+function buildChips(counts, total) {
   const assets = TAB_ASSETS[activeTab];
+  const cnt = n => n === undefined ? '' : `<span class="cnt">${n}</span>`;
   document.getElementById('assetRow').style.display = assets.length ? '' : 'none';
   document.getElementById('assetRow').innerHTML =
-    `<button class="asset-chip${activeAsset === null ? ' active' : ''}" onclick="setAsset(null)">All</button>` +
-    assets.map(a => `<button class="asset-chip${activeAsset === a ? ' active' : ''}" onclick="setAsset('${a}')">${a}</button>`).join('');
+    `<button class="asset-chip${activeAsset === null ? ' active' : ''}" onclick="setAsset(null)">All${cnt(total)}</button>` +
+    assets.map(a => {
+      const n = counts ? counts[a] : undefined;
+      return `<button class="asset-chip${activeAsset === a ? ' active' : ''}${n === 0 ? ' empty' : ''}" onclick="setAsset('${a}')">${a}${cnt(n)}</button>`;
+    }).join('');
 }
 
 function switchTab(tab) {
