@@ -83,11 +83,13 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
 /* CONTROLS */
 .controls-bar { background:var(--bg-primary);border-bottom:1px solid var(--border); }
 .controls-inner { max-width:1248px;margin:0 auto;padding:0 24px; }
-.tabs-row { display:flex;align-items:center;border-bottom:1px solid var(--border); }
+.tabs-row { display:flex;align-items:center;gap:16px;border-bottom:1px solid var(--border); }
+.tabs-scroll { display:flex;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none; }
+.tabs-scroll::-webkit-scrollbar { display:none; }
 .tab-btn { background:none;border:none;font-family:var(--font);cursor:pointer;padding:14px 18px;font-size:13px;font-weight:600;color:var(--text-muted);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;white-space:nowrap; }
 .tab-btn:hover { color:var(--text-secondary); }
 .tab-btn.active { color:var(--accent);border-bottom-color:var(--accent); }
-.day-filter { margin-left:auto;display:flex;gap:4px;align-items:center; }
+.day-filter { margin-left:auto;display:flex;gap:4px;align-items:center;flex-shrink:0; }
 .day-btn { background:none;border:1.5px solid var(--border);border-radius:20px;padding:3px 11px;font-size:11px;font-weight:700;color:var(--text-muted);font-family:var(--font);cursor:pointer;transition:all .15s;white-space:nowrap; }
 .day-btn:hover { border-color:var(--text-muted);color:var(--text-secondary); }
 .day-btn.active { border-color:var(--accent);color:var(--accent);background:var(--accent-dim); }
@@ -112,6 +114,11 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
 .news-card:hover { border-color:var(--accent);transform:translateY(-2px); }
 .card-img-wrap { width:100%;height:160px;overflow:hidden;flex-shrink:0;background:var(--bg-tertiary); }
 .card-img { width:100%;height:100%;object-fit:cover;display:block; }
+.card-img-wrap { position:relative; }
+.card-img-wrap .card-img { position:relative; z-index:1; }
+.card-ph { position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:10px;background:radial-gradient(circle at 18% 22%,rgba(81,215,206,.22),transparent 50%),radial-gradient(circle at 85% 90%,rgba(47,163,224,.28),transparent 55%),linear-gradient(135deg,#0a2e44,#062434); }
+.card-ph svg { opacity:.55; }
+.card-ph span { font-family:var(--font-mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent-2);opacity:.85; }
 .card-body { padding:14px 16px 16px;display:flex;flex-direction:column;gap:8px;flex:1; }
 .card-meta { display:flex;align-items:center;gap:8px;flex-wrap:wrap; }
 .source-badge { font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:2px 8px;border-radius:10px;white-space:nowrap;background:var(--accent-dim);color:var(--accent);border:1px solid rgba(47,163,224,.3); }
@@ -143,6 +150,10 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
 .footer-copy { font-size:12px;color:var(--text-muted);margin-top:6px; }
 
 @media(max-width:640px) {
+  .tabs-row { flex-wrap:wrap;gap:0; }
+  .tabs-scroll { flex-basis:100%; }
+  .day-filter { margin-left:0;padding:10px 0 2px; }
+  .tab-btn { padding:14px 12px; }
   .header-inner,.main,.controls-inner { padding-left:16px;padding-right:16px; }
   .news-grid { grid-template-columns:1fr; }
   .day-btn { padding:3px 8px;font-size:10px; }
@@ -200,21 +211,24 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
   <section class="hero">
     <div class="hero-inner">
       <h1>Market News</h1>
-      <p>Latest headlines from Forex, Crypto and Gold markets — filter by asset and date range.</p>
+      <p>Latest headlines from Forex, Crypto, Commodities, global markets and M&amp;A — filter by asset, topic and date range.</p>
     </div>
   </section>
 
   <div class="controls-bar">
     <div class="controls-inner">
       <div class="tabs-row">
-        <button class="tab-btn active" onclick="switchTab('forex')"  id="tab-forex">Forex</button>
-        <button class="tab-btn"        onclick="switchTab('crypto')" id="tab-crypto">Crypto</button>
-        <button class="tab-btn"        onclick="switchTab('gold')"   id="tab-gold">Gold &amp; Commodities</button>
+        <div class="tabs-scroll">
+          <button class="tab-btn active" onclick="switchTab('forex')"   id="tab-forex">Forex</button>
+          <button class="tab-btn"        onclick="switchTab('crypto')"  id="tab-crypto">Crypto</button>
+          <button class="tab-btn"        onclick="switchTab('gold')"    id="tab-gold">Gold &amp; Commodities</button>
+          <button class="tab-btn"        onclick="switchTab('general')" id="tab-general">Markets</button>
+          <button class="tab-btn"        onclick="switchTab('merger')"  id="tab-merger">Mergers &amp; Acquisitions</button>
+        </div>
         <div class="day-filter">
           <button class="day-btn active" onclick="setDays(1)" id="day-1">1D</button>
           <button class="day-btn"        onclick="setDays(3)" id="day-3">3D</button>
           <button class="day-btn"        onclick="setDays(5)" id="day-5">5D</button>
-          <button class="day-btn"        onclick="setDays(7)" id="day-7">7D</button>
         </div>
       </div>
       <div class="asset-row" id="assetRow"></div>
@@ -235,138 +249,176 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
   <footer class="footer">
     <div class="footer-inner">
       <p class="footer-disclaimer">News articles are sourced from third-party publishers and are for informational purposes only. Not financial advice.</p>
-      <p class="footer-copy">&copy; 2025 Market Analytics</p>
+      <p class="footer-copy">&copy; <span id="yr"></span> Market Analytics</p>
     </div>
   </footer>
 
 <script>
-/* ── SOURCES (all verified working via rss2json) ── */
+/* ── SOURCES ── */
+const FINNHUB_KEY = 'd95lt2pr01qqtvdma7c0d95lt2pr01qqtvdma7cg';
 const RSS2JSON = 'https://api.rss2json.com/v1/api.json?rss_url=';
+const RSS_FX = [
+  { url: 'https://www.forexlive.com/feed/', name: 'ForexLive' },
+];
 
-const SOURCES = {
-  forex:  [
-    { url: 'https://www.forexlive.com/feed/', name: 'ForexLive' },
-    { url: 'https://www.fxstreet.com/rss/news', name: 'FXStreet' },
-  ],
-  crypto: [
-    { url: 'https://cointelegraph.com/rss', name: 'CoinTelegraph' },
-    { url: 'https://decrypt.co/feed', name: 'Decrypt' },
-  ],
-  gold: [
-    { url: 'https://www.forexlive.com/feed/', name: 'ForexLive' },
-    { url: 'https://www.fxstreet.com/rss/news', name: 'FXStreet' },
-  ],
-};
+const FX_RE   = /\b(forex|fx|currenc(y|ies)|us dollar|dollar index|dxy|greenback|euro|eurozone|yen|sterling|swiss franc|yuan|renminbi|aussie|loonie|ecb|fed|federal reserve|fomc|boj|boe|snb|rba|rbnz|bank of (england|japan|canada)|central banks?|rate (cut|hike)s?|interest rates?|inflation|cpi|nonfarm|payrolls|powell|lagarde|ueda|bailey)\b/i;
+const GOLD_RE = /\b(gold|xau|silver|xag|bullion|precious metals?|oil|crude|brent|wti|opec|copper|natural gas|lng|commodit(y|ies))\b/i;
 
 const TAB_ASSETS = {
   forex:  ['EUR/USD','GBP/USD','USD/JPY','USD/CHF','AUD/USD','NZD/USD','USD/CAD','EUR/GBP','EUR/JPY','GBP/JPY','XAU/USD'],
   crypto: ['BTC/USD','ETH/USD','SOL/USD','XRP/USD','ADA/USD','BNB/USD','DOT/USD','AVAX/USD','DOGE/USD'],
   gold:   ['XAU/USD','XAG/USD','WTI Oil','Nat. Gas','Copper'],
+  general:['Stocks','Central Banks','Economy','Energy','Tech','Geopolitics'],
+  merger: [],
 };
 
-/* keyword sets for client-side filtering */
 const ASSET_KW = {
-  'EUR/USD': ['eur/usd','eurusd','euro ','ecb','eurozone','european central bank'],
-  'GBP/USD': ['gbp/usd','gbpusd','pound','sterling','cable','boe','bank of england'],
-  'USD/JPY': ['usd/jpy','usdjpy',' yen','boj','bank of japan'],
-  'USD/CHF': ['usd/chf','usdchf','franc','snb','swiss national bank'],
-  'AUD/USD': ['aud/usd','audusd','aussie','rba','reserve bank of australia'],
-  'NZD/USD': ['nzd/usd','nzdusd','kiwi','rbnz'],
-  'USD/CAD': ['usd/cad','usdcad','loonie','boc','bank of canada','canadian dollar'],
+  'EUR/USD': ['eur/usd','eurusd','euro','ecb','eurozone','european central bank','lagarde'],
+  'GBP/USD': ['gbp/usd','gbpusd','pound','sterling','boe','bank of england','bailey'],
+  'USD/JPY': ['usd/jpy','usdjpy','yen','boj','bank of japan','ueda'],
+  'USD/CHF': ['usd/chf','usdchf','swiss franc','snb','swiss national bank'],
+  'AUD/USD': ['aud/usd','audusd','aussie','australian dollar','rba','reserve bank of australia'],
+  'NZD/USD': ['nzd/usd','nzdusd','kiwi','new zealand dollar','rbnz'],
+  'USD/CAD': ['usd/cad','usdcad','loonie','canadian dollar','boc','bank of canada'],
   'EUR/GBP': ['eur/gbp','eurgbp'],
   'EUR/JPY': ['eur/jpy','eurjpy'],
   'GBP/JPY': ['gbp/jpy','gbpjpy'],
-  'BTC/USD': ['bitcoin','btc ','btcusd'],
-  'ETH/USD': ['ethereum','ether','eth ','ethusd'],
-  'SOL/USD': ['solana','sol '],
-  'XRP/USD': ['ripple','xrp '],
-  'ADA/USD': ['cardano','ada '],
-  'BNB/USD': ['binance coin','bnb '],
-  'DOT/USD': ['polkadot','dot '],
+  'BTC/USD': ['bitcoin','btc','btcusd'],
+  'ETH/USD': ['ethereum','ether','eth','ethusd'],
+  'SOL/USD': ['solana','sol'],
+  'XRP/USD': ['ripple','xrp'],
+  'ADA/USD': ['cardano','ada'],
+  'BNB/USD': ['bnb','binance coin'],
+  'DOT/USD': ['polkadot'],
   'AVAX/USD':['avalanche','avax'],
   'DOGE/USD':['dogecoin','doge'],
-  'XAU/USD': ['gold','xau','bullion'],
-  'XAG/USD': ['silver','xag'],
-  'WTI Oil': ['crude oil','wti','brent','oil price'],
+  'XAU/USD': ['gold','xau','xau/usd','xauusd','bullion'],
+  'XAG/USD': ['silver','xag','xag/usd','xagusd'],
+  'WTI Oil': ['oil','crude','wti','brent','opec'],
   'Nat. Gas':['natural gas','natgas','lng'],
   'Copper':  ['copper'],
+  'Stocks':        ['stock','stocks','shares','equities','s&p 500','nasdaq','dow','wall street','earnings'],
+  'Central Banks': ['fed','federal reserve','fomc','ecb','boj','boe','central bank','central banks','rate cut','rate hike','interest rates','powell','lagarde'],
+  'Economy':       ['economy','economic','gdp','inflation','cpi','jobs','unemployment','payrolls','recession','tariff','tariffs','imf'],
+  'Energy':        ['oil','crude','brent','opec','natural gas','lng','energy'],
+  'Tech':          ['ai','tech','nvidia','apple','microsoft','alphabet','google','amazon','meta','chip','chips','semiconductor','semiconductors'],
+  'Geopolitics':   ['war','iran','russia','ukraine','china','israel','sanctions','military','election','hormuz'],
 };
-
-/* For gold tab: show only articles mentioning commodities when "All" is selected */
-const GOLD_ALL_KW = ['gold','xau','silver','xag','crude oil','wti','brent','natural gas','copper','commodity','commodities','precious metal'];
+const reEsc = s => s.replace(/[.*+?^${}()|[\]\\\/]/g, '\\$&');
+const ASSET_RE = Object.fromEntries(Object.entries(ASSET_KW).map(([k, kws]) =>
+  [k, new RegExp('\\b(' + kws.map(reEsc).join('|') + ')\\b', 'i')]));
 
 /* ── STATE ── */
 let activeTab   = 'forex';
 let activeAsset = null;
 let activeDays  = 1;
 let articleCache = {}; // keyed by tab
+let feedCache    = {}; // keyed by source id, shared across tabs
 let loading     = false;
 
 /* ── HELPERS ── */
-function timeAgo(dateStr) {
-  const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+const safeUrl = u => /^https?:\/\//i.test(u || '') ? u : '';
+const textOf = a => a.title + ' ' + a.description;
+
+function timeAgo(ts) {
+  const diff = (Date.now() - ts) / 1000;
   if (diff < 60)    return 'just now';
   if (diff < 3600)  return Math.floor(diff / 60) + 'm ago';
   if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
   return Math.floor(diff / 86400) + 'd ago';
 }
 
-function withinDays(pubDate) {
-  return (Date.now() - new Date(pubDate).getTime()) <= activeDays * 86400 * 1000;
+function withinDays(ts) {
+  return Date.now() - ts <= activeDays * 86400 * 1000;
 }
 
 function matchesAsset(article, asset) {
-  if (!asset) {
-    /* for gold "All", require at least one commodity keyword */
-    if (activeTab === 'gold') {
-      const text = (article.title + ' ' + article.description).toLowerCase();
-      return GOLD_ALL_KW.some(k => text.includes(k));
-    }
-    return true;
-  }
-  const kws = ASSET_KW[asset] || [];
-  const text = (article.title + ' ' + article.description).toLowerCase();
-  return kws.some(k => text.includes(k));
+  return !asset || ASSET_RE[asset].test(textOf(article));
 }
 
 /* ── FETCH ── */
-async function fetchFeed(source) {
-  const url = RSS2JSON + encodeURIComponent(source.url);
-  const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const data = await res.json();
+async function fetchJson(url, attempts = 2) {
+  for (let i = 1; ; i++) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+      if (!res.ok) throw Object.assign(new Error(`HTTP ${res.status}`), { retry: res.status === 429 || res.status >= 500 });
+      return await res.json();
+    } catch (e) {
+      const retryable = e.retry !== false && (e.retry || e.name === 'TypeError' || e.name === 'TimeoutError');
+      if (i >= attempts || !retryable) throw e;
+      await new Promise(r => setTimeout(r, 700));
+    }
+  }
+}
+
+const parser = new DOMParser();
+const stripHtml = html => (parser.parseFromString(html || '', 'text/html').body.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 260);
+
+async function fetchFinnhub(category) {
+  const data = await fetchJson(`https://finnhub.io/api/v1/news?category=${category}&token=${FINNHUB_KEY}`);
+  if (!Array.isArray(data)) throw new Error(data.error || 'Unexpected response');
+  return data.map(n => ({
+    title:       n.headline || '',
+    description: stripHtml(n.summary),
+    link:        safeUrl(n.url),
+    ts:          (n.datetime || 0) * 1000,
+    thumbnail:   safeUrl(n.image),
+    source:      n.source === 'Forexlive' ? 'ForexLive' : (n.source || 'News'),
+  })).filter(a => a.title && a.link && a.ts);
+}
+
+async function fetchRss(source) {
+  const data = await fetchJson(RSS2JSON + encodeURIComponent(source.url));
   if (data.status !== 'ok') throw new Error(data.message || 'Feed error');
   return (data.items || []).map(item => {
-    /* strip HTML from description */
-    const tmp = document.createElement('div');
-    tmp.innerHTML = item.description || '';
-    const desc = (tmp.textContent || '').replace(/\s+/g,' ').trim().slice(0,260);
+    /* rss2json returns "YYYY-MM-DD HH:MM:SS" in UTC */
+    const ts = Date.parse((item.pubDate || '').replace(' ', 'T') + 'Z');
     return {
       title:       item.title || '',
-      description: desc,
-      link:        item.link || item.guid || '',
-      pubDate:     item.pubDate || '',
-      thumbnail:   item.thumbnail || '',
+      description: stripHtml(item.description),
+      link:        safeUrl(item.link || item.guid),
+      ts,
+      thumbnail:   safeUrl(item.thumbnail),
       source:      source.name,
     };
-  }).filter(a => a.title && a.link);
+  }).filter(a => a.title && a.link && a.ts);
+}
+
+function cached(id, fn) {
+  if (!feedCache[id]) feedCache[id] = fn().catch(e => { delete feedCache[id]; throw e; });
+  return feedCache[id];
+}
+const fh  = cat => cached('fh:' + cat, () => fetchFinnhub(cat));
+const rss = src => cached('rss:' + src.url, () => fetchRss(src));
+
+/* each job resolves to the articles it contributes to the tab */
+function jobsFor(tab) {
+  const only = re => list => list.filter(a => re.test(textOf(a)));
+  const all  = list => list;
+  if (tab === 'crypto' || tab === 'general' || tab === 'merger') return [fh(tab).then(all)];
+  if (tab === 'forex')  return [
+    fh('forex').then(all),
+    fh('general').then(only(FX_RE)),
+    ...RSS_FX.map(s => rss(s).then(all)),
+  ];
+  return [
+    fh('forex').then(only(GOLD_RE)),
+    fh('general').then(only(GOLD_RE)),
+    ...RSS_FX.map(s => rss(s).then(only(GOLD_RE))),
+  ];
 }
 
 async function loadForTab(tab) {
-  const sources = SOURCES[tab];
-  const results = await Promise.allSettled(sources.map(s => fetchFeed(s)));
-  let articles = [];
-  results.forEach(r => { if (r.status === 'fulfilled') articles.push(...r.value); });
-  if (articles.length === 0) {
-    const errors = results.filter(r => r.status === 'rejected').map(r => r.reason?.message);
-    throw new Error(errors[0] || 'All feeds failed');
-  }
-  /* de-duplicate by link */
+  const results = await Promise.allSettled(jobsFor(tab));
+  const failed = results.filter(r => r.status === 'rejected');
+  failed.forEach(r => console.warn('News source failed:', r.reason));
+  if (failed.length === results.length) throw new Error(failed[0].reason?.message || 'All news sources failed');
   const seen = new Set();
-  articles = articles.filter(a => { if (seen.has(a.link)) return false; seen.add(a.link); return true; });
-  /* sort newest first */
-  articles.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
-  return articles;
+  const key = a => a.title.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  return results.flatMap(r => r.status === 'fulfilled' ? r.value : [])
+    .filter(a => { const k = key(a); if (seen.has(k) || seen.has(a.link)) return false; seen.add(k); seen.add(a.link); return true; })
+    .sort((a, b) => b.ts - a.ts);
 }
 
 /* ── RENDER ── */
@@ -384,19 +436,20 @@ function skeletons(n = 6) {
 }
 
 function renderCard(a) {
-  const img = a.thumbnail
-    ? `<div class="card-img-wrap"><img class="card-img" src="${a.thumbnail}" alt="" loading="lazy" onerror="this.closest('.card-img-wrap').style.display='none'"></div>`
-    : '';
-  const sum = a.description ? `<div class="card-summary">${a.description}</div>` : '';
+  const img = `<div class="card-img-wrap">
+      <div class="card-ph"><svg width="34" height="22" viewBox="0 0 34 22" fill="none"><path d="M1 18l7-7 6 5 8-10 11 9" stroke="#51d7ce" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>${esc(a.source)}</span></div>
+      ${a.thumbnail ? `<img class="card-img" src="${esc(a.thumbnail)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : ''}
+    </div>`;
+  const sum = a.description ? `<div class="card-summary">${esc(a.description)}</div>` : '';
   return `
-    <a class="news-card" href="${a.link}" target="_blank" rel="noopener noreferrer">
+    <a class="news-card" href="${esc(a.link)}" target="_blank" rel="noopener noreferrer">
       ${img}
       <div class="card-body">
         <div class="card-meta">
-          <span class="source-badge">${a.source}</span>
-          <span class="card-time">${timeAgo(a.pubDate)}</span>
+          <span class="source-badge">${esc(a.source)}</span>
+          <span class="card-time" title="${esc(new Date(a.ts).toLocaleString())}">${timeAgo(a.ts)}</span>
         </div>
-        <div class="card-title">${a.title}</div>
+        <div class="card-title">${esc(a.title)}</div>
         ${sum}
         <div class="card-footer">
           <span class="read-more">Read article
@@ -408,7 +461,7 @@ function renderCard(a) {
 }
 
 function showFiltered(all) {
-  const filtered = all.filter(a => withinDays(a.pubDate) && matchesAsset(a, activeAsset));
+  const filtered = all.filter(a => withinDays(a.ts) && matchesAsset(a, activeAsset));
   const el = document.getElementById('newsContent');
   const count = document.getElementById('resultCount');
   if (filtered.length === 0) {
@@ -440,7 +493,7 @@ async function load(forceRefresh) {
       <div class="state-box">
         <div class="state-icon">⚠️</div>
         <div class="state-title">Could not load news</div>
-        <div class="state-sub">${err.message || 'Network error — please try again.'}</div>
+        <div class="state-sub">${esc(err.message || 'Network error — please try again.')}</div>
         <button class="btn-retry" onclick="reload()">Try again</button>
       </div>`;
     document.getElementById('resultCount').innerHTML = '';
@@ -454,6 +507,7 @@ async function load(forceRefresh) {
 /* ── CONTROLS ── */
 function buildChips() {
   const assets = TAB_ASSETS[activeTab];
+  document.getElementById('assetRow').style.display = assets.length ? '' : 'none';
   document.getElementById('assetRow').innerHTML =
     `<button class="asset-chip${activeAsset === null ? ' active' : ''}" onclick="setAsset(null)">All</button>` +
     assets.map(a => `<button class="asset-chip${activeAsset === a ? ' active' : ''}" onclick="setAsset('${a}')">${a}</button>`).join('');
@@ -464,6 +518,7 @@ function switchTab(tab) {
   activeTab = tab; activeAsset = null;
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-' + tab).classList.add('active');
+  document.getElementById('tab-' + tab).scrollIntoView({ block:'nearest', inline:'nearest' });
   buildChips();
   load(false);
 }
@@ -483,7 +538,8 @@ function setAsset(asset) {
 }
 
 function reload() {
-  delete articleCache[activeTab];
+  articleCache = {};
+  feedCache = {};
   load(true);
 }
 
@@ -495,6 +551,7 @@ document.getElementById('hamburger').addEventListener('click', () => {
   document.getElementById('hamburger').classList.toggle('open');
 });
 
+document.getElementById('yr').textContent = new Date().getFullYear();
 buildChips();
 load(true);
 </script>
