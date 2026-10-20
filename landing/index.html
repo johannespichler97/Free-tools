@@ -4,7 +4,18 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Market Analytics — Trade with clarity</title>
-  <meta name="description" content="Free professional trading tools: economic calendar, currency strength, trend bias, aggregate signals, volatility, correlation and trading challenges." />
+  <meta name="description" content="B2B trading analytics suite for brokers, prop firms and fintechs: economic calendar, currency strength, signals, news and trading challenges on your own subdomain." />
+  <meta name="theme-color" content="#041b28" />
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Market Analytics" />
+  <meta property="og:title" content="Market Analytics — Trade with clarity" />
+  <meta property="og:description" content="Professional trading tools for your clients, on a dedicated subdomain for your company. Request a demo." />
+  <meta property="og:image" content="https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1200&h=630&q=80&auto=format&fit=crop" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Market Analytics — Trade with clarity" />
+  <meta name="twitter:description" content="Professional trading tools for your clients, on a dedicated subdomain for your company. Request a demo." />
+  <meta name="twitter:image" content="https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1200&h=630&q=80&auto=format&fit=crop" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preconnect" href="https://images.unsplash.com" />
@@ -649,7 +660,7 @@ section { position:relative; }
           <div class="field"><label for="f-msg">Message <small>(optional)</small></label><textarea id="f-msg" name="message" placeholder="Which markets do your clients trade? Anything specific you need?"></textarea></div>
           <div class="hp" aria-hidden="true"><label>Leave empty<input name="company_url" tabindex="-1" autocomplete="off" /></label></div>
           <label class="consent" id="consentWrap"><input type="checkbox" name="consent" id="f-consent" /><span>I agree to be contacted by Market Analytics regarding this enquiry. *</span></label>
-          <div class="form-error" id="formError">Something went wrong. Please try again or email us directly.</div>
+          <div class="form-error" id="formError">Sorry, your request could not be sent. Please try again in a moment.</div>
           <button type="submit" class="btn btn-solid submit" id="submitBtn">Request a demo <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
           <p class="form-note">B2B only · No obligation · We never share your data</p>
         </form>
@@ -889,6 +900,8 @@ if (!reduceMotion) {
 
 /* contact form — set CONTACT_ENDPOINT to the backend URL (receives JSON via POST) */
 const CONTACT_ENDPOINT = '';
+/* without an endpoint the form only simulates success on preview hosts, never on a live domain */
+const IS_PREVIEW = location.protocol === 'file:' || /^(localhost|127\.0\.0\.1|htmlpreview\.github\.io)$/.test(location.hostname);
 const form = document.getElementById('contactForm');
 const emailOk = v => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v);
 function check(field) {
@@ -927,9 +940,11 @@ form.addEventListener('submit', async e => {
     else if (CONTACT_ENDPOINT) {
       const res = await fetch(CONTACT_ENDPOINT, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(data) });
       if (!res.ok) throw new Error('HTTP ' + res.status);
-    } else {
-      console.info('[contact] CONTACT_ENDPOINT not set — form data not sent:', data);
+    } else if (IS_PREVIEW) {
+      console.info('[contact] CONTACT_ENDPOINT not set — preview only, form data not sent:', data);
       await new Promise(r => setTimeout(r, 900));
+    } else {
+      throw new Error('CONTACT_ENDPOINT is not configured');
     }
     document.getElementById('sentEmail').textContent = data.email;
     document.getElementById('ctForm').classList.add('sent');
