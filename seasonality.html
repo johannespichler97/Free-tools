@@ -218,13 +218,14 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 .sum-tend.bear { color:#f08080; } .sum-tend.bear-strong { color:#f85149; }
 .sum-line { font-size:13px; color:var(--text-secondary); line-height:1.6; }
 .sum-line strong { color:var(--text-primary); }
+.sum-line strong.up { color:#3fb950; } .sum-line strong.down { color:#f85149; }
 .sum-stats { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:16px; }
 .stat { background:var(--bg-tertiary); border:1px solid var(--border); border-radius:var(--radius-md); padding:10px 12px; }
-.stat span { display:block; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--text-muted); }
+.stat > span { display:block; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--text-muted); }
 .stat b { font-family:var(--font-mono); font-size:16px; }
 .stat small { font-size:11px; color:var(--text-muted); font-family:var(--font-mono); }
 .up { color:#3fb950; } .down { color:#f85149; }
-.winbar { height:6px; border-radius:3px; background:rgba(248,81,73,.55); overflow:hidden; margin-top:8px; }
+.winbar { height:6px; border-radius:3px; background:#f85149; overflow:hidden; margin-top:8px; display:flex; }
 .winbar i { display:block; height:100%; background:#3fb950; }
 .sum-note { margin-top:14px; font-size:11px; color:var(--text-muted); line-height:1.5; }
 
@@ -233,10 +234,10 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 .ax-m { font-family:Inter,sans-serif; font-size:11px; font-weight:600; fill:#8ab8d0; }
 .ax-m.cur { fill:#2FA3E0; }
 .val { font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:600; }
+.cnt { font-family:'JetBrains Mono',monospace; font-weight:600; }
 .bar { cursor:pointer; transition:opacity .15s; }
 .bar:hover { opacity:.8; }
-.legend { display:flex; gap:18px; flex-wrap:wrap; font-size:12px; color:var(--text-secondary); margin-top:10px; }
-.legend i { display:inline-block; width:18px; height:3px; border-radius:2px; vertical-align:middle; margin-right:6px; }
+.updown { display:inline-flex; gap:10px; font-family:var(--font-mono); font-weight:700; }
 
 /* ── HEATMAP ── */
 .heat-wrap { overflow-x:auto; }
@@ -328,7 +329,7 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
   <section class="hero">
     <div class="hero-inner">
       <h1>Seasonality</h1>
-      <p>How each currency pair and metal has historically performed in every month of the year — average returns, win rates, the typical path through the year and a ranking for any month.</p>
+      <p>How each currency pair and metal has historically performed in every month of the year — average returns, bullish and bearish years, a year-by-year heatmap and a ranking for any month.</p>
     </div>
   </section>
 
@@ -354,15 +355,10 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
         <div id="summary"><div class="card-loading"><div class="spinner"></div></div></div>
       </section>
       <section class="panel">
-        <div class="panel-head"><h2>Average return by month</h2><span class="panel-sub">Bar = average · % = years positive · click a month</span></div>
+        <div class="panel-head"><h2>Average return by month</h2><span class="panel-sub">Bar = average return · ▲ bullish / ▼ bearish years · click a month</span></div>
         <div id="barChart" class="chart-box"><div class="card-loading"><div class="spinner"></div></div></div>
       </section>
     </div>
-
-    <section class="panel">
-      <div class="panel-head"><h2>Seasonal path through the year</h2><span class="panel-sub" id="curveSub"></span></div>
-      <div id="curveChart" class="chart-box"><div class="card-loading"><div class="spinner"></div></div></div>
-    </section>
 
     <section class="panel">
       <div class="panel-head"><h2>Monthly returns by year</h2><span class="panel-sub">Monthly change in %, green = up, red = down</span></div>
@@ -386,24 +382,24 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
           <p class="method-text">Each month's return is the change from the previous month's close to that month's close. Statistics use the selected number of <strong>complete calendar years</strong>; the current, unfinished year is shown separately and never included in the averages.</p>
           <div class="method-formula">Return(month)  = Close(month) / Close(previous month) − 1
 Average        = mean of that month's returns across the years
-Win rate       = share of years in which the month closed higher</div>
+Bullish years  = years in which the month closed higher
+Bearish years  = years in which the month closed lower</div>
           <table class="method-table">
             <thead><tr><th>Label</th><th>Rule (at least 5 years of data)</th></tr></thead>
             <tbody>
-              <tr><td style="color:var(--positive)">Historically bullish</td><td>average &gt; 0 and win rate ≥ 70%</td></tr>
-              <tr><td style="color:#8dd9a0">Leaning bullish</td><td>average &gt; 0 and win rate ≥ 60%</td></tr>
+              <tr><td style="color:var(--positive)">Historically bullish</td><td>average &gt; 0 and ≥ 70% of years bullish</td></tr>
+              <tr><td style="color:#8dd9a0">Leaning bullish</td><td>average &gt; 0 and ≥ 60% of years bullish</td></tr>
               <tr><td>No clear tendency</td><td>everything in between</td></tr>
-              <tr><td style="color:#f08080">Leaning bearish</td><td>average &lt; 0 and win rate ≤ 40%</td></tr>
-              <tr><td style="color:var(--negative)">Historically bearish</td><td>average &lt; 0 and win rate ≤ 30%</td></tr>
+              <tr><td style="color:#f08080">Leaning bearish</td><td>average &lt; 0 and ≥ 60% of years bearish</td></tr>
+              <tr><td style="color:var(--negative)">Historically bearish</td><td>average &lt; 0 and ≥ 70% of years bearish</td></tr>
             </tbody>
           </table>
         </div>
         <div class="method-block">
-          <h3>Seasonal path</h3>
-          <p class="method-text">For every complete year, the daily closes are turned into the cumulative change since the last close of the previous year. These yearly paths are averaged day by day into the <strong>typical path</strong>. The current year is drawn on top so you can see whether the market is running with or against its usual pattern.</p>
-          <div class="method-formula">Path(day) = Close(day) / Close(last day of prior year) − 1
-Typical   = average of Path(day) across the years</div>
-          <p class="method-note">Seasonality describes historical tendencies, not forecasts. Central bank decisions, geopolitics and positioning can override any seasonal pattern. Small samples (e.g. 5 years) are easily driven by a single outlier year — check the heatmap for consistency.</p>
+          <h3>Reading the numbers</h3>
+          <p class="method-text">The <strong>average</strong> shows how big the typical move was, the <strong>bullish / bearish count</strong> shows how consistent it was. A month is only a reliable pattern when both point the same way.</p>
+          <p class="method-text">If the average is positive but most years were bearish (or the median is negative), a single strong year is driving the result — check the heatmap to see which one.</p>
+          <p class="method-note">Seasonality describes historical tendencies, not forecasts. Central bank decisions, geopolitics and positioning can override any seasonal pattern. Small samples (e.g. 5 years) are easily driven by a single outlier year.</p>
         </div>
       </div>
     </div>
@@ -458,7 +454,7 @@ const FIRST_YEAR = CY - 21;
 const DAY = 86400000;
 
 let sym = 'OANDA:EUR_USD', years = 10, focusMonth = CM, loadId = 0;
-let cur = { monthly: null, daily: null };
+let cur = { monthly: null };
 
 /* ── DATA ── */
 const delay = ms => new Promise(r => setTimeout(r, ms));
@@ -498,18 +494,11 @@ function fetchDaily(s) {
     return { t, c: t.map(x => map.get(x)) };
   });
 }
-/* full daily history is only kept for the symbol on screen (it's ~100 KB) */
-async function getDaily(s) {
-  const k = 'seas:D:' + s, hit = cacheGet(k); if (hit) return hit;
-  const d = await fetchDaily(s);
-  try { Object.keys(localStorage).filter(x => x.startsWith('seas:D:') && x !== k).forEach(x => localStorage.removeItem(x)); } catch {}
-  cacheSet(k, d); return d;
-}
 /* month-end closes (key = year*12 + month), derived from daily candles */
 function getMonthEnds(s) {
   return once('ME:' + s, async () => {
     const k = 'seas:ME:' + s, hit = cacheGet(k); if (hit) return hit;
-    const d = cacheGet('seas:D:' + s) || await fetchDaily(s), last = new Map();
+    const d = await fetchDaily(s), last = new Map();
     d.t.forEach((t, i) => { const x = sessionDate(t); last.set(x.getUTCFullYear() * 12 + x.getUTCMonth(), d.c[i]); });
     const keys = [...last.keys()].sort((a, b) => a - b), out = { k: keys, c: keys.map(x => last.get(x)) };
     cacheSet(k, out); return out;
@@ -541,36 +530,16 @@ function monthStats(ret, mo) {
   if (!vals.length) return { n: 0 };
   const v = vals.map(x => x.v);
   const best = vals.reduce((a, b) => b.v > a.v ? b : a), worst = vals.reduce((a, b) => b.v < a.v ? b : a);
-  return { n: v.length, avg: avg(v), med: median(v), win: v.filter(x => x > 0).length / v.length, up: v.filter(x => x > 0).length, best, worst };
+  const up = v.filter(x => x > 0).length, down = v.filter(x => x < 0).length;
+  return { n: v.length, avg: avg(v), med: median(v), win: up / v.length, lose: down / v.length, up, down, best, worst };
 }
 function tendency(st) {
   if (!st.n || st.n < 5) return { label: 'Not enough data', cls: 'neutral' };
   if (st.avg > 0 && st.win >= 0.7) return { label: 'Historically bullish', cls: 'bull-strong' };
   if (st.avg > 0 && st.win >= 0.6) return { label: 'Leaning bullish', cls: 'bull' };
-  if (st.avg < 0 && st.win <= 0.3) return { label: 'Historically bearish', cls: 'bear-strong' };
-  if (st.avg < 0 && st.win <= 0.4) return { label: 'Leaning bearish', cls: 'bear' };
+  if (st.avg < 0 && st.lose >= 0.7) return { label: 'Historically bearish', cls: 'bear-strong' };
+  if (st.avg < 0 && st.lose >= 0.6) return { label: 'Leaning bearish', cls: 'bear' };
   return { label: 'No clear tendency', cls: 'neutral' };
-}
-
-const doyOf = d => Math.round((Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - Date.UTC(d.getUTCFullYear(), 0, 1)) / DAY);
-/* cumulative change since the prior year's last close, per day of year (0..365) */
-function yearPaths(daily) {
-  const pts = {}, last = {};
-  daily.t.forEach((t, i) => {
-    const d = sessionDate(t), y = d.getUTCFullYear();
-    (pts[y] ||= []).push([doyOf(d), daily.c[i]]);
-    last[y] = daily.c[i];
-  });
-  const paths = {};
-  Object.keys(pts).map(Number).forEach(y => {
-    const base = last[y - 1]; if (!base) return;
-    const p = pts[y], complete = p[0][0] <= 10 && p[p.length - 1][0] >= 355;
-    const end = y === CY ? doyOf(NOW) : 365, arr = Array(366).fill(null);
-    let j = 0, val = 0;
-    for (let d = 0; d <= end; d++) { while (j < p.length && p[j][0] <= d) val = p[j++][1] / base - 1; arr[d] = val; }
-    paths[y] = { arr, complete };
-  });
-  return paths;
 }
 
 /* ── FORMAT ── */
@@ -592,12 +561,12 @@ function renderSummary() {
   el.innerHTML = `
     <div class="sum-pair">${a.label}</div>
     <div class="sum-tend ${t.cls}">${t.label}</div>
-    <div class="sum-line">Average <strong class="${cls(st.avg)}">${pct(st.avg)}</strong> in ${MONTHS_LONG[focusMonth]}, higher in <strong>${st.up} of ${st.n}</strong> years.</div>
-    <div class="winbar" title="Win rate ${Math.round(st.win * 100)}%"><i style="width:${st.win * 100}%"></i></div>
+    <div class="sum-line">Average <strong class="${cls(st.avg)}">${pct(st.avg)}</strong> in ${MONTHS_LONG[focusMonth]} · <strong class="up">${st.up} bullish</strong> · <strong class="down">${st.down} bearish</strong> of ${st.n} years</div>
+    <div class="winbar" title="${st.up} bullish / ${st.down} bearish years"><i style="width:${st.up / st.n * 100}%"></i>${st.n - st.up - st.down ? `<i style="width:${(st.n - st.up - st.down) / st.n * 100}%;background:#4d7a96"></i>` : ''}</div>
     <div class="sum-stats">
       <div class="stat"><span>Average</span><b class="${cls(st.avg)}">${pct(st.avg)}</b></div>
       <div class="stat"><span>Median</span><b class="${cls(st.med)}">${pct(st.med)}</b></div>
-      <div class="stat"><span>Win rate</span><b>${Math.round(st.win * 100)}%</b> <small>${st.up}/${st.n}</small></div>
+      <div class="stat"><span>Bullish / Bearish</span><b class="updown"><span class="up">▲ ${st.up}</span><span class="down">▼ ${st.down}</span></b></div>
       <div class="stat"><span>${thisLabel}</span><b class="${cls(thisYear)}">${focusMonth > CM ? '–' : pct(thisYear)}</b></div>
       <div class="stat"><span>Best year</span><b class="up">${pct(st.best.v)}</b> <small>${st.best.y}</small></div>
       <div class="stat"><span>Worst year</span><b class="down">${pct(st.worst.v)}</b> <small>${st.worst.y}</small></div>
@@ -611,7 +580,7 @@ function renderBars() {
   const box = document.getElementById('barChart');
   if (!cur.monthly) return;
   const ret = monthlyReturns(cur.monthly), stats = MONTHS.map((_, m) => monthStats(ret, m));
-  const W = svgW(box), H = 280, L = 46, R = 8, T = 26, Bm = 46, ih = H - T - Bm, iw = W - L - R, slot = iw / 12;
+  const W = svgW(box), H = 292, L = 46, R = 8, T = 26, Bm = 58, ih = H - T - Bm, iw = W - L - R, slot = iw / 12;
   const mx = Math.max(0.002, ...stats.map(s => Math.abs(s.avg || 0))) * 1.18;
   const y = v => T + ih / 2 - (v / mx) * (ih / 2), showVals = slot >= 44, fs = slot < 34 ? 9 : 11;
   let g = '';
@@ -626,53 +595,19 @@ function renderBars() {
     if (s.n) {
       const y0 = y(0), y1 = y(s.avg), top = Math.min(y0, y1), h = Math.max(1.5, Math.abs(y1 - y0));
       const col = s.avg >= 0 ? '#3fb950' : '#f85149', strong = tendency(s).cls.includes('strong');
-      g += `<rect class="bar" data-m="${m}" x="${bx}" y="${top}" width="${bw}" height="${h}" rx="3" fill="${col}" fill-opacity="${strong ? 1 : 0.6}"><title>${MONTHS_LONG[m]}: average ${pct(s.avg)}, higher in ${s.up} of ${s.n} years</title></rect>`;
+      g += `<rect class="bar" data-m="${m}" x="${bx}" y="${top}" width="${bw}" height="${h}" rx="3" fill="${col}" fill-opacity="${strong ? 1 : 0.6}"><title>${MONTHS_LONG[m]}: average ${pct(s.avg)}, ${s.up} bullish / ${s.down} bearish of ${s.n} years</title></rect>`;
       if (showVals) g += `<text class="val" x="${bx + bw / 2}" y="${s.avg >= 0 ? top - 5 : top + h + 12}" text-anchor="middle" fill="${col}">${pct(s.avg)}</text>`;
     }
     g += `<rect class="bar" data-m="${m}" x="${x}" y="${H - Bm + 6}" width="${slot}" height="${Bm - 6}" fill="transparent"/>`;
     g += `<text class="ax-m${m === focusMonth ? ' cur' : ''}" style="font-size:${fs}px" x="${x + slot / 2}" y="${H - Bm + 22}" text-anchor="middle" pointer-events="none">${MONTHS[m]}</text>`;
-    g += `<text class="ax" x="${x + slot / 2}" y="${H - Bm + 38}" text-anchor="middle" pointer-events="none" fill="${s.n && s.win >= 0.6 ? '#3fb950' : s.n && s.win <= 0.4 ? '#f85149' : '#4d7a96'}" style="font-size:${Math.min(10, fs)}px;fill:${s.n && s.win >= 0.6 ? '#3fb950' : s.n && s.win <= 0.4 ? '#f85149' : '#4d7a96'}">${s.n ? Math.round(s.win * 100) + '%' : '–'}</text>`;
+    if (s.n) {
+      const cfs = Math.min(10, fs);
+      g += `<text class="cnt" x="${x + slot / 2}" y="${H - Bm + 37}" text-anchor="middle" pointer-events="none" style="font-size:${cfs}px;fill:#3fb950">▲${s.up}</text>`;
+      g += `<text class="cnt" x="${x + slot / 2}" y="${H - Bm + 37 + cfs + 4}" text-anchor="middle" pointer-events="none" style="font-size:${cfs}px;fill:#f85149">▼${s.down}</text>`;
+    }
   });
   box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${g}</svg>`;
   box.querySelectorAll('.bar').forEach(b => b.addEventListener('click', () => setFocus(+b.dataset.m)));
-}
-
-/* ── RENDER: SEASONAL CURVE ── */
-function renderCurve() {
-  const box = document.getElementById('curveChart');
-  if (!cur.daily) return;
-  const paths = yearPaths(cur.daily), ys = statYears().filter(y => paths[y]?.complete);
-  if (!ys.length) { box.innerHTML = '<div class="panel-error">Not enough daily history for this period.</div>'; return; }
-  const typ = Array.from({ length: 366 }, (_, d) => avg(ys.map(y => paths[y].arr[d])));
-  const now = paths[CY]?.arr || [], today = doyOf(NOW);
-  document.getElementById('curveSub').textContent = `Typical path ${ys[0]}–${ys[ys.length - 1]} (${ys.length} years) vs ${CY}`;
-  const vals = [...typ, ...now.filter(v => v != null), 0];
-  let lo = Math.min(...vals), hi = Math.max(...vals); const pad = (hi - lo) * 0.12 || 0.01; lo -= pad; hi += pad;
-  const W = svgW(box), H = 300, L = 50, R = 12, T = 14, Bm = 28, iw = W - L - R, ih = H - T - Bm;
-  const x = d => L + d / 365 * iw, y = v => T + (hi - v) / (hi - lo) * ih, fs = iw / 12 < 34 ? 9 : 11;
-  let g = `<defs><linearGradient id="ga" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#51d7ce" stop-opacity=".28"/><stop offset="1" stop-color="#51d7ce" stop-opacity="0"/></linearGradient></defs>`;
-  for (let i = 0; i <= 4; i++) {
-    const v = lo + (hi - lo) * i / 4, yy = y(v);
-    g += `<line x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}" stroke="#1a4d6e" stroke-dasharray="3 4"/><text class="ax" x="${L - 6}" y="${yy + 3}" text-anchor="end">${pct(v, 1)}</text>`;
-  }
-  g += `<line x1="${L}" x2="${W - R}" y1="${y(0)}" y2="${y(0)}" stroke="#4d7a96"/>`;
-  MONTHS.forEach((mn, m) => {
-    const d = doyOf(new Date(Date.UTC(2023, m, 1))), xx = x(d);
-    g += `<line x1="${xx}" x2="${xx}" y1="${T}" y2="${H - Bm}" stroke="#1a4d6e" stroke-opacity=".5"/><text class="ax-m${m === CM ? ' cur' : ''}" style="font-size:${fs}px" x="${xx + iw / 24}" y="${H - 8}" text-anchor="middle">${mn}</text>`;
-  });
-  const line = arr => arr.map((v, d) => v == null ? null : `${x(d).toFixed(1)},${y(v).toFixed(1)}`).filter(Boolean).join(' ');
-  g += `<polygon points="${x(0)},${y(0)} ${line(typ)} ${x(365)},${y(0)}" fill="url(#ga)"/>`;
-  g += `<polyline points="${line(typ)}" fill="none" stroke="#51d7ce" stroke-width="2.4" stroke-linejoin="round"/>`;
-  if (now.some(v => v != null)) {
-    g += `<polyline points="${line(now)}" fill="none" stroke="#e3b341" stroke-width="2" stroke-linejoin="round"/>`;
-    g += `<line x1="${x(today)}" x2="${x(today)}" y1="${T}" y2="${H - Bm}" stroke="#e3b341" stroke-dasharray="4 4" stroke-opacity=".7"/>`;
-    g += `<circle cx="${x(today)}" cy="${y(now[today])}" r="4" fill="#e3b341"/><circle cx="${x(today)}" cy="${y(typ[today])}" r="4" fill="#51d7ce"/>`;
-  }
-  box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${g}</svg>
-    <div class="legend">
-      <span><i style="background:#51d7ce"></i>Typical path · by today <strong class="${cls(typ[today])}">${pct(typ[today])}</strong>, full year <strong class="${cls(typ[365])}">${pct(typ[365])}</strong></span>
-      ${now.some(v => v != null) ? `<span><i style="background:#e3b341"></i>${CY} so far <strong class="${cls(now[today])}">${pct(now[today])}</strong></span>` : ''}
-    </div>`;
 }
 
 /* ── RENDER: HEATMAP ── */
@@ -694,13 +629,14 @@ function renderHeatmap() {
   const stats = MONTHS.map((_, m) => monthStats(ret, m));
   const totals = ys.map(y => yearTotal(ret[y])).filter(v => v != null);
   rows += `<tr class="sum"><td class="yr">Average</td>${stats.map(s => cell(s.n ? s.avg : null)).join('')}${cell(totals.length ? avg(totals) : null, ' tot')}</tr>`;
-  rows += `<tr class="sum"><td class="yr">Win %</td>${stats.map(s => s.n ? `<td style="color:${s.win >= 0.6 ? '#3fb950' : s.win <= 0.4 ? '#f85149' : 'var(--text-secondary)'}">${Math.round(s.win * 100)}</td>` : '<td class="empty">–</td>').join('')}<td>${totals.length ? Math.round(totals.filter(v => v > 0).length / totals.length * 100) : '–'}</td></tr>`;
+  const ud = (u, d) => `<td><span class="up">${u}</span><span style="color:var(--text-muted)">/</span><span class="down">${d}</span></td>`;
+  rows += `<tr class="sum"><td class="yr" title="bullish / bearish years">▲ / ▼</td>${stats.map(s => s.n ? ud(s.up, s.down) : '<td class="empty">–</td>').join('')}${totals.length ? ud(totals.filter(v => v > 0).length, totals.filter(v => v < 0).length) : '<td class="empty">–</td>'}</tr>`;
   box.innerHTML = `<table class="heat"><thead><tr><th style="text-align:left">Year</th>${MONTHS.map((mn, m) => `<th class="${m === CM ? 'cur' : ''}">${mn}</th>`).join('')}<th>Year</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 /* ── RENDER: SCREENER ── */
 let screenerData = {}, screenerLoading = false;
-try { Object.keys(localStorage).filter(x => x.startsWith('seas:M:')).forEach(x => localStorage.removeItem(x)); } catch {}
+try { Object.keys(localStorage).filter(x => x.startsWith('seas:M:') || x.startsWith('seas:D:')).forEach(x => localStorage.removeItem(x)); } catch {}
 async function loadScreener() {
   if (screenerLoading) return;
   screenerLoading = true;
@@ -730,7 +666,7 @@ function renderScreener() {
   const failed = ASSETS.length - rows.length;
   if (!rows.length) { box.innerHTML = '<div class="panel-error">Could not load data. Please reload the page.</div>'; return; }
   const mx = Math.max(...rows.map(r => Math.abs(r.st.avg))) || 0.01;
-  box.innerHTML = `<div class="scr-row head"><span>#</span><span>Symbol</span><span style="text-align:center">Average return</span><span class="scr-num">Avg</span><span class="scr-win">Win</span><span class="scr-n">Yrs</span></div>` +
+  box.innerHTML = `<div class="scr-row head"><span>#</span><span>Symbol</span><span style="text-align:center">Average return</span><span class="scr-num">Avg</span><span class="scr-win" title="bullish / bearish years">▲ / ▼</span><span class="scr-n">Yrs</span></div>` +
     rows.map((r, i) => {
       const w = Math.abs(r.st.avg) / mx * 50, pos = r.st.avg >= 0, t = tendency(r.st);
       const col = pos ? '#3fb950' : '#f85149';
@@ -739,7 +675,7 @@ function renderScreener() {
         <span class="scr-pair${r.a.type === 'metal' ? ' metal' : ''}">${r.a.label}</span>
         <span class="scr-bar"><i style="${pos ? `left:50%` : `right:50%`};width:${w}%;background:${col};opacity:${t.cls.includes('strong') ? 1 : 0.6}"></i></span>
         <span class="scr-num ${cls(r.st.avg)}">${pct(r.st.avg)}</span>
-        <span class="scr-win" style="color:${r.st.win >= 0.6 ? '#3fb950' : r.st.win <= 0.4 ? '#f85149' : ''}">${Math.round(r.st.win * 100)}%</span>
+        <span class="scr-win"><span class="up">${r.st.up}</span>/<span class="down">${r.st.down}</span></span>
         <span class="scr-n">${r.st.n}</span>
       </div>`;
     }).join('') + (failed ? `<div class="sum-note">${failed} symbol(s) could not be loaded.</div>` : '');
@@ -777,23 +713,20 @@ function setFocus(m) {
   focusMonth = m;
   renderSummary(); renderBars(); renderScreener();
 }
-function renderAll() { renderSummary(); renderBars(); renderHeatmap(); renderCurve(); }
+function renderAll() { renderSummary(); renderBars(); renderHeatmap(); }
 
 const spinner = '<div class="card-loading"><div class="spinner"></div></div>';
 async function loadSymbol() {
   const id = ++loadId;
-  cur = { monthly: null, daily: null };
-  ['summary', 'barChart', 'heatmap', 'curveChart'].forEach(i => document.getElementById(i).innerHTML = spinner);
-  document.getElementById('curveSub').textContent = '';
+  cur = { monthly: null };
+  ['summary', 'barChart', 'heatmap'].forEach(i => document.getElementById(i).innerHTML = spinner);
   const fail = ids => ids.forEach(i => document.getElementById(i).innerHTML = '<div class="panel-error">Could not load data. Please try again.</div>');
   getMonthEnds(sym).then(m => { if (id !== loadId) return; cur.monthly = m; renderSummary(); renderBars(); renderHeatmap(); })
     .catch(() => id === loadId && fail(['summary', 'barChart', 'heatmap']));
-  getDaily(sym).then(d => { if (id !== loadId) return; cur.daily = d; renderCurve(); })
-    .catch(() => id === loadId && fail(['curveChart']));
 }
 
 let rz;
-window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { renderBars(); renderCurve(); }, 150); });
+window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(renderBars, 150); });
 
 buildControls();
 loadSymbol();
