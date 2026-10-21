@@ -319,6 +319,12 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
         <span class="tf-hint">Only divergences confirmed within the last N candles.</span>
       </div>
       <hr class="ctrl-divider" />
+      <div class="ctrl-row">
+        <span class="ctrl-label">Min. RSI diff</span>
+        <div class="tf-chips" id="minDiffChips"></div>
+        <span class="tf-hint">Hides tiny divergences: RSI must differ by at least this many points between the two pivots.</span>
+      </div>
+      <hr class="ctrl-divider" />
       <div class="scan-row">
         <div class="scan-meta">
           <span><strong id="selectedCount">0</strong> symbol<span id="symPlural">s</span> × <strong id="tfCount">0</strong> timeframe<span id="tfPlural">s</span></span>
@@ -353,7 +359,8 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
           <p class="method-text">RSI uses Wilder's smoothing over 14 candle closes — the standard used by TradingView and most platforms. A <strong>pivot</strong> is an RSI low (or high) that is lower (or higher) than the 5 candles on each side. Price is compared at the same candles: the candle low for bullish setups, the candle high for bearish ones.</p>
           <div class="method-formula">RSI      = 100 − 100 / (1 + avg gain / avg loss)   (Wilder, 14)
 Pivot    = RSI extreme with 5 candles left and right
-Distance = 5 to 60 candles between the two pivots</div>
+Distance = 5 to 60 candles between the two pivots
+Min diff = |RSI at pivot 2 − RSI at pivot 1| ≥ 2 to 10 points (selectable)</div>
           <p class="method-note">A pivot needs 5 more candles to be confirmed, so every divergence appears 5 candles after the actual turning point — exactly like TradingView. Only completed candles are used, so signals never repaint.</p>
         </div>
         <div class="method-block">
@@ -429,11 +436,12 @@ const TYPES = {
   hbear: { label:'Hidden bearish',  desc:'Price lower high · RSI higher high', side:'bear' },
 };
 const FRESH = [3, 5, 10, 20];
+const MIN_DIFF = [2, 4, 6, 8, 10];
 
 let activeAssets = new Set(ASSETS.map(a => a.sym));
 let activeTfs = new Set(TFS.map(t => t.id));
 let activeTypes = new Set(['rbull', 'rbear']);
-let fresh = 10, scanning = false, found = [], failedSets = 0, totalSets = 0, lastScan = null;
+let fresh = 10, minDiff = 2, scanning = false, found = [], failedSets = 0, totalSets = 0, lastScan = null;
 
 /* ── MATH ── */
 function rsi(close, n = RSI_LEN) {
@@ -553,6 +561,7 @@ function buildControls() {
   chipRow('assetChips', ASSETS.map(a => ({ v:a.sym, label:a.label, cls:'asset-chip' + (a.type === 'metal' ? ' metal' : '') })), v => activeAssets.has(v), v => { activeAssets.has(v) ? activeAssets.delete(v) : activeAssets.add(v); buildControls(); });
   chipRow('tfChips', TFS.map(t => ({ v:t.id, label:t.label })), v => activeTfs.has(v), v => { if (activeTfs.has(v)) { if (activeTfs.size > 1) activeTfs.delete(v); } else activeTfs.add(v); buildControls(); });
   chipRow('typeChips', Object.entries(TYPES).map(([k, t]) => ({ v:k, label:t.label, cls:'tf-chip type-chip ' + k })), v => activeTypes.has(v), v => { if (activeTypes.has(v)) { if (activeTypes.size > 1) activeTypes.delete(v); } else activeTypes.add(v); buildControls(); render(); });
+  chipRow('minDiffChips', MIN_DIFF.map(n => ({ v:n, label:`${n} pts` })), v => +v === minDiff, v => { minDiff = +v; buildControls(); render(); });
   chipRow('freshChips', FRESH.map(n => ({ v:n, label:`${n} candles` })), v => +v === fresh, v => { fresh = +v; buildControls(); render(); });
   document.getElementById('selectedCount').textContent = activeAssets.size;
   document.getElementById('tfCount').textContent = activeTfs.size;
@@ -604,7 +613,7 @@ const ago = d => d.barsAgo === 0 ? 'on the last closed candle' : `${d.barsAgo} c
 function render() {
   if (!lastScan) return;
   const grid = document.getElementById('divGrid'), bar = document.getElementById('summaryBar');
-  const visible = found.filter(d => d.barsAgo < fresh && activeTypes.has(d.type))
+  const visible = found.filter(d => d.barsAgo < fresh && activeTypes.has(d.type) && Math.abs(d.osc[d.p1] - d.osc[d.p0]) >= minDiff)
     .sort((x, y) => y.at - x.at || y.tf.sec - x.tf.sec);
   const counts = Object.keys(TYPES).filter(k => activeTypes.has(k)).map(k =>
     `<span class="sum-pill"><span class="div-type ${k}" style="padding:0;font-size:12px">${TYPES[k].label}</span><b>${visible.filter(d => d.type === k).length}</b></span>`).join('');
@@ -615,7 +624,7 @@ function render() {
     return;
   }
   if (!visible.length) {
-    grid.innerHTML = `<div class="state-box" style="grid-column:1/-1;padding:50px 24px"><div class="state-icon">🔍</div><div class="state-title">No fresh divergences</div><div class="state-sub">None of the selected pairs shows a divergence confirmed within the last ${fresh} candles. Try more timeframes, a longer freshness window or include hidden divergences.</div></div>`;
+    grid.innerHTML = `<div class="state-box" style="grid-column:1/-1;padding:50px 24px"><div class="state-icon">🔍</div><div class="state-title">No fresh divergences</div><div class="state-sub">None of the selected pairs shows a divergence of at least ${minDiff} RSI points confirmed within the last ${fresh} candles. Try more timeframes, a longer freshness window, a lower minimum RSI difference or include hidden divergences.</div></div>`;
     return;
   }
   grid.innerHTML = visible.map(card).join('');
