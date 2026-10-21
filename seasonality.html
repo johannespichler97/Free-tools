@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Seasonality | Market Analytics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-primary:    #062434;
+  --bg-secondary:  #0a2e44;
+  --bg-tertiary:   #0e3a54;
+  --bg-hover:      #123f5c;
+  --border:        #1a4d6e;
+  --text-primary:  #E6E9EB;
+  --text-secondary:#8ab8d0;
+  --text-muted:    #4d7a96;
+  --accent:        #2FA3E0;
+  --accent-2:      #51d7ce;
+  --accent-dim:    rgba(47,163,224,0.12);
+  --positive:      #3fb950;
+  --positive-bg:   rgba(63,185,80,0.10);
+  --negative:      #f85149;
+  --negative-bg:   rgba(248,81,73,0.10);
+  --warn:          #e3b341;
+  --warn-bg:       rgba(227,179,65,0.10);
+  --font:          'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono:     'JetBrains Mono', monospace;
+  --radius-sm:     6px;
+  --radius-md:     10px;
+  --radius-lg:     14px;
+}
+
+html { scroll-behavior: smooth; }
+body { font-family: var(--font); background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; font-size: 14px; line-height: 1.5; }
+
+@keyframes pulse   { 0%,100%{opacity:1} 50%{opacity:0.4} }
+@keyframes spin    { to{transform:rotate(360deg)} }
+@keyframes fadeIn  { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+/* ── HEADER ── */
+.header { position:sticky; top:0; z-index:200; background:rgba(6,36,52,0.97); backdrop-filter:blur(12px); border-bottom:1px solid var(--border); }
+.header-inner { max-width:1200px; margin:0 auto; padding:0 24px; height:60px; display:flex; align-items:center; gap:32px; }
+.logo { display:flex; align-items:center; gap:8px; text-decoration:none; color:var(--text-primary); font-size:16px; font-weight:700; white-space:nowrap; }
+.logo-text strong { color:var(--accent); }
+
+.nav { display:flex; gap:1px; flex:1; align-items:center; }
+.nav-link { text-decoration:none; color:var(--text-secondary); padding:6px 9px; border-radius:var(--radius-sm); font-size:12.5px; font-weight:500; transition:all .15s; white-space:nowrap; }
+.nav-link:hover { color:var(--text-primary); background:var(--bg-hover); }
+.nav-link.active { color:var(--accent); background:var(--accent-dim); }
+
+.nav-dropdown { position:relative; }
+.dropdown-btn { background:none; border:none; font-family:var(--font); cursor:pointer; display:flex; align-items:center; gap:5px; color:var(--text-secondary); padding:6px 9px; border-radius:var(--radius-sm); font-size:12.5px; font-weight:500; transition:all .15s; white-space:nowrap; }
+.dropdown-btn:hover { color:var(--text-primary); background:var(--bg-hover); }
+.dropdown-btn.active { color:var(--accent); background:var(--accent-dim); }
+.dropdown-btn svg { transition:transform .2s; }
+.nav-dropdown:hover .dropdown-btn svg,
+.nav-dropdown.open .dropdown-btn svg { transform:rotate(180deg); }
+.dropdown-menu { display:none; position:absolute; top:calc(100% + 6px); left:0; background:rgba(6,36,52,0.99); border:1px solid var(--border); border-radius:var(--radius-md); min-width:190px; padding:4px 0; z-index:300; backdrop-filter:blur(12px); box-shadow:0 8px 24px rgba(0,0,0,0.4); }
+.nav-dropdown:hover .dropdown-menu,
+.nav-dropdown.open .dropdown-menu { display:block; }
+.dropdown-item { display:block; padding:9px 16px; color:var(--text-secondary); text-decoration:none; font-size:12.5px; font-weight:500; transition:all .15s; white-space:nowrap; }
+.dropdown-item:hover { color:var(--text-primary); background:var(--bg-hover); }
+.dropdown-item.active { color:var(--accent); }
+
+.header-actions { display:flex; align-items:center; gap:12px; }
+.live-badge { font-size:11px; font-weight:600; color:var(--positive); letter-spacing:.05em; display:flex; align-items:center; gap:5px; }
+.live-dot { animation:pulse 2s infinite; }
+.btn-primary { background:linear-gradient(135deg,#51d7ce,#2FA3E0); color:#062434; border:none; padding:7px 18px; border-radius:20px; font-size:13px; font-weight:700; cursor:pointer; transition:opacity .15s; font-family:var(--font); }
+.btn-primary:hover { opacity:.88; }
+
+.hamburger { display:none; flex-direction:column; justify-content:center; gap:5px; background:none; border:none; padding:6px; cursor:pointer; border-radius:6px; transition:background .15s; margin-left:auto; }
+.hamburger:hover { background:var(--bg-hover); }
+.hamburger span { display:block; width:22px; height:2px; background:var(--text-primary); border-radius:1px; transition:all .25s; }
+.hamburger.open span:nth-child(1) { transform:translateY(7px) rotate(45deg); }
+.hamburger.open span:nth-child(2) { opacity:0; }
+.hamburger.open span:nth-child(3) { transform:translateY(-7px) rotate(-45deg); }
+
+@media(max-width:980px) {
+  .hamburger { display:flex; }
+  .header-inner { position:relative; flex-wrap:nowrap; }
+  .nav { display:none; position:absolute; top:60px; left:0; right:0; z-index:99; flex-direction:column; align-items:stretch; gap:0; padding:6px 0; background:rgba(6,36,52,0.98); border-bottom:1px solid var(--border); backdrop-filter:blur(12px); }
+  .nav.open { display:flex; }
+  .nav-link { padding:13px 22px; border-radius:0; font-size:14px; border-bottom:1px solid rgba(26,77,110,0.4); }
+  .nav-dropdown { position:static; }
+  .dropdown-btn { padding:13px 22px; border-radius:0; font-size:14px; border-bottom:1px solid rgba(26,77,110,0.4); width:100%; justify-content:space-between; }
+  .dropdown-menu { display:none; position:static; border:none; border-radius:0; padding:0; background:var(--bg-tertiary); box-shadow:none; backdrop-filter:none; }
+  .nav-dropdown.open .dropdown-menu { display:block; }
+  .nav-dropdown:hover .dropdown-menu { display:none; }
+  .nav-dropdown.open .dropdown-menu { display:block; }
+  .dropdown-item { padding:11px 32px; font-size:13px; border-bottom:1px solid rgba(26,77,110,0.3); }
+  .dropdown-item:last-child { border-bottom:none; }
+  .header-actions .btn-primary { display:none; }
+}
+
+/* ── HERO ── */
+.hero { background:linear-gradient(135deg,#062434 0%,#0a2e44 60%,#0d3550 100%); border-bottom:1px solid var(--border); padding:28px 24px; }
+.hero-inner { max-width:1200px; margin:0 auto; }
+.hero h1 { font-size:26px; font-weight:700; }
+.hero h1::after { content:''; display:block; width:40px; height:3px; background:linear-gradient(90deg,#51d7ce,#2FA3E0); border-radius:2px; margin-top:10px; }
+.hero p { color:var(--text-secondary); font-size:15px; margin-top:10px; }
+
+/* ── CONTROLS ── */
+.controls-bar { background:var(--bg-primary); border-bottom:1px solid var(--border); padding:12px 24px; }
+.controls-box { max-width:1248px; margin:0 auto; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); padding:16px 18px; display:flex; flex-direction:column; gap:14px; }
+.ctrl-row { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.ctrl-label { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.07em; white-space:nowrap; min-width:80px; }
+.ctrl-divider { border:none; border-top:1px solid var(--border); margin:0; }
+
+.asset-chips { display:flex; flex-wrap:wrap; gap:5px; flex:1; }
+.asset-chip { padding:4px 10px; border-radius:20px; font-size:12px; font-weight:600; cursor:pointer; transition:all .15s; border:1.5px solid var(--border); color:var(--text-muted); background:var(--bg-tertiary); user-select:none; white-space:nowrap; opacity:.55; }
+.asset-chip:hover { opacity:.85; border-color:var(--text-muted); }
+.asset-chip.active { opacity:1; border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
+.asset-chip.metal.active { border-color:var(--accent-2); color:var(--accent-2); background:rgba(81,215,206,0.10); }
+
+.chip-actions { display:flex; gap:6px; }
+.chip-action-btn { padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; cursor:pointer; border:1px solid var(--border); background:transparent; color:var(--text-muted); font-family:var(--font); transition:all .15s; }
+.chip-action-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+.tf-chips { display:flex; gap:5px; flex-wrap:wrap; }
+.tf-chip { padding:5px 14px; border-radius:20px; font-size:12px; font-weight:700; cursor:pointer; transition:all .15s; border:1.5px solid var(--border); color:var(--text-muted); background:var(--bg-tertiary); user-select:none; opacity:.55; }
+.tf-chip:hover { opacity:.85; }
+.tf-chip.active { opacity:1; border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
+.tf-hint { font-size:11.5px; color:var(--text-muted); }
+
+/* multi-timeframe card */
+.align-text { font-size:12px; color:var(--text-muted); text-align:center; }
+.align-text strong { color:var(--text-primary); }
+.mtf-rows { display:flex; flex-direction:column; gap:7px; }
+.mtf-row { display:grid; grid-template-columns:34px 1fr 88px 40px; align-items:center; gap:10px; font-size:12px; min-height:20px; }
+.mtf-row.head { font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--text-muted); min-height:0; }
+.mtf-row.head span:nth-child(3) { text-align:center; } .mtf-row.head span:nth-child(4) { text-align:right; }
+.mtf-tf { font-family:var(--font-mono); font-weight:700; color:var(--text-secondary); }
+.mtf-bar { height:6px; display:flex; gap:1px; border-radius:3px; overflow:hidden; background:var(--bg-tertiary); }
+.mtf-bar i { display:block; height:100%; }
+.mtf-sig { font-size:10px; font-weight:800; letter-spacing:.03em; text-transform:uppercase; text-align:center; padding:3px 0; border-radius:10px; white-space:nowrap; }
+.mtf-sig.strong-buy  { color:#3fb950; background:rgba(63,185,80,.14); }
+.mtf-sig.buy         { color:#8dd9a0; background:rgba(141,217,160,.10); }
+.mtf-sig.neutral     { color:var(--text-muted); background:rgba(77,122,150,.15); }
+.mtf-sig.sell        { color:#f08080; background:rgba(240,128,128,.10); }
+.mtf-sig.strong-sell { color:#f85149; background:rgba(248,81,73,.14); }
+.mtf-adx { font-family:var(--font-mono); font-size:11px; text-align:right; color:var(--text-muted); }
+.mtf-adx.trend { color:var(--accent); font-weight:700; }
+.mtf-wait { grid-column:2 / -1; height:6px; border-radius:3px; background:linear-gradient(90deg,var(--bg-tertiary) 25%,var(--bg-hover) 50%,var(--bg-tertiary) 75%); background-size:300px 100%; animation:shimmer 1.3s infinite; }
+.mtf-err { grid-column:2 / -1; font-size:11px; color:var(--text-muted); }
+@keyframes shimmer { 0%{background-position:-300px 0} 100%{background-position:300px 0} }
+
+.scan-row { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+.scan-meta { font-size:12px; color:var(--text-muted); display:flex; align-items:center; gap:12px; }
+.scan-meta strong { color:var(--accent); }
+.last-update { font-family:var(--font-mono); font-size:11px; color:var(--text-muted); }
+.btn-scan { background:linear-gradient(135deg,#51d7ce,#2FA3E0); color:#062434; border:none; padding:10px 28px; border-radius:20px; font-size:14px; font-weight:700; cursor:pointer; font-family:var(--font); transition:opacity .15s; display:flex; align-items:center; gap:8px; }
+.btn-scan:hover { opacity:.88; }
+.btn-scan:disabled { opacity:.45; cursor:not-allowed; }
+
+/* ── MAIN ── */
+.main { max-width:1248px; margin:0 auto; padding:20px 24px 60px; }
+
+/* ── STATE BOX ── */
+.state-box { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:80px 24px; gap:14px; text-align:center; color:var(--text-muted); background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); }
+.state-icon { font-size:44px; opacity:.3; }
+.state-title { font-size:17px; font-weight:600; color:var(--text-secondary); }
+.state-sub { font-size:13px; max-width:400px; line-height:1.6; }
+
+/* loading state */
+.card-loading { display:flex; align-items:center; justify-content:center; padding:40px; }
+.spinner { width:28px; height:28px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .7s linear infinite; }
+
+/* error state */
+.card-error { padding:20px 16px; text-align:center; color:var(--text-muted); font-size:12px; }
+
+/* ── METHODOLOGY ── */
+.method-card { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); padding:28px; }
+.method-card h2 { font-size:16px; font-weight:700; margin-bottom:20px; color:var(--text-primary); display:flex; align-items:center; gap:10px; }
+.method-card h2::after { content:''; flex:1; height:1px; background:var(--border); }
+.method-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+@media(max-width:700px){ .method-grid { grid-template-columns:1fr; } }
+.method-block { min-width:0; background:var(--bg-tertiary); border:1px solid var(--border); border-radius:var(--radius-md); padding:16px; }
+.method-block h3 { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--accent); margin-bottom:12px; }
+.method-text { font-size:12.5px; color:var(--text-secondary); line-height:1.7; margin-bottom:10px; }
+.method-formula { font-family:var(--font-mono); background:var(--bg-primary); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px 14px; font-size:12px; color:var(--text-primary); margin:10px 0; line-height:1.8; overflow-x:auto; white-space:pre; }
+.method-table { width:100%; border-collapse:collapse; margin-top:10px; }
+.method-table th { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); padding:5px 8px; border-bottom:1px solid var(--border); text-align:left; }
+.method-table td { font-size:12px; padding:6px 8px; border-bottom:1px solid rgba(26,77,110,0.3); color:var(--text-secondary); }
+.method-table tr:last-child td { border-bottom:none; }
+.method-note { font-size:11.5px; color:var(--text-muted); line-height:1.6; margin-top:14px; border-top:1px solid var(--border); padding-top:14px; }
+
+/* ── FOOTER ── */
+.footer { background:var(--bg-secondary); border-top:1px solid var(--border); padding:24px; }
+.footer-inner { max-width:1200px; margin:0 auto; text-align:center; }
+.footer-disclaimer { font-size:12px; color:var(--text-muted); line-height:1.6; }
+.footer-copy { font-size:12px; color:var(--text-muted); margin-top:6px; }
+
+@media(max-width:640px) { .header-inner,.main,.controls-bar { padding-left:16px; padding-right:16px; } }
+.tf-hint { font-size:11.5px; color:var(--text-muted); }
+
+/* ── LAYOUT ── */
+.main { display:flex; flex-direction:column; gap:20px; }
+.s-grid { display:grid; grid-template-columns:minmax(260px, 340px) 1fr; gap:20px; }
+@media(max-width:900px){ .s-grid { grid-template-columns:1fr; } }
+.panel { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); padding:20px; min-width:0; animation:fadeIn .25s ease; }
+.panel-head { display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
+.panel-head h2 { font-size:15px; font-weight:700; }
+.panel-sub { font-size:11.5px; color:var(--text-muted); }
+.chart-box { width:100%; }
+.chart-box svg { display:block; width:100%; height:auto; }
+.panel-error { padding:30px 10px; text-align:center; color:var(--text-muted); font-size:13px; }
+
+/* ── SUMMARY ── */
+.sum-pair { font-family:var(--font-mono); font-size:13px; color:var(--text-secondary); }
+.sum-tend { font-size:22px; font-weight:800; letter-spacing:.01em; margin:6px 0 2px; }
+.sum-tend.bull-strong { color:#3fb950; } .sum-tend.bull { color:#8dd9a0; }
+.sum-tend.neutral { color:var(--text-secondary); }
+.sum-tend.bear { color:#f08080; } .sum-tend.bear-strong { color:#f85149; }
+.sum-line { font-size:13px; color:var(--text-secondary); line-height:1.6; }
+.sum-line strong { color:var(--text-primary); }
+.sum-stats { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:16px; }
+.stat { background:var(--bg-tertiary); border:1px solid var(--border); border-radius:var(--radius-md); padding:10px 12px; }
+.stat span { display:block; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--text-muted); }
+.stat b { font-family:var(--font-mono); font-size:16px; }
+.stat small { font-size:11px; color:var(--text-muted); font-family:var(--font-mono); }
+.up { color:#3fb950; } .down { color:#f85149; }
+.winbar { height:6px; border-radius:3px; background:rgba(248,81,73,.55); overflow:hidden; margin-top:8px; }
+.winbar i { display:block; height:100%; background:#3fb950; }
+.sum-note { margin-top:14px; font-size:11px; color:var(--text-muted); line-height:1.5; }
+
+/* ── CHART TEXT ── */
+.ax { font-family:'JetBrains Mono',monospace; font-size:10px; fill:#4d7a96; }
+.ax-m { font-family:Inter,sans-serif; font-size:11px; font-weight:600; fill:#8ab8d0; }
+.ax-m.cur { fill:#2FA3E0; }
+.val { font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:600; }
+.bar { cursor:pointer; transition:opacity .15s; }
+.bar:hover { opacity:.8; }
+.legend { display:flex; gap:18px; flex-wrap:wrap; font-size:12px; color:var(--text-secondary); margin-top:10px; }
+.legend i { display:inline-block; width:18px; height:3px; border-radius:2px; vertical-align:middle; margin-right:6px; }
+
+/* ── HEATMAP ── */
+.heat-wrap { overflow-x:auto; }
+.heat { width:100%; border-collapse:separate; border-spacing:3px; min-width:760px; font-family:var(--font-mono); font-size:11px; }
+.heat th { font-family:var(--font); font-size:10.5px; font-weight:700; color:var(--text-muted); padding:4px 2px; text-align:center; }
+.heat th.cur { color:var(--accent); }
+.heat td { text-align:center; padding:7px 2px; border-radius:4px; color:var(--text-primary); white-space:nowrap; }
+.heat td.yr { text-align:left; color:var(--text-secondary); font-weight:600; padding-left:4px; background:none; }
+.heat td.empty { color:var(--text-muted); background:rgba(14,58,84,.35); }
+.heat td.mtd { font-style:italic; outline:1px dashed var(--accent); outline-offset:-1px; }
+.heat tr.cy td.yr { color:var(--accent); }
+.heat tr.sum td { font-weight:700; border-top:1px solid var(--border); }
+.heat tr.sum td.yr { color:var(--text-primary); }
+.heat td.tot { font-weight:700; }
+
+/* ── SCREENER ── */
+.scr-row { display:grid; grid-template-columns:28px 86px 1fr 70px 64px 40px; align-items:center; gap:12px; padding:8px 10px; border-radius:var(--radius-sm); cursor:pointer; font-size:12.5px; }
+.scr-row:hover { background:var(--bg-hover); }
+.scr-row.sel { background:var(--accent-dim); }
+.scr-row.head { cursor:default; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--text-muted); }
+.scr-row.head:hover { background:none; }
+.scr-rank { font-family:var(--font-mono); color:var(--text-muted); }
+.scr-pair { font-family:var(--font-mono); font-weight:700; }
+.scr-pair.metal { color:var(--accent-2); }
+.scr-bar { position:relative; height:10px; }
+.scr-bar::before { content:''; position:absolute; left:50%; top:-3px; bottom:-3px; width:1px; background:var(--border); }
+.scr-bar i { position:absolute; top:0; height:100%; border-radius:3px; }
+.scr-num { font-family:var(--font-mono); text-align:right; }
+.scr-win { font-family:var(--font-mono); text-align:right; color:var(--text-secondary); }
+.scr-n { font-family:var(--font-mono); text-align:right; color:var(--text-muted); font-size:11px; }
+.scr-tag { font-size:10px; font-weight:700; }
+@media(max-width:640px){
+  .controls-box .ctrl-row .ctrl-label { flex-basis:100%; }
+  .scr-row { grid-template-columns:16px 62px minmax(36px,1fr) 54px 32px; gap:6px; padding:8px 6px; font-size:11.5px; }
+  .scr-row.head span:nth-child(3) { visibility:hidden; }
+  .scr-n { display:none; }
+}
+  </style>
+</head>
+<body>
+
+  <header class="header">
+    <div class="header-inner">
+      <a href="economic-calendar.html" class="logo">
+        <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+          <defs><linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#51d7ce"/><stop offset="100%" stop-color="#2FA3E0"/></linearGradient></defs>
+          <circle cx="18" cy="18" r="16.5" stroke="url(#lg)" stroke-width="2" fill="none"/>
+          <rect x="8" y="20" width="4" height="8" rx="1" fill="url(#lg)"/>
+          <rect x="14" y="15" width="4" height="13" rx="1" fill="url(#lg)"/>
+          <rect x="20" y="11" width="4" height="17" rx="1" fill="url(#lg)"/>
+          <polyline points="22,9 27,9 27,14" stroke="url(#lg)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <line x1="14" y1="21" x2="27" y2="9" stroke="url(#lg)" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <span class="logo-text">Market<strong>Analytics</strong></span>
+      </a>
+      <nav class="nav" id="mainNav">
+        <a href="economic-calendar.html"    class="nav-link">Economic Calendar</a>
+        <a href="challenges.html"           class="nav-link">Challenges</a>
+        <a href="market-news.html"          class="nav-link">Market News</a>
+        <a href="trend-bias.html"           class="nav-link">Trend Bias</a>
+        <a href="currency-strength.html"    class="nav-link">Currency Strength</a>
+        <a href="volatility-scanner.html"   class="nav-link">Volatility</a>
+        <a href="correlation-matrix.html"   class="nav-link">Correlation</a>
+        <div class="nav-dropdown" id="moreDropdown">
+          <button class="dropdown-btn active" id="moreToolsBtn" onclick="toggleDropdown(event)">
+            More Tools
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><polyline points="2,3 5,7 8,3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div class="dropdown-menu" id="moreToolsMenu">
+            <a href="aggregate-signal.html"         class="dropdown-item">Aggregate Signal</a>
+            <a href="seasonality.html"              class="dropdown-item active">Seasonality</a>
+            <a href="pattern-recognition.html"      class="dropdown-item">Pattern Recognition</a>
+            <a href="support-resistance.html"       class="dropdown-item">Support / Resistance</a>
+            <a href="trading-sessions.html"         class="dropdown-item">Trading Sessions</a>
+            <a href="position-size-calculator.html" class="dropdown-item">Position Size</a>
+          </div>
+        </div>
+      </nav>
+      <button class="hamburger" id="hamburger" aria-label="Open navigation">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="header-actions">
+        <span class="live-badge"><span class="live-dot">&#9679;</span> LIVE</span>
+        <button class="btn-primary">Open Account</button>
+      </div>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-inner">
+      <h1>Seasonality</h1>
+      <p>How each currency pair and metal has historically performed in every month of the year — average returns, win rates, the typical path through the year and a ranking for any month.</p>
+    </div>
+  </section>
+
+  <div class="controls-bar">
+    <div class="controls-box">
+      <div class="ctrl-row">
+        <span class="ctrl-label">Symbol</span>
+        <div class="asset-chips" id="assetChips"></div>
+      </div>
+      <hr class="ctrl-divider" />
+      <div class="ctrl-row">
+        <span class="ctrl-label">Lookback</span>
+        <div class="tf-chips" id="yearChips"></div>
+        <span class="tf-hint" id="periodHint"></span>
+      </div>
+    </div>
+  </div>
+
+  <main class="main">
+    <div class="s-grid">
+      <section class="panel" id="summaryPanel">
+        <div class="panel-head"><h2 id="sumTitle">This month</h2><span class="panel-sub" id="sumSub"></span></div>
+        <div id="summary"><div class="card-loading"><div class="spinner"></div></div></div>
+      </section>
+      <section class="panel">
+        <div class="panel-head"><h2>Average return by month</h2><span class="panel-sub">Bar = average · % = years positive · click a month</span></div>
+        <div id="barChart" class="chart-box"><div class="card-loading"><div class="spinner"></div></div></div>
+      </section>
+    </div>
+
+    <section class="panel">
+      <div class="panel-head"><h2>Seasonal path through the year</h2><span class="panel-sub" id="curveSub"></span></div>
+      <div id="curveChart" class="chart-box"><div class="card-loading"><div class="spinner"></div></div></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h2>Monthly returns by year</h2><span class="panel-sub">Monthly change in %, green = up, red = down</span></div>
+      <div id="heatmap" class="heat-wrap"><div class="card-loading"><div class="spinner"></div></div></div>
+    </section>
+
+    <section class="panel" id="screenerPanel">
+      <div class="panel-head"><h2>Seasonality screener</h2><span class="panel-sub" id="scrSub"></span></div>
+      <div class="ctrl-row" style="margin-bottom:14px;">
+        <span class="ctrl-label">Month</span>
+        <div class="tf-chips" id="monthChips"></div>
+      </div>
+      <div id="screener"><div class="card-loading"><div class="spinner"></div></div></div>
+    </section>
+
+    <div class="method-card">
+      <h2>Methodology</h2>
+      <div class="method-grid">
+        <div class="method-block">
+          <h3>Monthly statistics</h3>
+          <p class="method-text">Each month's return is the change from the previous month's close to that month's close. Statistics use the selected number of <strong>complete calendar years</strong>; the current, unfinished year is shown separately and never included in the averages.</p>
+          <div class="method-formula">Return(month)  = Close(month) / Close(previous month) − 1
+Average        = mean of that month's returns across the years
+Win rate       = share of years in which the month closed higher</div>
+          <table class="method-table">
+            <thead><tr><th>Label</th><th>Rule (at least 5 years of data)</th></tr></thead>
+            <tbody>
+              <tr><td style="color:var(--positive)">Historically bullish</td><td>average &gt; 0 and win rate ≥ 70%</td></tr>
+              <tr><td style="color:#8dd9a0">Leaning bullish</td><td>average &gt; 0 and win rate ≥ 60%</td></tr>
+              <tr><td>No clear tendency</td><td>everything in between</td></tr>
+              <tr><td style="color:#f08080">Leaning bearish</td><td>average &lt; 0 and win rate ≤ 40%</td></tr>
+              <tr><td style="color:var(--negative)">Historically bearish</td><td>average &lt; 0 and win rate ≤ 30%</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="method-block">
+          <h3>Seasonal path</h3>
+          <p class="method-text">For every complete year, the daily closes are turned into the cumulative change since the last close of the previous year. These yearly paths are averaged day by day into the <strong>typical path</strong>. The current year is drawn on top so you can see whether the market is running with or against its usual pattern.</p>
+          <div class="method-formula">Path(day) = Close(day) / Close(last day of prior year) − 1
+Typical   = average of Path(day) across the years</div>
+          <p class="method-note">Seasonality describes historical tendencies, not forecasts. Central bank decisions, geopolitics and positioning can override any seasonal pattern. Small samples (e.g. 5 years) are easily driven by a single outlier year — check the heatmap for consistency.</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+      <p class="footer-disclaimer">Seasonal statistics are calculated from historical market data and are for informational purposes only. Not financial advice. Past performance does not guarantee future results. Trading CFDs and Forex involves significant risk of loss.</p>
+      <p class="footer-copy">© <span id="yr"></span> Market Analytics</p>
+    </div>
+  </footer>
+
+<script>
+const API_KEY = 'd95lt2pr01qqtvdma7c0d95lt2pr01qqtvdma7cg';
+const BASE    = 'https://finnhub.io/api/v1';
+
+const ASSETS = [
+  { label:'EUR/USD', sym:'OANDA:EUR_USD', type:'fx' },
+  { label:'GBP/USD', sym:'OANDA:GBP_USD', type:'fx' },
+  { label:'USD/JPY', sym:'OANDA:USD_JPY', type:'fx' },
+  { label:'USD/CHF', sym:'OANDA:USD_CHF', type:'fx' },
+  { label:'AUD/USD', sym:'OANDA:AUD_USD', type:'fx' },
+  { label:'NZD/USD', sym:'OANDA:NZD_USD', type:'fx' },
+  { label:'USD/CAD', sym:'OANDA:USD_CAD', type:'fx' },
+  { label:'EUR/GBP', sym:'OANDA:EUR_GBP', type:'fx' },
+  { label:'EUR/JPY', sym:'OANDA:EUR_JPY', type:'fx' },
+  { label:'EUR/CHF', sym:'OANDA:EUR_CHF', type:'fx' },
+  { label:'EUR/AUD', sym:'OANDA:EUR_AUD', type:'fx' },
+  { label:'EUR/CAD', sym:'OANDA:EUR_CAD', type:'fx' },
+  { label:'EUR/NZD', sym:'OANDA:EUR_NZD', type:'fx' },
+  { label:'GBP/JPY', sym:'OANDA:GBP_JPY', type:'fx' },
+  { label:'GBP/CHF', sym:'OANDA:GBP_CHF', type:'fx' },
+  { label:'GBP/AUD', sym:'OANDA:GBP_AUD', type:'fx' },
+  { label:'GBP/CAD', sym:'OANDA:GBP_CAD', type:'fx' },
+  { label:'GBP/NZD', sym:'OANDA:GBP_NZD', type:'fx' },
+  { label:'AUD/JPY', sym:'OANDA:AUD_JPY', type:'fx' },
+  { label:'AUD/NZD', sym:'OANDA:AUD_NZD', type:'fx' },
+  { label:'AUD/CAD', sym:'OANDA:AUD_CAD', type:'fx' },
+  { label:'AUD/CHF', sym:'OANDA:AUD_CHF', type:'fx' },
+  { label:'NZD/JPY', sym:'OANDA:NZD_JPY', type:'fx' },
+  { label:'CAD/JPY', sym:'OANDA:CAD_JPY', type:'fx' },
+  { label:'CHF/JPY', sym:'OANDA:CHF_JPY', type:'fx' },
+  { label:'XAU/USD', sym:'OANDA:XAU_USD', type:'metal' },
+  { label:'XAG/USD', sym:'OANDA:XAG_USD', type:'metal' },
+];
+
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTHS_LONG = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const YEAR_OPTS = [5, 10, 15, 20];
+const NOW = new Date(), CY = NOW.getUTCFullYear(), CM = NOW.getUTCMonth();
+const FIRST_YEAR = CY - 21;
+const DAY = 86400000;
+
+let sym = 'OANDA:EUR_USD', years = 10, focusMonth = CM, loadId = 0;
+let cur = { monthly: null, daily: null };
+
+/* ── DATA ── */
+const delay = ms => new Promise(r => setTimeout(r, ms));
+async function fetchJson(url) {
+  let limited = 0;
+  for (let attempt = 0; ; ) {
+    try {
+      const res = await fetch(url);
+      if (res.status === 429 && limited < 6) { limited++; await delay(4000 * limited); continue; }
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      return data;
+    } catch (e) {
+      if (attempt++ < 2) await delay(700); else throw e;
+    }
+  }
+}
+function cacheGet(k) {
+  try { const v = JSON.parse(localStorage.getItem(k)); if (v && Date.now() - v.at < DAY) return v.data; } catch {}
+  return null;
+}
+function cacheSet(k, data) { try { localStorage.setItem(k, JSON.stringify({ at: Date.now(), data })); } catch {} }
+const inflight = {};
+const once = (key, fn) => inflight[key] || (inflight[key] = fn().catch(e => { delete inflight[key]; throw e; }));
+const candleUrl = (s, res, from, to) => `${BASE}/forex/candle?symbol=${encodeURIComponent(s)}&resolution=${res}&from=${from}&to=${to}&token=${API_KEY}`;
+
+/* daily candles are capped at ~2,100 per request, so load in 5-year chunks */
+function fetchDaily(s) {
+  return once('D:' + s, async () => {
+    const now = Math.floor(Date.now() / 1000), jobs = [];
+    for (let y = FIRST_YEAR; y <= CY; y += 5)
+      jobs.push(fetchJson(candleUrl(s, 'D', Date.UTC(y, 0, 1) / 1000, Math.min(Date.UTC(y + 5, 0, 1) / 1000 - 1, now))));
+    const parts = await Promise.all(jobs), map = new Map();
+    parts.forEach(d => { if (d.s === 'ok') d.t.forEach((t, i) => map.set(t, d.c[i])); });
+    if (!map.size) throw new Error('No data');
+    const t = [...map.keys()].sort((a, b) => a - b);
+    return { t, c: t.map(x => map.get(x)) };
+  });
+}
+/* full daily history is only kept for the symbol on screen (it's ~100 KB) */
+async function getDaily(s) {
+  const k = 'seas:D:' + s, hit = cacheGet(k); if (hit) return hit;
+  const d = await fetchDaily(s);
+  try { Object.keys(localStorage).filter(x => x.startsWith('seas:D:') && x !== k).forEach(x => localStorage.removeItem(x)); } catch {}
+  cacheSet(k, d); return d;
+}
+/* month-end closes (key = year*12 + month), derived from daily candles */
+function getMonthEnds(s) {
+  return once('ME:' + s, async () => {
+    const k = 'seas:ME:' + s, hit = cacheGet(k); if (hit) return hit;
+    const d = cacheGet('seas:D:' + s) || await fetchDaily(s), last = new Map();
+    d.t.forEach((t, i) => { const x = sessionDate(t); last.set(x.getUTCFullYear() * 12 + x.getUTCMonth(), d.c[i]); });
+    const keys = [...last.keys()].sort((a, b) => a - b), out = { k: keys, c: keys.map(x => last.get(x)) };
+    cacheSet(k, out); return out;
+  });
+}
+
+/* ── CALCULATIONS ── */
+/* FX daily candles are stamped with their open (21:00/22:00 UTC the evening before),
+   so the trading day they belong to is the next calendar day */
+const sessionDate = t => new Date((t + 6 * 3600) * 1000);
+
+/* Finnhub's own monthly candles group days by open timestamp and are shifted by one
+   trading day, so monthly returns are built from month-end daily closes instead */
+function monthlyReturns(me) {
+  const r = {};
+  for (let i = 1; i < me.k.length; i++) {
+    if (me.k[i] !== me.k[i - 1] + 1) continue;
+    const y = Math.floor(me.k[i] / 12), mo = me.k[i] % 12;
+    (r[y] ||= Array(12).fill(null))[mo] = me.c[i] / me.c[i - 1] - 1;
+  }
+  return r;
+}
+const statYears = () => Array.from({ length: years }, (_, i) => CY - years + i);
+const avg = a => a.reduce((s, v) => s + v, 0) / a.length;
+const median = a => { const s = [...a].sort((x, y) => x - y), h = s.length >> 1; return s.length % 2 ? s[h] : (s[h - 1] + s[h]) / 2; };
+
+function monthStats(ret, mo) {
+  const vals = statYears().map(y => ({ y, v: ret[y]?.[mo] })).filter(x => x.v != null);
+  if (!vals.length) return { n: 0 };
+  const v = vals.map(x => x.v);
+  const best = vals.reduce((a, b) => b.v > a.v ? b : a), worst = vals.reduce((a, b) => b.v < a.v ? b : a);
+  return { n: v.length, avg: avg(v), med: median(v), win: v.filter(x => x > 0).length / v.length, up: v.filter(x => x > 0).length, best, worst };
+}
+function tendency(st) {
+  if (!st.n || st.n < 5) return { label: 'Not enough data', cls: 'neutral' };
+  if (st.avg > 0 && st.win >= 0.7) return { label: 'Historically bullish', cls: 'bull-strong' };
+  if (st.avg > 0 && st.win >= 0.6) return { label: 'Leaning bullish', cls: 'bull' };
+  if (st.avg < 0 && st.win <= 0.3) return { label: 'Historically bearish', cls: 'bear-strong' };
+  if (st.avg < 0 && st.win <= 0.4) return { label: 'Leaning bearish', cls: 'bear' };
+  return { label: 'No clear tendency', cls: 'neutral' };
+}
+
+const doyOf = d => Math.round((Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - Date.UTC(d.getUTCFullYear(), 0, 1)) / DAY);
+/* cumulative change since the prior year's last close, per day of year (0..365) */
+function yearPaths(daily) {
+  const pts = {}, last = {};
+  daily.t.forEach((t, i) => {
+    const d = sessionDate(t), y = d.getUTCFullYear();
+    (pts[y] ||= []).push([doyOf(d), daily.c[i]]);
+    last[y] = daily.c[i];
+  });
+  const paths = {};
+  Object.keys(pts).map(Number).forEach(y => {
+    const base = last[y - 1]; if (!base) return;
+    const p = pts[y], complete = p[0][0] <= 10 && p[p.length - 1][0] >= 355;
+    const end = y === CY ? doyOf(NOW) : 365, arr = Array(366).fill(null);
+    let j = 0, val = 0;
+    for (let d = 0; d <= end; d++) { while (j < p.length && p[j][0] <= d) val = p[j++][1] / base - 1; arr[d] = val; }
+    paths[y] = { arr, complete };
+  });
+  return paths;
+}
+
+/* ── FORMAT ── */
+const pct = (v, dp = 2) => v == null ? '–' : (v >= 0 ? '+' : '') + (v * 100).toFixed(dp) + '%';
+const cls = v => v == null ? '' : v >= 0 ? 'up' : 'down';
+const assetOf = s => ASSETS.find(a => a.sym === s);
+const svgW = el => Math.max(300, Math.round(el.clientWidth || 700));
+
+/* ── RENDER: SUMMARY ── */
+function renderSummary() {
+  const el = document.getElementById('summary');
+  if (!cur.monthly) return;
+  const ret = monthlyReturns(cur.monthly), st = monthStats(ret, focusMonth), t = tendency(st), a = assetOf(sym);
+  document.getElementById('sumTitle').textContent = MONTHS_LONG[focusMonth] + (focusMonth === CM ? ' · this month' : '');
+  document.getElementById('sumSub').textContent = `${statYears()[0]}–${CY - 1}`;
+  if (!st.n) { el.innerHTML = '<div class="panel-error">No data for this period.</div>'; return; }
+  const thisYear = ret[CY]?.[focusMonth];
+  const thisLabel = focusMonth === CM ? `${CY} so far` : focusMonth > CM ? `${CY}` : `${CY}`;
+  el.innerHTML = `
+    <div class="sum-pair">${a.label}</div>
+    <div class="sum-tend ${t.cls}">${t.label}</div>
+    <div class="sum-line">Average <strong class="${cls(st.avg)}">${pct(st.avg)}</strong> in ${MONTHS_LONG[focusMonth]}, higher in <strong>${st.up} of ${st.n}</strong> years.</div>
+    <div class="winbar" title="Win rate ${Math.round(st.win * 100)}%"><i style="width:${st.win * 100}%"></i></div>
+    <div class="sum-stats">
+      <div class="stat"><span>Average</span><b class="${cls(st.avg)}">${pct(st.avg)}</b></div>
+      <div class="stat"><span>Median</span><b class="${cls(st.med)}">${pct(st.med)}</b></div>
+      <div class="stat"><span>Win rate</span><b>${Math.round(st.win * 100)}%</b> <small>${st.up}/${st.n}</small></div>
+      <div class="stat"><span>${thisLabel}</span><b class="${cls(thisYear)}">${focusMonth > CM ? '–' : pct(thisYear)}</b></div>
+      <div class="stat"><span>Best year</span><b class="up">${pct(st.best.v)}</b> <small>${st.best.y}</small></div>
+      <div class="stat"><span>Worst year</span><b class="down">${pct(st.worst.v)}</b> <small>${st.worst.y}</small></div>
+    </div>
+    ${st.n < years ? `<div class="sum-note">Only ${st.n} of ${years} years available for this symbol.</div>` : ''}
+    <div class="sum-note">Historical tendency, not a forecast.</div>`;
+}
+
+/* ── RENDER: BAR CHART ── */
+function renderBars() {
+  const box = document.getElementById('barChart');
+  if (!cur.monthly) return;
+  const ret = monthlyReturns(cur.monthly), stats = MONTHS.map((_, m) => monthStats(ret, m));
+  const W = svgW(box), H = 280, L = 46, R = 8, T = 26, Bm = 46, ih = H - T - Bm, iw = W - L - R, slot = iw / 12;
+  const mx = Math.max(0.002, ...stats.map(s => Math.abs(s.avg || 0))) * 1.18;
+  const y = v => T + ih / 2 - (v / mx) * (ih / 2), showVals = slot >= 44, fs = slot < 34 ? 9 : 11;
+  let g = '';
+  [-1, -0.5, 0, 0.5, 1].forEach(f => {
+    const v = f * mx / 1.18, yy = y(v);
+    g += `<line x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}" stroke="${f === 0 ? '#4d7a96' : '#1a4d6e'}" stroke-width="1" ${f === 0 ? '' : 'stroke-dasharray="3 4"'}/>`;
+    g += `<text class="ax" x="${L - 6}" y="${yy + 3}" text-anchor="end">${pct(v, 1)}</text>`;
+  });
+  stats.forEach((s, m) => {
+    const x = L + m * slot, bw = Math.min(34, slot * 0.62), bx = x + (slot - bw) / 2;
+    if (m === focusMonth) g += `<rect x="${x + 1}" y="${T - 18}" width="${slot - 2}" height="${H - T}" rx="6" fill="rgba(47,163,224,.10)" stroke="rgba(47,163,224,.45)"/>`;
+    if (s.n) {
+      const y0 = y(0), y1 = y(s.avg), top = Math.min(y0, y1), h = Math.max(1.5, Math.abs(y1 - y0));
+      const col = s.avg >= 0 ? '#3fb950' : '#f85149', strong = tendency(s).cls.includes('strong');
+      g += `<rect class="bar" data-m="${m}" x="${bx}" y="${top}" width="${bw}" height="${h}" rx="3" fill="${col}" fill-opacity="${strong ? 1 : 0.6}"><title>${MONTHS_LONG[m]}: average ${pct(s.avg)}, higher in ${s.up} of ${s.n} years</title></rect>`;
+      if (showVals) g += `<text class="val" x="${bx + bw / 2}" y="${s.avg >= 0 ? top - 5 : top + h + 12}" text-anchor="middle" fill="${col}">${pct(s.avg)}</text>`;
+    }
+    g += `<rect class="bar" data-m="${m}" x="${x}" y="${H - Bm + 6}" width="${slot}" height="${Bm - 6}" fill="transparent"/>`;
+    g += `<text class="ax-m${m === focusMonth ? ' cur' : ''}" style="font-size:${fs}px" x="${x + slot / 2}" y="${H - Bm + 22}" text-anchor="middle" pointer-events="none">${MONTHS[m]}</text>`;
+    g += `<text class="ax" x="${x + slot / 2}" y="${H - Bm + 38}" text-anchor="middle" pointer-events="none" fill="${s.n && s.win >= 0.6 ? '#3fb950' : s.n && s.win <= 0.4 ? '#f85149' : '#4d7a96'}" style="font-size:${Math.min(10, fs)}px;fill:${s.n && s.win >= 0.6 ? '#3fb950' : s.n && s.win <= 0.4 ? '#f85149' : '#4d7a96'}">${s.n ? Math.round(s.win * 100) + '%' : '–'}</text>`;
+  });
+  box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${g}</svg>`;
+  box.querySelectorAll('.bar').forEach(b => b.addEventListener('click', () => setFocus(+b.dataset.m)));
+}
+
+/* ── RENDER: SEASONAL CURVE ── */
+function renderCurve() {
+  const box = document.getElementById('curveChart');
+  if (!cur.daily) return;
+  const paths = yearPaths(cur.daily), ys = statYears().filter(y => paths[y]?.complete);
+  if (!ys.length) { box.innerHTML = '<div class="panel-error">Not enough daily history for this period.</div>'; return; }
+  const typ = Array.from({ length: 366 }, (_, d) => avg(ys.map(y => paths[y].arr[d])));
+  const now = paths[CY]?.arr || [], today = doyOf(NOW);
+  document.getElementById('curveSub').textContent = `Typical path ${ys[0]}–${ys[ys.length - 1]} (${ys.length} years) vs ${CY}`;
+  const vals = [...typ, ...now.filter(v => v != null), 0];
+  let lo = Math.min(...vals), hi = Math.max(...vals); const pad = (hi - lo) * 0.12 || 0.01; lo -= pad; hi += pad;
+  const W = svgW(box), H = 300, L = 50, R = 12, T = 14, Bm = 28, iw = W - L - R, ih = H - T - Bm;
+  const x = d => L + d / 365 * iw, y = v => T + (hi - v) / (hi - lo) * ih, fs = iw / 12 < 34 ? 9 : 11;
+  let g = `<defs><linearGradient id="ga" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#51d7ce" stop-opacity=".28"/><stop offset="1" stop-color="#51d7ce" stop-opacity="0"/></linearGradient></defs>`;
+  for (let i = 0; i <= 4; i++) {
+    const v = lo + (hi - lo) * i / 4, yy = y(v);
+    g += `<line x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}" stroke="#1a4d6e" stroke-dasharray="3 4"/><text class="ax" x="${L - 6}" y="${yy + 3}" text-anchor="end">${pct(v, 1)}</text>`;
+  }
+  g += `<line x1="${L}" x2="${W - R}" y1="${y(0)}" y2="${y(0)}" stroke="#4d7a96"/>`;
+  MONTHS.forEach((mn, m) => {
+    const d = doyOf(new Date(Date.UTC(2023, m, 1))), xx = x(d);
+    g += `<line x1="${xx}" x2="${xx}" y1="${T}" y2="${H - Bm}" stroke="#1a4d6e" stroke-opacity=".5"/><text class="ax-m${m === CM ? ' cur' : ''}" style="font-size:${fs}px" x="${xx + iw / 24}" y="${H - 8}" text-anchor="middle">${mn}</text>`;
+  });
+  const line = arr => arr.map((v, d) => v == null ? null : `${x(d).toFixed(1)},${y(v).toFixed(1)}`).filter(Boolean).join(' ');
+  g += `<polygon points="${x(0)},${y(0)} ${line(typ)} ${x(365)},${y(0)}" fill="url(#ga)"/>`;
+  g += `<polyline points="${line(typ)}" fill="none" stroke="#51d7ce" stroke-width="2.4" stroke-linejoin="round"/>`;
+  if (now.some(v => v != null)) {
+    g += `<polyline points="${line(now)}" fill="none" stroke="#e3b341" stroke-width="2" stroke-linejoin="round"/>`;
+    g += `<line x1="${x(today)}" x2="${x(today)}" y1="${T}" y2="${H - Bm}" stroke="#e3b341" stroke-dasharray="4 4" stroke-opacity=".7"/>`;
+    g += `<circle cx="${x(today)}" cy="${y(now[today])}" r="4" fill="#e3b341"/><circle cx="${x(today)}" cy="${y(typ[today])}" r="4" fill="#51d7ce"/>`;
+  }
+  box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${g}</svg>
+    <div class="legend">
+      <span><i style="background:#51d7ce"></i>Typical path · by today <strong class="${cls(typ[today])}">${pct(typ[today])}</strong>, full year <strong class="${cls(typ[365])}">${pct(typ[365])}</strong></span>
+      ${now.some(v => v != null) ? `<span><i style="background:#e3b341"></i>${CY} so far <strong class="${cls(now[today])}">${pct(now[today])}</strong></span>` : ''}
+    </div>`;
+}
+
+/* ── RENDER: HEATMAP ── */
+function renderHeatmap() {
+  const box = document.getElementById('heatmap');
+  if (!cur.monthly) return;
+  const ret = monthlyReturns(cur.monthly), ys = statYears();
+  const all = ys.flatMap(y => ret[y] || []).filter(v => v != null).map(Math.abs).sort((a, b) => a - b);
+  const cap = all[Math.floor(all.length * 0.9)] || 0.01;
+  const bg = v => v == null ? '' : `background:${v >= 0 ? 'rgba(63,185,80,' : 'rgba(248,81,73,'}${(0.1 + Math.min(1, Math.abs(v) / cap) * 0.6).toFixed(2)})`;
+  const yearTotal = arr => { const v = (arr || []).filter(x => x != null); return v.length ? v.reduce((p, r) => p * (1 + r), 1) - 1 : null; };
+  const cell = (v, extra = '') => v == null ? `<td class="empty${extra}">–</td>` : `<td class="${extra.trim()}" style="${bg(v)}">${(v * 100).toFixed(1)}</td>`;
+  let rows = '';
+  const cyArr = ret[CY] || [];
+  rows += `<tr class="cy"><td class="yr">${CY} YTD</td>${MONTHS.map((_, m) => m > CM ? '<td class="empty"></td>' : cell(cyArr[m], m === CM ? ' mtd' : '')).join('')}${cell(yearTotal(cyArr.slice(0, CM + 1)), ' tot')}</tr>`;
+  [...ys].reverse().forEach(y => {
+    rows += `<tr><td class="yr">${y}</td>${MONTHS.map((_, m) => cell(ret[y]?.[m])).join('')}${cell(yearTotal(ret[y]), ' tot')}</tr>`;
+  });
+  const stats = MONTHS.map((_, m) => monthStats(ret, m));
+  const totals = ys.map(y => yearTotal(ret[y])).filter(v => v != null);
+  rows += `<tr class="sum"><td class="yr">Average</td>${stats.map(s => cell(s.n ? s.avg : null)).join('')}${cell(totals.length ? avg(totals) : null, ' tot')}</tr>`;
+  rows += `<tr class="sum"><td class="yr">Win %</td>${stats.map(s => s.n ? `<td style="color:${s.win >= 0.6 ? '#3fb950' : s.win <= 0.4 ? '#f85149' : 'var(--text-secondary)'}">${Math.round(s.win * 100)}</td>` : '<td class="empty">–</td>').join('')}<td>${totals.length ? Math.round(totals.filter(v => v > 0).length / totals.length * 100) : '–'}</td></tr>`;
+  box.innerHTML = `<table class="heat"><thead><tr><th style="text-align:left">Year</th>${MONTHS.map((mn, m) => `<th class="${m === CM ? 'cur' : ''}">${mn}</th>`).join('')}<th>Year</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+/* ── RENDER: SCREENER ── */
+let screenerData = {}, screenerLoading = false;
+try { Object.keys(localStorage).filter(x => x.startsWith('seas:M:')).forEach(x => localStorage.removeItem(x)); } catch {}
+async function loadScreener() {
+  if (screenerLoading) return;
+  screenerLoading = true;
+  const box = document.getElementById('screener');
+  const todo = ASSETS.filter(a => !screenerData[a.sym]);
+  let done = ASSETS.length - todo.length, next = 0;
+  const progress = () => { if (done < ASSETS.length) box.innerHTML = `<div class="card-loading" style="flex-direction:column;gap:10px;"><div class="spinner"></div><span class="panel-sub">Loading ${done} of ${ASSETS.length} symbols…</span></div>`; };
+  progress();
+  const worker = async () => {
+    while (next < todo.length) {
+      const a = todo[next++];
+      try { screenerData[a.sym] = monthlyReturns(await getMonthEnds(a.sym)); } catch { screenerData[a.sym] = null; }
+      done++; progress();
+    }
+  };
+  await Promise.all(Array.from({ length: 3 }, worker));
+  screenerLoading = false;
+  renderScreener();
+}
+function renderScreener() {
+  const box = document.getElementById('screener'), ys = statYears();
+  document.getElementById('scrSub').textContent = `${MONTHS_LONG[focusMonth]} · ${ys[0]}–${ys[ys.length - 1]} · ranked by average return · click a row to open it`;
+  document.querySelectorAll('#monthChips .tf-chip').forEach(c => c.classList.toggle('active', +c.dataset.m === focusMonth));
+  if (screenerLoading) return;
+  const rows = ASSETS.map(a => ({ a, st: screenerData[a.sym] ? monthStats(screenerData[a.sym], focusMonth) : { n: 0 } }))
+    .filter(r => r.st.n).sort((p, q) => q.st.avg - p.st.avg);
+  const failed = ASSETS.length - rows.length;
+  if (!rows.length) { box.innerHTML = '<div class="panel-error">Could not load data. Please reload the page.</div>'; return; }
+  const mx = Math.max(...rows.map(r => Math.abs(r.st.avg))) || 0.01;
+  box.innerHTML = `<div class="scr-row head"><span>#</span><span>Symbol</span><span style="text-align:center">Average return</span><span class="scr-num">Avg</span><span class="scr-win">Win</span><span class="scr-n">Yrs</span></div>` +
+    rows.map((r, i) => {
+      const w = Math.abs(r.st.avg) / mx * 50, pos = r.st.avg >= 0, t = tendency(r.st);
+      const col = pos ? '#3fb950' : '#f85149';
+      return `<div class="scr-row${r.a.sym === sym ? ' sel' : ''}" data-sym="${r.a.sym}" title="${t.label}">
+        <span class="scr-rank">${i + 1}</span>
+        <span class="scr-pair${r.a.type === 'metal' ? ' metal' : ''}">${r.a.label}</span>
+        <span class="scr-bar"><i style="${pos ? `left:50%` : `right:50%`};width:${w}%;background:${col};opacity:${t.cls.includes('strong') ? 1 : 0.6}"></i></span>
+        <span class="scr-num ${cls(r.st.avg)}">${pct(r.st.avg)}</span>
+        <span class="scr-win" style="color:${r.st.win >= 0.6 ? '#3fb950' : r.st.win <= 0.4 ? '#f85149' : ''}">${Math.round(r.st.win * 100)}%</span>
+        <span class="scr-n">${r.st.n}</span>
+      </div>`;
+    }).join('') + (failed ? `<div class="sum-note">${failed} symbol(s) could not be loaded.</div>` : '');
+  box.querySelectorAll('.scr-row[data-sym]').forEach(r => r.addEventListener('click', () => { setSymbol(r.dataset.sym); window.scrollTo({ top: 0, behavior: 'smooth' }); }));
+}
+
+/* ── CONTROLS ── */
+function buildControls() {
+  document.getElementById('assetChips').innerHTML = ASSETS.map(a =>
+    `<span class="asset-chip${a.type === 'metal' ? ' metal' : ''}${a.sym === sym ? ' active' : ''}" data-sym="${a.sym}">${a.label}</span>`).join('');
+  document.querySelectorAll('#assetChips .asset-chip').forEach(c => c.addEventListener('click', () => setSymbol(c.dataset.sym)));
+  document.getElementById('yearChips').innerHTML = YEAR_OPTS.map(n => `<span class="tf-chip${n === years ? ' active' : ''}" data-y="${n}">${n} years</span>`).join('');
+  document.querySelectorAll('#yearChips .tf-chip').forEach(c => c.addEventListener('click', () => setYears(+c.dataset.y)));
+  document.getElementById('monthChips').innerHTML = MONTHS.map((mn, m) => `<span class="tf-chip${m === focusMonth ? ' active' : ''}" data-m="${m}">${mn}</span>`).join('');
+  document.querySelectorAll('#monthChips .tf-chip').forEach(c => c.addEventListener('click', () => setFocus(+c.dataset.m)));
+  updateHint();
+}
+function updateHint() {
+  const ys = statYears();
+  document.getElementById('periodHint').textContent = `Statistics use ${ys[0]}–${ys[ys.length - 1]} (${years} complete years). ${CY} is shown separately.`;
+}
+function setSymbol(s) {
+  if (s === sym) return;
+  sym = s;
+  document.querySelectorAll('#assetChips .asset-chip').forEach(c => c.classList.toggle('active', c.dataset.sym === s));
+  loadSymbol();
+  renderScreener();
+}
+function setYears(n) {
+  years = n;
+  document.querySelectorAll('#yearChips .tf-chip').forEach(c => c.classList.toggle('active', +c.dataset.y === n));
+  updateHint(); renderAll(); renderScreener();
+}
+function setFocus(m) {
+  focusMonth = m;
+  renderSummary(); renderBars(); renderScreener();
+}
+function renderAll() { renderSummary(); renderBars(); renderHeatmap(); renderCurve(); }
+
+const spinner = '<div class="card-loading"><div class="spinner"></div></div>';
+async function loadSymbol() {
+  const id = ++loadId;
+  cur = { monthly: null, daily: null };
+  ['summary', 'barChart', 'heatmap', 'curveChart'].forEach(i => document.getElementById(i).innerHTML = spinner);
+  document.getElementById('curveSub').textContent = '';
+  const fail = ids => ids.forEach(i => document.getElementById(i).innerHTML = '<div class="panel-error">Could not load data. Please try again.</div>');
+  getMonthEnds(sym).then(m => { if (id !== loadId) return; cur.monthly = m; renderSummary(); renderBars(); renderHeatmap(); })
+    .catch(() => id === loadId && fail(['summary', 'barChart', 'heatmap']));
+  getDaily(sym).then(d => { if (id !== loadId) return; cur.daily = d; renderCurve(); })
+    .catch(() => id === loadId && fail(['curveChart']));
+}
+
+let rz;
+window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { renderBars(); renderCurve(); }, 150); });
+
+buildControls();
+loadSymbol();
+loadScreener();
+
+/* ── NAV ── */
+function toggleDropdown(e) {
+  e.stopPropagation();
+  const dd = document.getElementById('moreDropdown');
+  dd.classList.toggle('open');
+}
+document.addEventListener('click', () => {
+  document.getElementById('moreDropdown')?.classList.remove('open');
+});
+document.getElementById('hamburger').addEventListener('click', () => {
+  document.getElementById('mainNav').classList.toggle('open');
+  document.getElementById('hamburger').classList.toggle('open');
+});
+
+document.getElementById('yr').textContent = CY;
+</script>
+</body>
+</html>
