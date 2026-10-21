@@ -187,6 +187,8 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 .method-table th { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); padding:5px 8px; border-bottom:1px solid var(--border); text-align:left; }
 .method-table td { font-size:12px; padding:6px 8px; border-bottom:1px solid rgba(26,77,110,0.3); color:var(--text-secondary); }
 .method-table tr:last-child td { border-bottom:none; }
+.method-steps { margin:4px 0 12px 20px; display:grid; gap:7px; font-size:12.5px; color:var(--text-secondary); line-height:1.6; }
+.method-steps strong { color:var(--text-primary); }
 .method-note { font-size:11.5px; color:var(--text-muted); line-height:1.6; margin-top:14px; border-top:1px solid var(--border); padding-top:14px; }
 
 /* ── FOOTER ── */
@@ -360,7 +362,7 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
           <div class="method-formula">RSI      = 100 − 100 / (1 + avg gain / avg loss)   (Wilder, 14)
 Pivot    = RSI extreme with 5 candles left and right
 Distance = 5 to 60 candles between the two pivots
-Min diff = |RSI at pivot 2 − RSI at pivot 1| ≥ 2 to 10 points (selectable)</div>
+Min diff = |RSI P2 − RSI P1| ≥ 2–10 points</div>
           <p class="method-note">A pivot needs 5 more candles to be confirmed, so every divergence appears 5 candles after the actual turning point — exactly like TradingView. Only completed candles are used, so signals never repaint.</p>
         </div>
         <div class="method-block">
@@ -375,6 +377,23 @@ Min diff = |RSI at pivot 2 − RSI at pivot 1| ≥ 2 to 10 points (selectable)</
             </tbody>
           </table>
           <p class="method-note">Divergences marked <strong>oversold</strong> (RSI below 30) or <strong>overbought</strong> (RSI above 70) at the pivot are considered stronger. A divergence is a warning sign, not an entry signal on its own — combine it with structure, trend and risk management. 4h candles are built from 1h data starting at 17:00 New York time, matching the FX session used by TradingView.</p>
+        </div>
+
+        <div class="method-block" style="grid-column:1 / -1;">
+          <h3>When is a divergence confirmed?</h3>
+          <p class="method-text">A divergence is listed as soon as the pattern is <strong>complete and can no longer change</strong>. Example for a bullish divergence:</p>
+          <ol class="method-steps">
+            <li><strong>First low (P1):</strong> the RSI forms a low — lower than the 5 candles before and the 5 candles after it.</li>
+            <li><strong>Second low (P2):</strong> 5 to 60 candles later, the RSI forms another low by the same rule.</li>
+            <li><strong>The divergence:</strong> at P2 the price made a <em>lower</em> low than at P1, but the RSI made a <em>higher</em> low. Price fell further, yet the selling momentum got weaker.</li>
+            <li><strong>Minimum difference:</strong> the two RSI lows differ by at least the selected number of points (2–10), so tiny, meaningless divergences are filtered out.</li>
+            <li><strong>Confirmation:</strong> the <strong>5th candle after P2 has closed</strong> and the RSI did not drop below P2 in the meantime. Only now is P2 a proven low — before that, a deeper RSI low could still appear and cancel the pattern.</li>
+          </ol>
+          <p class="method-text">In the mini chart, the two dots mark P1 and P2, and the <span style="color:var(--warn)">yellow dashed line</span> marks the candle that confirmed the divergence. "Confirmed 6 candles ago" means that confirming candle closed 6 candles ago. Bearish divergences work the same way with RSI highs and candle highs.</p>
+          <div class="method-formula">Why the delay? A low can only be proven once the following candles have closed.
+This is how every standard divergence indicator works, including TradingView's.
+Because only closed candles are used, a listed divergence never disappears later.</div>
+          <p class="method-text" style="margin-top:14px;padding:12px 14px;border-radius:var(--radius-sm);background:var(--warn-bg);border:1px solid rgba(227,179,65,.3);"><strong style="color:var(--warn)">What confirmation does not mean:</strong> it does not say that the price has already turned. A divergence shows that momentum is fading — it is an early warning, not an entry signal. Because of the 5-candle delay, price may already have moved by the time the divergence is confirmed. Look for your own price confirmation (e.g. a candle closing beyond the P2 candle, a break of structure or a trendline) and always use a stop-loss.</p>
         </div>
       </div>
     </div>
