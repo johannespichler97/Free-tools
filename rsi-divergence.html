@@ -327,6 +327,12 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
         <span class="tf-hint">Hides tiny divergences: RSI must differ by at least this many points between the two pivots.</span>
       </div>
       <hr class="ctrl-divider" />
+      <div class="ctrl-row">
+        <span class="ctrl-label">Confirmation</span>
+        <div class="tf-chips" id="confChips"></div>
+        <span class="tf-hint">Closed candles needed after the second pivot. Fewer = earlier but more false signals; 5 = TradingView default.</span>
+      </div>
+      <hr class="ctrl-divider" />
       <div class="scan-row">
         <div class="scan-meta">
           <span><strong id="selectedCount">0</strong> symbol<span id="symPlural">s</span> × <strong id="tfCount">0</strong> timeframe<span id="tfPlural">s</span></span>
@@ -358,12 +364,12 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
       <div class="method-grid">
         <div class="method-block">
           <h3>RSI and pivots</h3>
-          <p class="method-text">RSI uses Wilder's smoothing over 14 candle closes — the standard used by TradingView and most platforms. A <strong>pivot</strong> is an RSI low (or high) that is lower (or higher) than the 5 candles on each side. Price is compared at the same candles: the candle low for bullish setups, the candle high for bearish ones.</p>
+          <p class="method-text">RSI uses Wilder's smoothing over 14 candle closes — the standard used by TradingView and most platforms. A <strong>pivot</strong> is an RSI low (or high) that is lower (or higher) than the 5 candles before it and the <span class="cn">5</span> candles after it. Price is compared at the same candles: the candle low for bullish setups, the candle high for bearish ones.</p>
           <div class="method-formula">RSI      = 100 − 100 / (1 + avg gain / avg loss)   (Wilder, 14)
-Pivot    = RSI extreme with 5 candles left and right
+Pivot    = RSI extreme, 5 candles left / <span class="cn">5</span> candles right
 Distance = 5 to 60 candles between the two pivots
 Min diff = |RSI P2 − RSI P1| ≥ 2–10 points</div>
-          <p class="method-note">A pivot needs 5 more candles to be confirmed, so every divergence appears 5 candles after the actual turning point — exactly like TradingView. Only completed candles are used, so signals never repaint.</p>
+          <p class="method-note">A pivot needs <span class="cn">5</span> more candles to be confirmed, so every divergence appears <span class="cn">5</span> candles after the actual turning point. The number of confirmation candles is selectable (2–6); the default of 5 matches TradingView. Only completed candles are used, so signals never repaint.</p>
         </div>
         <div class="method-block">
           <h3>Divergence types</h3>
@@ -383,17 +389,17 @@ Min diff = |RSI P2 − RSI P1| ≥ 2–10 points</div>
           <h3>When is a divergence confirmed?</h3>
           <p class="method-text">A divergence is listed as soon as the pattern is <strong>complete and can no longer change</strong>. Example for a bullish divergence:</p>
           <ol class="method-steps">
-            <li><strong>First low (P1):</strong> the RSI forms a low — lower than the 5 candles before and the 5 candles after it.</li>
+            <li><strong>First low (P1):</strong> the RSI forms a low — lower than the 5 candles before and the <span class="cn">5</span> candles after it.</li>
             <li><strong>Second low (P2):</strong> 5 to 60 candles later, the RSI forms another low by the same rule.</li>
             <li><strong>The divergence:</strong> at P2 the price made a <em>lower</em> low than at P1, but the RSI made a <em>higher</em> low. Price fell further, yet the selling momentum got weaker.</li>
             <li><strong>Minimum difference:</strong> the two RSI lows differ by at least the selected number of points (2–10), so tiny, meaningless divergences are filtered out.</li>
-            <li><strong>Confirmation:</strong> the <strong>5th candle after P2 has closed</strong> and the RSI did not drop below P2 in the meantime. Only now is P2 a proven low — before that, a deeper RSI low could still appear and cancel the pattern.</li>
+            <li><strong>Confirmation:</strong> the <strong><span class="cn-th">5th</span> candle after P2 has closed</strong> and the RSI did not drop below P2 in the meantime. Only now is P2 a proven low — before that, a deeper RSI low could still appear and cancel the pattern.</li>
           </ol>
           <p class="method-text">In the mini chart, the two dots mark P1 and P2, and the <span style="color:var(--warn)">yellow dashed line</span> marks the candle that confirmed the divergence. "Confirmed 6 candles ago" means that confirming candle closed 6 candles ago. Bearish divergences work the same way with RSI highs and candle highs.</p>
           <div class="method-formula">Why the delay? A low can only be proven once the following candles have closed.
 This is how every standard divergence indicator works, including TradingView's.
 Because only closed candles are used, a listed divergence never disappears later.</div>
-          <p class="method-text" style="margin-top:14px;padding:12px 14px;border-radius:var(--radius-sm);background:var(--warn-bg);border:1px solid rgba(227,179,65,.3);"><strong style="color:var(--warn)">What confirmation does not mean:</strong> it does not say that the price has already turned. A divergence shows that momentum is fading — it is an early warning, not an entry signal. Because of the 5-candle delay, price may already have moved by the time the divergence is confirmed. Look for your own price confirmation (e.g. a candle closing beyond the P2 candle, a break of structure or a trendline) and always use a stop-loss.</p>
+          <p class="method-text" style="margin-top:14px;padding:12px 14px;border-radius:var(--radius-sm);background:var(--warn-bg);border:1px solid rgba(227,179,65,.3);"><strong style="color:var(--warn)">What confirmation does not mean:</strong> it does not say that the price has already turned. A divergence shows that momentum is fading — it is an early warning, not an entry signal. Because of the <span class="cn">5</span>-candle delay, price may already have moved by the time the divergence is confirmed. Look for your own price confirmation (e.g. a candle closing beyond the P2 candle, a break of structure or a trendline) and always use a stop-loss.</p>
         </div>
       </div>
     </div>
@@ -441,7 +447,9 @@ const ASSETS = [
 ];
 
 /* ── SETTINGS (TradingView "RSI Divergence" defaults) ── */
-const RSI_LEN = 14, LB_L = 5, LB_R = 5, RANGE_MIN = 5, RANGE_MAX = 60;
+const RSI_LEN = 14, LB_L = 5, RANGE_MIN = 5, RANGE_MAX = 60;
+const CONFIRM = [2, 3, 4, 5, 6];
+let confirmN = 5; /* pivot lookback right = candles needed to confirm a pivot */
 const TFS = [
   { id:'15',  label:'15m',   res:'15', days:7,   sec:900 },
   { id:'60',  label:'1h',    res:'60', days:80,  sec:3600 },
@@ -460,7 +468,7 @@ const MIN_DIFF = [2, 4, 6, 8, 10];
 let activeAssets = new Set(ASSETS.map(a => a.sym));
 let activeTfs = new Set(TFS.map(t => t.id));
 let activeTypes = new Set(['rbull', 'rbear']);
-let fresh = 10, minDiff = 2, scanning = false, found = [], failedSets = 0, totalSets = 0, lastScan = null;
+let fresh = 10, minDiff = 2, scanning = false, found = [], sets = [], failedSets = 0, totalSets = 0, lastScan = null;
 
 /* ── MATH ── */
 function rsi(close, n = RSI_LEN) {
@@ -475,17 +483,17 @@ function rsi(close, n = RSI_LEN) {
   return out;
 }
 function isPivot(osc, p, low) {
-  if (p - LB_L < 0 || p + LB_R >= osc.length || osc[p - LB_L] == null) return false;
+  if (p - LB_L < 0 || p + confirmN >= osc.length || osc[p - LB_L] == null) return false;
   for (let k = 1; k <= LB_L; k++) if (low ? !(osc[p] < osc[p - k]) : !(osc[p] > osc[p - k])) return false;
-  for (let k = 1; k <= LB_R; k++) if (low ? !(osc[p] < osc[p + k]) : !(osc[p] > osc[p + k])) return false;
+  for (let k = 1; k <= confirmN; k++) if (low ? !(osc[p] < osc[p + k]) : !(osc[p] > osc[p + k])) return false;
   return true;
 }
 /* walks the series like Pine: compare each confirmed pivot with the previous pivot of the same kind */
-function divergences(c) {
-  const osc = rsi(c.c), out = [];
+function divergences(c, osc) {
+  const out = [];
   let prevLow = null, prevHigh = null;
-  for (let p = 0; p + LB_R < osc.length; p++) {
-    const i = p + LB_R;
+  for (let p = 0; p + confirmN < osc.length; p++) {
+    const i = p + confirmN;
     if (isPivot(osc, p, true)) {
       if (prevLow !== null) {
         const gap = p - prevLow - 1;
@@ -507,7 +515,7 @@ function divergences(c) {
       prevHigh = p;
     }
   }
-  return { osc, list: out };
+  return { list: out };
 }
 
 /* ── DATA ── */
@@ -580,6 +588,9 @@ function buildControls() {
   chipRow('assetChips', ASSETS.map(a => ({ v:a.sym, label:a.label, cls:'asset-chip' + (a.type === 'metal' ? ' metal' : '') })), v => activeAssets.has(v), v => { activeAssets.has(v) ? activeAssets.delete(v) : activeAssets.add(v); buildControls(); });
   chipRow('tfChips', TFS.map(t => ({ v:t.id, label:t.label })), v => activeTfs.has(v), v => { if (activeTfs.has(v)) { if (activeTfs.size > 1) activeTfs.delete(v); } else activeTfs.add(v); buildControls(); });
   chipRow('typeChips', Object.entries(TYPES).map(([k, t]) => ({ v:k, label:t.label, cls:'tf-chip type-chip ' + k })), v => activeTypes.has(v), v => { if (activeTypes.has(v)) { if (activeTypes.size > 1) activeTypes.delete(v); } else activeTypes.add(v); buildControls(); render(); });
+  chipRow('confChips', CONFIRM.map(n => ({ v:n, label:`${n} candles` })), v => +v === confirmN, v => { confirmN = +v; buildControls(); if (lastScan) { detectAll(); render(); } });
+  document.querySelectorAll('.cn').forEach(e => e.textContent = confirmN);
+  document.querySelectorAll('.cn-th').forEach(e => e.textContent = ordinal(confirmN));
   chipRow('minDiffChips', MIN_DIFF.map(n => ({ v:n, label:`${n} pts` })), v => +v === minDiff, v => { minDiff = +v; buildControls(); render(); });
   chipRow('freshChips', FRESH.map(n => ({ v:n, label:`${n} candles` })), v => +v === fresh, v => { fresh = +v; buildControls(); render(); });
   document.getElementById('selectedCount').textContent = activeAssets.size;
@@ -599,7 +610,7 @@ async function runScan() {
   const btn = document.getElementById('scanBtn'); btn.disabled = true;
   const tfs = TFS.filter(t => activeTfs.has(t.id)), syms = ASSETS.filter(a => activeAssets.has(a.sym));
   const jobs = syms.flatMap(a => tfs.map(tf => ({ a, tf }))), memo = {};
-  let done = 0, next = 0; found = []; failedSets = 0; totalSets = jobs.length;
+  let done = 0, next = 0; found = []; sets = []; failedSets = 0; totalSets = jobs.length;
   const progress = () => btn.innerHTML = `<div class="spinner" style="width:14px;height:14px;border-width:2px;"></div> Scanning ${done}/${jobs.length}`;
   progress();
   document.getElementById('stateBox').style.display = 'none';
@@ -611,20 +622,30 @@ async function runScan() {
       const { a, tf } = jobs[next++];
       try {
         const c = await candles(a.sym, tf, memo);
-        const { osc, list } = divergences(c), last = c.t.length - 1;
-        list.forEach(d => found.push({ ...d, a, tf, c, osc, barsAgo: last - d.i, at: c.end ? c.end[d.i] : c.t[d.i] + tf.sec }));
+        sets.push({ a, tf, c, osc: rsi(c.c) });
       } catch { failedSets++; }
       done++; progress();
     }
   };
   try { await Promise.all(Array.from({ length: Math.min(6, jobs.length) }, worker)); }
   finally {
+    detectAll();
     lastScan = new Date();
     document.getElementById('lastUpdate').textContent = 'Updated ' + lastScan.toLocaleTimeString();
     btn.disabled = false; btn.innerHTML = `${SCAN_ICON} Scan`; scanning = false;
     render();
   }
 }
+
+/* re-run detection on the loaded candles, e.g. after the confirmation setting changes */
+function detectAll() {
+  found = [];
+  sets.forEach(({ a, tf, c, osc }) => {
+    const last = c.t.length - 1;
+    divergences(c, osc).list.forEach(d => found.push({ ...d, a, tf, c, osc, barsAgo: last - d.i, at: c.end ? c.end[d.i] : c.t[d.i] + tf.sec }));
+  });
+}
+const ordinal = n => n + (n === 2 ? 'nd' : n === 3 ? 'rd' : 'th');
 
 /* ── RENDER ── */
 const fmtPrice = (v, ref) => v.toFixed(ref >= 100 ? 2 : ref >= 10 ? 3 : 5);
