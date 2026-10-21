@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RSI Divergence Scanner | Market Analytics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-primary:    #062434;
+  --bg-secondary:  #0a2e44;
+  --bg-tertiary:   #0e3a54;
+  --bg-hover:      #123f5c;
+  --border:        #1a4d6e;
+  --text-primary:  #E6E9EB;
+  --text-secondary:#8ab8d0;
+  --text-muted:    #4d7a96;
+  --accent:        #2FA3E0;
+  --accent-2:      #51d7ce;
+  --accent-dim:    rgba(47,163,224,0.12);
+  --positive:      #3fb950;
+  --positive-bg:   rgba(63,185,80,0.10);
+  --negative:      #f85149;
+  --negative-bg:   rgba(248,81,73,0.10);
+  --warn:          #e3b341;
+  --warn-bg:       rgba(227,179,65,0.10);
+  --font:          'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono:     'JetBrains Mono', monospace;
+  --radius-sm:     6px;
+  --radius-md:     10px;
+  --radius-lg:     14px;
+}
+
+html { scroll-behavior: smooth; }
+body { font-family: var(--font); background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; font-size: 14px; line-height: 1.5; }
+
+@keyframes pulse   { 0%,100%{opacity:1} 50%{opacity:0.4} }
+@keyframes spin    { to{transform:rotate(360deg)} }
+@keyframes fadeIn  { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+/* ── HEADER ── */
+.header { position:sticky; top:0; z-index:200; background:rgba(6,36,52,0.97); backdrop-filter:blur(12px); border-bottom:1px solid var(--border); }
+.header-inner { max-width:1200px; margin:0 auto; padding:0 24px; height:60px; display:flex; align-items:center; gap:32px; }
+.logo { display:flex; align-items:center; gap:8px; text-decoration:none; color:var(--text-primary); font-size:16px; font-weight:700; white-space:nowrap; }
+.logo-text strong { color:var(--accent); }
+
+.nav { display:flex; gap:1px; flex:1; align-items:center; }
+.nav-link { text-decoration:none; color:var(--text-secondary); padding:6px 9px; border-radius:var(--radius-sm); font-size:12.5px; font-weight:500; transition:all .15s; white-space:nowrap; }
+.nav-link:hover { color:var(--text-primary); background:var(--bg-hover); }
+.nav-link.active { color:var(--accent); background:var(--accent-dim); }
+
+.nav-dropdown { position:relative; }
+.dropdown-btn { background:none; border:none; font-family:var(--font); cursor:pointer; display:flex; align-items:center; gap:5px; color:var(--text-secondary); padding:6px 9px; border-radius:var(--radius-sm); font-size:12.5px; font-weight:500; transition:all .15s; white-space:nowrap; }
+.dropdown-btn:hover { color:var(--text-primary); background:var(--bg-hover); }
+.dropdown-btn.active { color:var(--accent); background:var(--accent-dim); }
+.dropdown-btn svg { transition:transform .2s; }
+.nav-dropdown:hover .dropdown-btn svg,
+.nav-dropdown.open .dropdown-btn svg { transform:rotate(180deg); }
+.dropdown-menu { display:none; position:absolute; top:calc(100% + 6px); left:0; background:rgba(6,36,52,0.99); border:1px solid var(--border); border-radius:var(--radius-md); min-width:190px; padding:4px 0; z-index:300; backdrop-filter:blur(12px); box-shadow:0 8px 24px rgba(0,0,0,0.4); }
+.nav-dropdown:hover .dropdown-menu,
+.nav-dropdown.open .dropdown-menu { display:block; }
+.dropdown-item { display:block; padding:9px 16px; color:var(--text-secondary); text-decoration:none; font-size:12.5px; font-weight:500; transition:all .15s; white-space:nowrap; }
+.dropdown-item:hover { color:var(--text-primary); background:var(--bg-hover); }
+.dropdown-item.active { color:var(--accent); }
+
+.header-actions { display:flex; align-items:center; gap:12px; }
+.live-badge { font-size:11px; font-weight:600; color:var(--positive); letter-spacing:.05em; display:flex; align-items:center; gap:5px; }
+.live-dot { animation:pulse 2s infinite; }
+.btn-primary { background:linear-gradient(135deg,#51d7ce,#2FA3E0); color:#062434; border:none; padding:7px 18px; border-radius:20px; font-size:13px; font-weight:700; cursor:pointer; transition:opacity .15s; font-family:var(--font); }
+.btn-primary:hover { opacity:.88; }
+
+.hamburger { display:none; flex-direction:column; justify-content:center; gap:5px; background:none; border:none; padding:6px; cursor:pointer; border-radius:6px; transition:background .15s; margin-left:auto; }
+.hamburger:hover { background:var(--bg-hover); }
+.hamburger span { display:block; width:22px; height:2px; background:var(--text-primary); border-radius:1px; transition:all .25s; }
+.hamburger.open span:nth-child(1) { transform:translateY(7px) rotate(45deg); }
+.hamburger.open span:nth-child(2) { opacity:0; }
+.hamburger.open span:nth-child(3) { transform:translateY(-7px) rotate(-45deg); }
+
+@media(max-width:1199px) {
+  .hamburger { display:flex; }
+  .header-inner { position:relative; flex-wrap:nowrap; }
+  .nav { display:none; position:absolute; top:60px; left:0; right:0; z-index:99; flex-direction:column; align-items:stretch; gap:0; padding:6px 0; background:rgba(6,36,52,0.98); border-bottom:1px solid var(--border); backdrop-filter:blur(12px); }
+  .nav.open { display:flex; }
+  .nav-link { padding:13px 22px; border-radius:0; font-size:14px; border-bottom:1px solid rgba(26,77,110,0.4); }
+  .nav-dropdown { position:static; }
+  .dropdown-btn { padding:13px 22px; border-radius:0; font-size:14px; border-bottom:1px solid rgba(26,77,110,0.4); width:100%; justify-content:space-between; }
+  .dropdown-menu { display:none; position:static; border:none; border-radius:0; padding:0; background:var(--bg-tertiary); box-shadow:none; backdrop-filter:none; }
+  .nav-dropdown.open .dropdown-menu { display:block; }
+  .nav-dropdown:hover .dropdown-menu { display:none; }
+  .nav-dropdown.open .dropdown-menu { display:block; }
+  .dropdown-item { padding:11px 32px; font-size:13px; border-bottom:1px solid rgba(26,77,110,0.3); }
+  .dropdown-item:last-child { border-bottom:none; }
+  .header-actions .btn-primary { display:none; }
+}
+
+/* ── HERO ── */
+.hero { background:linear-gradient(135deg,#062434 0%,#0a2e44 60%,#0d3550 100%); border-bottom:1px solid var(--border); padding:28px 24px; }
+.hero-inner { max-width:1200px; margin:0 auto; }
+.hero h1 { font-size:26px; font-weight:700; }
+.hero h1::after { content:''; display:block; width:40px; height:3px; background:linear-gradient(90deg,#51d7ce,#2FA3E0); border-radius:2px; margin-top:10px; }
+.hero p { color:var(--text-secondary); font-size:15px; margin-top:10px; }
+
+/* ── CONTROLS ── */
+.controls-bar { background:var(--bg-primary); border-bottom:1px solid var(--border); padding:12px 24px; }
+.controls-box { max-width:1248px; margin:0 auto; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); padding:16px 18px; display:flex; flex-direction:column; gap:14px; }
+.ctrl-row { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.ctrl-label { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.07em; white-space:nowrap; min-width:80px; }
+.ctrl-divider { border:none; border-top:1px solid var(--border); margin:0; }
+
+.asset-chips { display:flex; flex-wrap:wrap; gap:5px; flex:1; }
+.asset-chip { padding:4px 10px; border-radius:20px; font-size:12px; font-weight:600; cursor:pointer; transition:all .15s; border:1.5px solid var(--border); color:var(--text-muted); background:var(--bg-tertiary); user-select:none; white-space:nowrap; opacity:.55; }
+.asset-chip:hover { opacity:.85; border-color:var(--text-muted); }
+.asset-chip.active { opacity:1; border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
+.asset-chip.metal.active { border-color:var(--accent-2); color:var(--accent-2); background:rgba(81,215,206,0.10); }
+
+.chip-actions { display:flex; gap:6px; }
+.chip-action-btn { padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; cursor:pointer; border:1px solid var(--border); background:transparent; color:var(--text-muted); font-family:var(--font); transition:all .15s; }
+.chip-action-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+.tf-chips { display:flex; gap:5px; flex-wrap:wrap; }
+.tf-chip { padding:5px 14px; border-radius:20px; font-size:12px; font-weight:700; cursor:pointer; transition:all .15s; border:1.5px solid var(--border); color:var(--text-muted); background:var(--bg-tertiary); user-select:none; opacity:.55; }
+.tf-chip:hover { opacity:.85; }
+.tf-chip.active { opacity:1; border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
+.tf-hint { font-size:11.5px; color:var(--text-muted); }
+
+/* multi-timeframe card */
+.align-text { font-size:12px; color:var(--text-muted); text-align:center; }
+.align-text strong { color:var(--text-primary); }
+.mtf-rows { display:flex; flex-direction:column; gap:7px; }
+.mtf-row { display:grid; grid-template-columns:34px 1fr 88px 40px; align-items:center; gap:10px; font-size:12px; min-height:20px; }
+.mtf-row.head { font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--text-muted); min-height:0; }
+.mtf-row.head span:nth-child(3) { text-align:center; } .mtf-row.head span:nth-child(4) { text-align:right; }
+.mtf-tf { font-family:var(--font-mono); font-weight:700; color:var(--text-secondary); }
+.mtf-bar { height:6px; display:flex; gap:1px; border-radius:3px; overflow:hidden; background:var(--bg-tertiary); }
+.mtf-bar i { display:block; height:100%; }
+.mtf-sig { font-size:10px; font-weight:800; letter-spacing:.03em; text-transform:uppercase; text-align:center; padding:3px 0; border-radius:10px; white-space:nowrap; }
+.mtf-sig.strong-buy  { color:#3fb950; background:rgba(63,185,80,.14); }
+.mtf-sig.buy         { color:#8dd9a0; background:rgba(141,217,160,.10); }
+.mtf-sig.neutral     { color:var(--text-muted); background:rgba(77,122,150,.15); }
+.mtf-sig.sell        { color:#f08080; background:rgba(240,128,128,.10); }
+.mtf-sig.strong-sell { color:#f85149; background:rgba(248,81,73,.14); }
+.mtf-adx { font-family:var(--font-mono); font-size:11px; text-align:right; color:var(--text-muted); }
+.mtf-adx.trend { color:var(--accent); font-weight:700; }
+.mtf-wait { grid-column:2 / -1; height:6px; border-radius:3px; background:linear-gradient(90deg,var(--bg-tertiary) 25%,var(--bg-hover) 50%,var(--bg-tertiary) 75%); background-size:300px 100%; animation:shimmer 1.3s infinite; }
+.mtf-err { grid-column:2 / -1; font-size:11px; color:var(--text-muted); }
+@keyframes shimmer { 0%{background-position:-300px 0} 100%{background-position:300px 0} }
+
+.scan-row { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+.scan-meta { font-size:12px; color:var(--text-muted); display:flex; align-items:center; gap:12px; }
+.scan-meta strong { color:var(--accent); }
+.last-update { font-family:var(--font-mono); font-size:11px; color:var(--text-muted); }
+.btn-scan { background:linear-gradient(135deg,#51d7ce,#2FA3E0); color:#062434; border:none; padding:10px 28px; border-radius:20px; font-size:14px; font-weight:700; cursor:pointer; font-family:var(--font); transition:opacity .15s; display:flex; align-items:center; gap:8px; }
+.btn-scan:hover { opacity:.88; }
+.btn-scan:disabled { opacity:.45; cursor:not-allowed; }
+
+/* ── MAIN ── */
+.main { max-width:1248px; margin:0 auto; padding:20px 24px 60px; }
+
+/* ── STATE BOX ── */
+.state-box { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:80px 24px; gap:14px; text-align:center; color:var(--text-muted); background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); }
+.state-icon { font-size:44px; opacity:.3; }
+.state-title { font-size:17px; font-weight:600; color:var(--text-secondary); }
+.state-sub { font-size:13px; max-width:400px; line-height:1.6; }
+
+/* loading state */
+.card-loading { display:flex; align-items:center; justify-content:center; padding:40px; }
+.spinner { width:28px; height:28px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .7s linear infinite; }
+
+/* error state */
+.card-error { padding:20px 16px; text-align:center; color:var(--text-muted); font-size:12px; }
+
+/* ── METHODOLOGY ── */
+.method-card { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); padding:28px; }
+.method-card h2 { font-size:16px; font-weight:700; margin-bottom:20px; color:var(--text-primary); display:flex; align-items:center; gap:10px; }
+.method-card h2::after { content:''; flex:1; height:1px; background:var(--border); }
+.method-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+@media(max-width:700px){ .method-grid { grid-template-columns:1fr; } }
+.method-block { min-width:0; background:var(--bg-tertiary); border:1px solid var(--border); border-radius:var(--radius-md); padding:16px; }
+.method-block h3 { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--accent); margin-bottom:12px; }
+.method-text { font-size:12.5px; color:var(--text-secondary); line-height:1.7; margin-bottom:10px; }
+.method-formula { font-family:var(--font-mono); background:var(--bg-primary); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px 14px; font-size:12px; color:var(--text-primary); margin:10px 0; line-height:1.8; overflow-x:auto; white-space:pre; }
+.method-table { width:100%; border-collapse:collapse; margin-top:10px; }
+.method-table th { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); padding:5px 8px; border-bottom:1px solid var(--border); text-align:left; }
+.method-table td { font-size:12px; padding:6px 8px; border-bottom:1px solid rgba(26,77,110,0.3); color:var(--text-secondary); }
+.method-table tr:last-child td { border-bottom:none; }
+.method-note { font-size:11.5px; color:var(--text-muted); line-height:1.6; margin-top:14px; border-top:1px solid var(--border); padding-top:14px; }
+
+/* ── FOOTER ── */
+.footer { background:var(--bg-secondary); border-top:1px solid var(--border); padding:24px; }
+.footer-inner { max-width:1200px; margin:0 auto; text-align:center; }
+.footer-disclaimer { font-size:12px; color:var(--text-muted); line-height:1.6; }
+.footer-copy { font-size:12px; color:var(--text-muted); margin-top:6px; }
+
+@media(max-width:640px) { .header-inner,.main,.controls-bar { padding-left:16px; padding-right:16px; } }
+.tf-hint { font-size:11.5px; color:var(--text-muted); }
+.type-chip.rbull.active { border-color:#3fb950; color:#3fb950; background:rgba(63,185,80,.10); }
+.type-chip.rbear.active { border-color:#f85149; color:#f85149; background:rgba(248,81,73,.10); }
+.type-chip.hbull.active { border-color:#8dd9a0; color:#8dd9a0; background:rgba(141,217,160,.08); }
+.type-chip.hbear.active { border-color:#f08080; color:#f08080; background:rgba(240,128,128,.08); }
+
+.summary-bar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:16px; font-size:13px; color:var(--text-secondary); }
+.sum-pill { display:inline-flex; align-items:center; gap:8px; padding:6px 12px; border-radius:20px; background:var(--bg-secondary); border:1px solid var(--border); font-weight:600; }
+.sum-pill b { font-family:var(--font-mono); font-size:14px; }
+.sum-note { font-size:12px; color:var(--text-muted); }
+
+.div-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(340px, 1fr)); gap:16px; animation:fadeIn .25s ease; }
+.div-card { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; transition:border-color .2s; }
+.div-card:hover { border-color:var(--accent); }
+.div-card.bull { border-top:3px solid #3fb950; } .div-card.bear { border-top:3px solid #f85149; }
+.div-head { display:flex; align-items:center; gap:8px; padding:12px 16px 8px; }
+.div-pair { font-family:var(--font-mono); font-size:16px; font-weight:700; }
+.div-pair.metal { color:var(--accent-2); }
+.div-tf { font-size:11px; font-weight:700; color:var(--text-muted); background:var(--bg-tertiary); padding:2px 8px; border-radius:10px; }
+.div-zone { margin-left:auto; font-size:10px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; padding:3px 8px; border-radius:10px; }
+.div-zone.os { color:#3fb950; background:rgba(63,185,80,.12); } .div-zone.ob { color:#f85149; background:rgba(248,81,73,.12); }
+.div-type { padding:0 16px; font-size:15px; font-weight:800; }
+.div-type.rbull { color:#3fb950; } .div-type.rbear { color:#f85149; } .div-type.hbull { color:#8dd9a0; } .div-type.hbear { color:#f08080; }
+.div-desc { padding:2px 16px 0; font-size:12px; color:var(--text-muted); }
+.div-chart { padding:10px 8px 4px; }
+.div-chart svg { display:block; width:100%; height:auto; }
+.div-stats { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:6px 16px 14px; }
+.div-stat { background:var(--bg-tertiary); border-radius:var(--radius-sm); padding:7px 10px; }
+.div-stat span { display:block; font-size:9.5px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--text-muted); }
+.div-stat b { font-family:var(--font-mono); font-size:12.5px; font-weight:600; }
+.div-when { padding:0 16px 14px; font-size:11.5px; color:var(--text-muted); }
+.div-when strong { color:var(--text-secondary); }
+.ax { font-family:'JetBrains Mono',monospace; font-size:9px; fill:#4d7a96; }
+@media(max-width:640px){
+  .controls-box .ctrl-row .ctrl-label { flex-basis:100%; }
+  .div-grid { grid-template-columns:1fr; }
+}
+  </style>
+</head>
+<body>
+
+  <header class="header">
+    <div class="header-inner">
+      <a href="economic-calendar.html" class="logo">
+        <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+          <defs><linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#51d7ce"/><stop offset="100%" stop-color="#2FA3E0"/></linearGradient></defs>
+          <circle cx="18" cy="18" r="16.5" stroke="url(#lg)" stroke-width="2" fill="none"/>
+          <rect x="8" y="20" width="4" height="8" rx="1" fill="url(#lg)"/>
+          <rect x="14" y="15" width="4" height="13" rx="1" fill="url(#lg)"/>
+          <rect x="20" y="11" width="4" height="17" rx="1" fill="url(#lg)"/>
+          <polyline points="22,9 27,9 27,14" stroke="url(#lg)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <line x1="14" y1="21" x2="27" y2="9" stroke="url(#lg)" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <span class="logo-text">Market<strong>Analytics</strong></span>
+      </a>
+      <nav class="nav" id="mainNav">
+        <a href="economic-calendar.html"    class="nav-link">Economic Calendar</a>
+        <a href="challenges.html"           class="nav-link">Challenges</a>
+        <a href="market-news.html"          class="nav-link">Market News</a>
+        <a href="trend-bias.html"           class="nav-link">Trend Bias</a>
+        <a href="currency-strength.html"    class="nav-link">Currency Strength</a>
+        <a href="volatility-scanner.html"   class="nav-link">Volatility</a>
+        <a href="correlation-matrix.html"   class="nav-link">Correlation</a>
+        <div class="nav-dropdown" id="moreDropdown">
+          <button class="dropdown-btn active" id="moreToolsBtn" onclick="toggleDropdown(event)">
+            More Tools
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><polyline points="2,3 5,7 8,3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div class="dropdown-menu" id="moreToolsMenu">
+            <a href="aggregate-signal.html"         class="dropdown-item">Aggregate Signal</a>
+            <a href="seasonality.html"              class="dropdown-item">Seasonality</a>
+            <a href="rsi-divergence.html"           class="dropdown-item active">RSI Divergence</a>
+            <a href="pattern-recognition.html"      class="dropdown-item">Pattern Recognition</a>
+            <a href="support-resistance.html"       class="dropdown-item">Support / Resistance</a>
+            <a href="trading-sessions.html"         class="dropdown-item">Trading Sessions</a>
+            <a href="position-size-calculator.html" class="dropdown-item">Position Size</a>
+          </div>
+        </div>
+      </nav>
+      <button class="hamburger" id="hamburger" aria-label="Open navigation">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="header-actions">
+        <span class="live-badge"><span class="live-dot">&#9679;</span> LIVE</span>
+        <button class="btn-primary">Open Account</button>
+      </div>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-inner">
+      <h1>RSI Divergence Scanner</h1>
+      <p>Finds fresh bullish and bearish RSI divergences across all pairs and timeframes — the same detection logic as TradingView's built-in RSI divergence indicator.</p>
+    </div>
+  </section>
+
+  <div class="controls-bar">
+    <div class="controls-box">
+      <div class="ctrl-row">
+        <span class="ctrl-label">Symbols</span>
+        <div class="asset-chips" id="assetChips"></div>
+        <div class="chip-actions">
+          <button class="chip-action-btn" onclick="selectAll()">All</button>
+          <button class="chip-action-btn" onclick="selectNone()">None</button>
+        </div>
+      </div>
+      <hr class="ctrl-divider" />
+      <div class="ctrl-row">
+        <span class="ctrl-label">Timeframes</span>
+        <div class="tf-chips" id="tfChips"></div>
+      </div>
+      <hr class="ctrl-divider" />
+      <div class="ctrl-row">
+        <span class="ctrl-label">Types</span>
+        <div class="tf-chips" id="typeChips"></div>
+      </div>
+      <hr class="ctrl-divider" />
+      <div class="ctrl-row">
+        <span class="ctrl-label">Freshness</span>
+        <div class="tf-chips" id="freshChips"></div>
+        <span class="tf-hint">Only divergences confirmed within the last N candles.</span>
+      </div>
+      <hr class="ctrl-divider" />
+      <div class="scan-row">
+        <div class="scan-meta">
+          <span><strong id="selectedCount">0</strong> symbol<span id="symPlural">s</span> × <strong id="tfCount">0</strong> timeframe<span id="tfPlural">s</span></span>
+          <span class="last-update" id="lastUpdate"></span>
+        </div>
+        <button class="btn-scan" id="scanBtn" onclick="runScan()">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.8"/><line x1="7" y1="4" x2="7" y2="7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="7" y1="7" x2="9" y2="9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          Scan
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <main class="main" id="mainContent">
+    <div class="state-box" id="stateBox">
+      <div class="state-icon">📈</div>
+      <div class="state-title">Select symbols and hit Scan</div>
+      <div class="state-sub">The scanner loads candles for every selected pair and timeframe, calculates RSI(14) and lists all divergences confirmed within the freshness window.</div>
+    </div>
+    <div id="results" style="display:none;">
+      <div class="summary-bar" id="summaryBar"></div>
+      <div class="div-grid" id="divGrid"></div>
+    </div>
+  </main>
+
+  <div style="max-width:1248px;margin:0 auto;padding:0 24px 48px;">
+    <div class="method-card">
+      <h2>Methodology</h2>
+      <div class="method-grid">
+        <div class="method-block">
+          <h3>RSI and pivots</h3>
+          <p class="method-text">RSI uses Wilder's smoothing over 14 candle closes — the standard used by TradingView and most platforms. A <strong>pivot</strong> is an RSI low (or high) that is lower (or higher) than the 5 candles on each side. Price is compared at the same candles: the candle low for bullish setups, the candle high for bearish ones.</p>
+          <div class="method-formula">RSI      = 100 − 100 / (1 + avg gain / avg loss)   (Wilder, 14)
+Pivot    = RSI extreme with 5 candles left and right
+Distance = 5 to 60 candles between the two pivots</div>
+          <p class="method-note">A pivot needs 5 more candles to be confirmed, so every divergence appears 5 candles after the actual turning point — exactly like TradingView. Only completed candles are used, so signals never repaint.</p>
+        </div>
+        <div class="method-block">
+          <h3>Divergence types</h3>
+          <table class="method-table">
+            <thead><tr><th>Type</th><th>Price</th><th>RSI</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><td style="color:var(--positive)">Regular bullish</td><td>Lower low</td><td>Higher low</td><td>Selling pressure fading — possible reversal up</td></tr>
+              <tr><td style="color:var(--negative)">Regular bearish</td><td>Higher high</td><td>Lower high</td><td>Buying pressure fading — possible reversal down</td></tr>
+              <tr><td style="color:#8dd9a0">Hidden bullish</td><td>Higher low</td><td>Lower low</td><td>Uptrend continuation</td></tr>
+              <tr><td style="color:#f08080">Hidden bearish</td><td>Lower high</td><td>Higher high</td><td>Downtrend continuation</td></tr>
+            </tbody>
+          </table>
+          <p class="method-note">Divergences marked <strong>oversold</strong> (RSI below 30) or <strong>overbought</strong> (RSI above 70) at the pivot are considered stronger. A divergence is a warning sign, not an entry signal on its own — combine it with structure, trend and risk management. 4h candles are built from 1h data starting at 17:00 New York time, matching the FX session used by TradingView.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div class="footer-inner">
+      <p class="footer-disclaimer">Signals are generated algorithmically from market data and are for informational purposes only. Not financial advice. Past performance does not guarantee future results. Trading CFDs and Forex involves significant risk of loss.</p>
+      <p class="footer-copy">© <span id="yr"></span> Market Analytics</p>
+    </div>
+  </footer>
+
+<script>
+const API_KEY = 'd95lt2pr01qqtvdma7c0d95lt2pr01qqtvdma7cg';
+const BASE    = 'https://finnhub.io/api/v1';
+
+const ASSETS = [
+  { label:'EUR/USD', sym:'OANDA:EUR_USD', type:'fx' },
+  { label:'GBP/USD', sym:'OANDA:GBP_USD', type:'fx' },
+  { label:'USD/JPY', sym:'OANDA:USD_JPY', type:'fx' },
+  { label:'USD/CHF', sym:'OANDA:USD_CHF', type:'fx' },
+  { label:'AUD/USD', sym:'OANDA:AUD_USD', type:'fx' },
+  { label:'NZD/USD', sym:'OANDA:NZD_USD', type:'fx' },
+  { label:'USD/CAD', sym:'OANDA:USD_CAD', type:'fx' },
+  { label:'EUR/GBP', sym:'OANDA:EUR_GBP', type:'fx' },
+  { label:'EUR/JPY', sym:'OANDA:EUR_JPY', type:'fx' },
+  { label:'EUR/CHF', sym:'OANDA:EUR_CHF', type:'fx' },
+  { label:'EUR/AUD', sym:'OANDA:EUR_AUD', type:'fx' },
+  { label:'EUR/CAD', sym:'OANDA:EUR_CAD', type:'fx' },
+  { label:'EUR/NZD', sym:'OANDA:EUR_NZD', type:'fx' },
+  { label:'GBP/JPY', sym:'OANDA:GBP_JPY', type:'fx' },
+  { label:'GBP/CHF', sym:'OANDA:GBP_CHF', type:'fx' },
+  { label:'GBP/AUD', sym:'OANDA:GBP_AUD', type:'fx' },
+  { label:'GBP/CAD', sym:'OANDA:GBP_CAD', type:'fx' },
+  { label:'GBP/NZD', sym:'OANDA:GBP_NZD', type:'fx' },
+  { label:'AUD/JPY', sym:'OANDA:AUD_JPY', type:'fx' },
+  { label:'AUD/NZD', sym:'OANDA:AUD_NZD', type:'fx' },
+  { label:'AUD/CAD', sym:'OANDA:AUD_CAD', type:'fx' },
+  { label:'AUD/CHF', sym:'OANDA:AUD_CHF', type:'fx' },
+  { label:'NZD/JPY', sym:'OANDA:NZD_JPY', type:'fx' },
+  { label:'CAD/JPY', sym:'OANDA:CAD_JPY', type:'fx' },
+  { label:'CHF/JPY', sym:'OANDA:CHF_JPY', type:'fx' },
+  { label:'XAU/USD', sym:'OANDA:XAU_USD', type:'metal' },
+  { label:'XAG/USD', sym:'OANDA:XAG_USD', type:'metal' },
+];
+
+/* ── SETTINGS (TradingView "RSI Divergence" defaults) ── */
+const RSI_LEN = 14, LB_L = 5, LB_R = 5, RANGE_MIN = 5, RANGE_MAX = 60;
+const TFS = [
+  { id:'15',  label:'15m',   res:'15', days:7,   sec:900 },
+  { id:'60',  label:'1h',    res:'60', days:80,  sec:3600 },
+  { id:'240', label:'4h',    res:'60', days:80,  sec:14400, from1h:true },
+  { id:'D',   label:'Daily', res:'D',  days:620, sec:86400 },
+];
+const TYPES = {
+  rbull: { label:'Regular bullish', desc:'Price lower low · RSI higher low', side:'bull' },
+  rbear: { label:'Regular bearish', desc:'Price higher high · RSI lower high', side:'bear' },
+  hbull: { label:'Hidden bullish',  desc:'Price higher low · RSI lower low', side:'bull' },
+  hbear: { label:'Hidden bearish',  desc:'Price lower high · RSI higher high', side:'bear' },
+};
+const FRESH = [3, 5, 10, 20];
+
+let activeAssets = new Set(ASSETS.map(a => a.sym));
+let activeTfs = new Set(TFS.map(t => t.id));
+let activeTypes = new Set(['rbull', 'rbear']);
+let fresh = 10, scanning = false, found = [], failedSets = 0, totalSets = 0, lastScan = null;
+
+/* ── MATH ── */
+function rsi(close, n = RSI_LEN) {
+  const out = Array(close.length).fill(null);
+  let up = 0, dn = 0;
+  const val = () => dn === 0 ? 100 : up === 0 ? 0 : 100 - 100 / (1 + up / dn);
+  for (let i = 1; i < close.length; i++) {
+    const ch = close[i] - close[i - 1], u = Math.max(ch, 0), d = Math.max(-ch, 0);
+    if (i <= n) { up += u; dn += d; if (i === n) { up /= n; dn /= n; out[i] = val(); } }
+    else { up = (up * (n - 1) + u) / n; dn = (dn * (n - 1) + d) / n; out[i] = val(); }
+  }
+  return out;
+}
+function isPivot(osc, p, low) {
+  if (p - LB_L < 0 || p + LB_R >= osc.length || osc[p - LB_L] == null) return false;
+  for (let k = 1; k <= LB_L; k++) if (low ? !(osc[p] < osc[p - k]) : !(osc[p] > osc[p - k])) return false;
+  for (let k = 1; k <= LB_R; k++) if (low ? !(osc[p] < osc[p + k]) : !(osc[p] > osc[p + k])) return false;
+  return true;
+}
+/* walks the series like Pine: compare each confirmed pivot with the previous pivot of the same kind */
+function divergences(c) {
+  const osc = rsi(c.c), out = [];
+  let prevLow = null, prevHigh = null;
+  for (let p = 0; p + LB_R < osc.length; p++) {
+    const i = p + LB_R;
+    if (isPivot(osc, p, true)) {
+      if (prevLow !== null) {
+        const gap = p - prevLow - 1;
+        if (gap >= RANGE_MIN && gap <= RANGE_MAX) {
+          if (osc[p] > osc[prevLow] && c.l[p] < c.l[prevLow]) out.push({ type:'rbull', p0:prevLow, p1:p, i });
+          if (osc[p] < osc[prevLow] && c.l[p] > c.l[prevLow]) out.push({ type:'hbull', p0:prevLow, p1:p, i });
+        }
+      }
+      prevLow = p;
+    }
+    if (isPivot(osc, p, false)) {
+      if (prevHigh !== null) {
+        const gap = p - prevHigh - 1;
+        if (gap >= RANGE_MIN && gap <= RANGE_MAX) {
+          if (osc[p] < osc[prevHigh] && c.h[p] > c.h[prevHigh]) out.push({ type:'rbear', p0:prevHigh, p1:p, i });
+          if (osc[p] > osc[prevHigh] && c.h[p] < c.h[prevHigh]) out.push({ type:'hbear', p0:prevHigh, p1:p, i });
+        }
+      }
+      prevHigh = p;
+    }
+  }
+  return { osc, list: out };
+}
+
+/* ── DATA ── */
+const delay = ms => new Promise(r => setTimeout(r, ms));
+async function fetchJson(url) {
+  let limited = 0;
+  for (let attempt = 0; ; ) {
+    try {
+      const res = await fetch(url);
+      if (res.status === 429 && limited < 6) { limited++; await delay(4000 * limited); continue; }
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      return data;
+    } catch (e) { if (attempt++ < 2) await delay(700); else throw e; }
+  }
+}
+async function candles(sym, tf, memo) {
+  const key = sym + '|' + tf.res;
+  if (!memo[key]) {
+    const now = Math.floor(Date.now() / 1000);
+    memo[key] = fetchJson(`${BASE}/forex/candle?symbol=${encodeURIComponent(sym)}&resolution=${tf.res}&from=${now - tf.days * 86400}&to=${now}&token=${API_KEY}`)
+      .then(d => { if (d.s !== 'ok' || !d.t?.length) throw new Error('No data'); return d; });
+  }
+  const d = await memo[key];
+  const c = tf.from1h ? build4h(d) : { t: d.t, o: d.o, h: d.h, l: d.l, c: d.c };
+  return dropOpenBar(c, tf);
+}
+/* the newest candle is still forming; using it would make signals repaint */
+function dropOpenBar(c, tf) {
+  const n = c.t.length, end = c.end ? c.end[n - 1] : c.t[n - 1] + tf.sec;
+  if (end * 1000 <= Date.now()) return c;
+  const cut = a => a && a.slice(0, n - 1);
+  return { t: cut(c.t), o: cut(c.o), h: cut(c.h), l: cut(c.l), c: cut(c.c), end: cut(c.end) };
+}
+/* 4h candles aligned to the FX day (17:00 New York), like OANDA on TradingView */
+const nyFmt = new Intl.DateTimeFormat('en-US', { timeZone:'America/New_York', hourCycle:'h23', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
+const nyOffCache = new Map();
+function nyOffsetSec(t) {
+  const h = Math.floor(t / 3600);
+  if (!nyOffCache.has(h)) {
+    const p = Object.fromEntries(nyFmt.formatToParts(new Date(h * 3600000)).map(x => [x.type, x.value]));
+    nyOffCache.set(h, (Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute) - h * 3600000) / 1000);
+  }
+  return nyOffCache.get(h);
+}
+function build4h(d) {
+  const out = { t: [], o: [], h: [], l: [], c: [], end: [] };
+  let key = null;
+  for (let i = 0; i < d.t.length; i++) {
+    const off = nyOffsetSec(d.t[i]), shifted = d.t[i] + off + 7 * 3600, k = Math.floor(shifted / 14400);
+    if (k !== key) {
+      key = k;
+      out.t.push(d.t[i]); out.o.push(d.o[i]); out.h.push(d.h[i]); out.l.push(d.l[i]); out.c.push(d.c[i]);
+      out.end.push((k + 1) * 14400 - off - 7 * 3600);
+    } else {
+      const j = out.t.length - 1;
+      out.h[j] = Math.max(out.h[j], d.h[i]); out.l[j] = Math.min(out.l[j], d.l[i]); out.c[j] = d.c[i];
+    }
+  }
+  return out;
+}
+
+/* ── CONTROLS ── */
+function chipRow(id, items, isOn, onClick, extra = () => '') {
+  const el = document.getElementById(id);
+  el.innerHTML = items.map(x => `<span class="${x.cls || 'tf-chip'}${isOn(x.v) ? ' active' : ''} ${extra(x)}" data-v="${x.v}">${x.label}</span>`).join('');
+  el.querySelectorAll('[data-v]').forEach(c => c.addEventListener('click', () => onClick(c.dataset.v)));
+}
+function buildControls() {
+  chipRow('assetChips', ASSETS.map(a => ({ v:a.sym, label:a.label, cls:'asset-chip' + (a.type === 'metal' ? ' metal' : '') })), v => activeAssets.has(v), v => { activeAssets.has(v) ? activeAssets.delete(v) : activeAssets.add(v); buildControls(); });
+  chipRow('tfChips', TFS.map(t => ({ v:t.id, label:t.label })), v => activeTfs.has(v), v => { if (activeTfs.has(v)) { if (activeTfs.size > 1) activeTfs.delete(v); } else activeTfs.add(v); buildControls(); });
+  chipRow('typeChips', Object.entries(TYPES).map(([k, t]) => ({ v:k, label:t.label, cls:'tf-chip type-chip ' + k })), v => activeTypes.has(v), v => { if (activeTypes.has(v)) { if (activeTypes.size > 1) activeTypes.delete(v); } else activeTypes.add(v); buildControls(); render(); });
+  chipRow('freshChips', FRESH.map(n => ({ v:n, label:`${n} candles` })), v => +v === fresh, v => { fresh = +v; buildControls(); render(); });
+  document.getElementById('selectedCount').textContent = activeAssets.size;
+  document.getElementById('tfCount').textContent = activeTfs.size;
+  document.getElementById('symPlural').textContent = activeAssets.size === 1 ? '' : 's';
+  document.getElementById('tfPlural').textContent = activeTfs.size === 1 ? '' : 's';
+}
+function selectAll() { ASSETS.forEach(a => activeAssets.add(a.sym)); buildControls(); }
+function selectNone() { activeAssets.clear(); buildControls(); }
+
+/* ── SCAN ── */
+const SCAN_ICON = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.8"/><line x1="7" y1="4" x2="7" y2="7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="7" y1="7" x2="9" y2="9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;
+async function runScan() {
+  if (scanning) return;
+  if (!activeAssets.size) { alert('Select at least one symbol.'); return; }
+  scanning = true;
+  const btn = document.getElementById('scanBtn'); btn.disabled = true;
+  const tfs = TFS.filter(t => activeTfs.has(t.id)), syms = ASSETS.filter(a => activeAssets.has(a.sym));
+  const jobs = syms.flatMap(a => tfs.map(tf => ({ a, tf }))), memo = {};
+  let done = 0, next = 0; found = []; failedSets = 0; totalSets = jobs.length;
+  const progress = () => btn.innerHTML = `<div class="spinner" style="width:14px;height:14px;border-width:2px;"></div> Scanning ${done}/${jobs.length}`;
+  progress();
+  document.getElementById('stateBox').style.display = 'none';
+  document.getElementById('results').style.display = 'block';
+  document.getElementById('summaryBar').innerHTML = '';
+  document.getElementById('divGrid').innerHTML = `<div class="card-loading" style="grid-column:1/-1"><div class="spinner"></div></div>`;
+  const worker = async () => {
+    while (next < jobs.length) {
+      const { a, tf } = jobs[next++];
+      try {
+        const c = await candles(a.sym, tf, memo);
+        const { osc, list } = divergences(c), last = c.t.length - 1;
+        list.forEach(d => found.push({ ...d, a, tf, c, osc, barsAgo: last - d.i, at: c.end ? c.end[d.i] : c.t[d.i] + tf.sec }));
+      } catch { failedSets++; }
+      done++; progress();
+    }
+  };
+  try { await Promise.all(Array.from({ length: Math.min(6, jobs.length) }, worker)); }
+  finally {
+    lastScan = new Date();
+    document.getElementById('lastUpdate').textContent = 'Updated ' + lastScan.toLocaleTimeString();
+    btn.disabled = false; btn.innerHTML = `${SCAN_ICON} Scan`; scanning = false;
+    render();
+  }
+}
+
+/* ── RENDER ── */
+const fmtPrice = (v, ref) => v.toFixed(ref >= 100 ? 2 : ref >= 10 ? 3 : 5);
+const ago = d => d.barsAgo === 0 ? 'on the last closed candle' : `${d.barsAgo} candle${d.barsAgo > 1 ? 's' : ''} ago`;
+function render() {
+  if (!lastScan) return;
+  const grid = document.getElementById('divGrid'), bar = document.getElementById('summaryBar');
+  const visible = found.filter(d => d.barsAgo < fresh && activeTypes.has(d.type))
+    .sort((x, y) => y.at - x.at || y.tf.sec - x.tf.sec);
+  const counts = Object.keys(TYPES).filter(k => activeTypes.has(k)).map(k =>
+    `<span class="sum-pill"><span class="div-type ${k}" style="padding:0;font-size:12px">${TYPES[k].label}</span><b>${visible.filter(d => d.type === k).length}</b></span>`).join('');
+  bar.innerHTML = counts + (failedSets ? `<span class="sum-note">${failedSets} data set(s) could not be loaded.</span>` : '');
+  if (failedSets && failedSets === totalSets) {
+    bar.innerHTML = '';
+    grid.innerHTML = `<div class="state-box" style="grid-column:1/-1;padding:50px 24px"><div class="state-icon">⚠️</div><div class="state-title">Could not load market data</div><div class="state-sub">The data service did not respond. Please try again in a moment.</div></div>`;
+    return;
+  }
+  if (!visible.length) {
+    grid.innerHTML = `<div class="state-box" style="grid-column:1/-1;padding:50px 24px"><div class="state-icon">🔍</div><div class="state-title">No fresh divergences</div><div class="state-sub">None of the selected pairs shows a divergence confirmed within the last ${fresh} candles. Try more timeframes, a longer freshness window or include hidden divergences.</div></div>`;
+    return;
+  }
+  grid.innerHTML = visible.map(card).join('');
+}
+function card(d) {
+  const t = TYPES[d.type], bull = t.side === 'bull', c = d.c;
+  const r0 = d.osc[d.p0], r1 = d.osc[d.p1];
+  const pr0 = bull ? c.l[d.p0] : c.h[d.p0], pr1 = bull ? c.l[d.p1] : c.h[d.p1];
+  const zone = bull && Math.min(r0, r1) < 30 ? '<span class="div-zone os">Oversold</span>' : !bull && Math.max(r0, r1) > 70 ? '<span class="div-zone ob">Overbought</span>' : '';
+  return `<div class="div-card ${t.side}">
+    <div class="div-head"><span class="div-pair${d.a.type === 'metal' ? ' metal' : ''}">${d.a.label}</span><span class="div-tf">${d.tf.label}</span>${zone}</div>
+    <div class="div-type ${d.type}">${t.label}</div>
+    <div class="div-desc">${t.desc}</div>
+    <div class="div-chart">${miniChart(d, pr0, pr1, r0, r1)}</div>
+    <div class="div-stats">
+      <div class="div-stat"><span>Price ${bull ? 'lows' : 'highs'}</span><b>${fmtPrice(pr0, pr0)} → ${fmtPrice(pr1, pr0)}</b></div>
+      <div class="div-stat"><span>RSI</span><b>${r0.toFixed(1)} → ${r1.toFixed(1)}</b></div>
+    </div>
+    <div class="div-when">Confirmed <strong>${ago(d)}</strong> · ${new Date(d.at * 1000).toLocaleString([], { weekday:'short', day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}</div>
+  </div>`;
+}
+function miniChart(d, pr0, pr1, r0, r1) {
+  const c = d.c, last = c.t.length - 1, from = Math.max(0, d.p0 - 12), n = last - from + 1;
+  const W = 360, H = 236, L = 4, R = 52, P_T = 8, P_H = 112, G = 16, R_T = P_T + P_H + G, R_H = H - R_T - 16;
+  const step = (W - L - R) / n, cw = Math.max(1, step * 0.62);
+  let lo = Infinity, hi = -Infinity;
+  for (let i = from; i <= last; i++) { lo = Math.min(lo, c.l[i]); hi = Math.max(hi, c.h[i]); }
+  const pad = (hi - lo) * 0.06 || hi * 0.001; lo -= pad; hi += pad;
+  /* RSI pane is scaled to the visible range so the divergence slope is readable */
+  let rlo = 100, rhi = 0;
+  for (let i = from; i <= last; i++) if (d.osc[i] != null) { rlo = Math.min(rlo, d.osc[i]); rhi = Math.max(rhi, d.osc[i]); }
+  rlo = Math.max(0, Math.floor(rlo - 4)); rhi = Math.min(100, Math.ceil(rhi + 4));
+  const x = i => L + (i - from + 0.5) * step, py = v => P_T + (hi - v) / (hi - lo) * P_H, ry = v => R_T + (rhi - v) / (rhi - rlo) * R_H;
+  const col = TYPES[d.type].side === 'bull' ? '#3fb950' : '#f85149', dash = d.type[0] === 'h' ? 'stroke-dasharray="5 4"' : '';
+  let g = '';
+  for (let i = from; i <= last; i++) {
+    const up = c.c[i] >= c.o[i], cc = up ? '#3fb950' : '#f85149';
+    g += `<line x1="${x(i)}" x2="${x(i)}" y1="${py(c.h[i])}" y2="${py(c.l[i])}" stroke="${cc}" stroke-opacity=".75"/>`;
+    g += `<rect x="${x(i) - cw / 2}" y="${py(Math.max(c.o[i], c.c[i]))}" width="${cw}" height="${Math.max(0.8, Math.abs(py(c.o[i]) - py(c.c[i])))}" fill="${cc}" fill-opacity=".75"/>`;
+  }
+  g += `<rect x="${L}" y="${R_T}" width="${W - L - R}" height="${R_H}" fill="#2FA3E0" fill-opacity=".04" rx="2"/>`;
+  [30, 50, 70].filter(v => v > rlo && v < rhi).forEach(v => g += `<line x1="${L}" x2="${W - R}" y1="${ry(v)}" y2="${ry(v)}" stroke="${v === 50 ? '#1a4d6e' : '#4d7a96'}" stroke-dasharray="3 3" stroke-opacity=".7"/><text class="ax" x="${W - R + 4}" y="${ry(v) + 3}">${v}</text>`);
+  const clash = y => [30, 50, 70].some(k => k > rlo && k < rhi && Math.abs(ry(k) + 3 - y) < 13);
+  if (!clash(R_T + 7)) g += `<text class="ax" x="${W - R + 4}" y="${R_T + 7}">${rhi}</text>`;
+  if (!clash(R_T + R_H)) g += `<text class="ax" x="${W - R + 4}" y="${R_T + R_H}">${rlo}</text>`;
+  const pts = []; for (let i = from; i <= last; i++) if (d.osc[i] != null) pts.push(`${x(i).toFixed(1)},${ry(d.osc[i]).toFixed(1)}`);
+  g += `<polyline points="${pts.join(' ')}" fill="none" stroke="#b48cf2" stroke-width="1.4"/>`;
+  g += `<line x1="${x(d.p0)}" y1="${py(pr0)}" x2="${x(d.p1)}" y2="${py(pr1)}" stroke="${col}" stroke-width="2.2" ${dash}/>`;
+  g += `<line x1="${x(d.p0)}" y1="${ry(r0)}" x2="${x(d.p1)}" y2="${ry(r1)}" stroke="${col}" stroke-width="2.2" ${dash}/>`;
+  [[d.p0, pr0, r0], [d.p1, pr1, r1]].forEach(([i, p, r]) => g += `<circle cx="${x(i)}" cy="${py(p)}" r="3" fill="${col}"/><circle cx="${x(i)}" cy="${ry(r)}" r="3" fill="${col}"/>`);
+  g += `<line x1="${x(d.i)}" x2="${x(d.i)}" y1="${P_T}" y2="${H - 14}" stroke="#e3b341" stroke-dasharray="2 3" stroke-opacity=".6"/>`;
+  g += `<text class="ax" x="${W - R + 4}" y="${py(hi - pad) + 8}">${fmtPrice(hi - pad, hi)}</text><text class="ax" x="${W - R + 4}" y="${py(lo + pad)}">${fmtPrice(lo + pad, lo)}</text>`;
+  g += `<text class="ax" x="${L}" y="${H - 3}">RSI(14)</text><text class="ax" x="${x(d.i)}" y="${H - 3}" text-anchor="middle" style="fill:#e3b341">confirmed</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">${g}</svg>`;
+}
+
+buildControls();
+
+/* ── NAV ── */
+function toggleDropdown(e) {
+  e.stopPropagation();
+  const dd = document.getElementById('moreDropdown');
+  dd.classList.toggle('open');
+}
+document.addEventListener('click', () => {
+  document.getElementById('moreDropdown')?.classList.remove('open');
+});
+document.getElementById('hamburger').addEventListener('click', () => {
+  document.getElementById('mainNav').classList.toggle('open');
+  document.getElementById('hamburger').classList.toggle('open');
+});
+
+document.getElementById('yr').textContent = new Date().getFullYear();
+</script>
+</body>
+</html>
