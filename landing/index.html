@@ -898,9 +898,9 @@ if (!reduceMotion) {
   }, 70);
 }
 
-/* contact form — set CONTACT_ENDPOINT to the backend URL (receives JSON via POST) */
-const CONTACT_ENDPOINT = '';
-/* without an endpoint the form only simulates success on preview hosts, never on a live domain */
+/* contact form — contact.php (next to this page) emails the request to info@market-analytics.io */
+const CONTACT_ENDPOINT = 'contact.php';
+/* preview hosts can't run PHP, so the form only simulates success there */
 const IS_PREVIEW = location.protocol === 'file:' || /^(localhost|127\.0\.0\.1|htmlpreview\.github\.io)$/.test(location.hostname);
 const form = document.getElementById('contactForm');
 const emailOk = v => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v);
@@ -937,12 +937,12 @@ form.addEventListener('submit', async e => {
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Sending…';
   try {
     if (fd.get('company_url')) { /* honeypot filled: bot */ }
-    else if (CONTACT_ENDPOINT) {
+    else if (IS_PREVIEW) {
+      console.info('[contact] preview only, form data not sent:', data);
+      await new Promise(r => setTimeout(r, 900));
+    } else if (CONTACT_ENDPOINT) {
       const res = await fetch(CONTACT_ENDPOINT, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(data) });
       if (!res.ok) throw new Error('HTTP ' + res.status);
-    } else if (IS_PREVIEW) {
-      console.info('[contact] CONTACT_ENDPOINT not set — preview only, form data not sent:', data);
-      await new Promise(r => setTimeout(r, 900));
     } else {
       throw new Error('CONTACT_ENDPOINT is not configured');
     }
