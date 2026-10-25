@@ -498,7 +498,7 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 </div>
 
 <script>
-const API_KEY  = 'd4fevfpr01qkcvvhv6h0d4fevfpr01qkcvvhv6hg';
+const API_KEY  = 'd95lt2pr01qqtvdma7c0d95lt2pr01qqtvdma7cg';
 const API_BASE = 'https://finnhub.io/api/v1';
 
 let allResults   = [];   // { pattern, sym, symLabel, tf, tfLabel }
@@ -761,7 +761,7 @@ async function scan() {
 // not once per pattern. Reduces 30 API calls to ~5-10.
 async function checkSLHits() {
   const toCheck = allResults.filter(i => !i._slChecked);
-  if (toCheck.length === 0) { showSLDebug(0); return; }
+  if (toCheck.length === 0) return;
 
   // Group by sym+tf — one candle fetch covers all patterns in the group
   const groups = {};
