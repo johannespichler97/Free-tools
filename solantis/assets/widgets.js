@@ -2,9 +2,6 @@
 (() => {
 const { reduce, $, $$, clamp, lerp, loop } = SOL;
 
-// Where the analytics tools live. Change this when the platform gets its own domain.
-const ANALYTICS_BASE = '../';
-
 const ICONS = {
   cal: '<rect x="3" y="4" width="18" height="17" rx="3"/><path d="M3 9h18M8 2v4M16 2v4"/>',
   news: '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M7 9h10M7 13h10M7 17h6"/>',
@@ -46,12 +43,11 @@ $$('[data-tool-list]').forEach(el => {
 
 /* full tool grid with category filter (analytics page) */
 $$('[data-tool-grid]').forEach(grid => {
-  grid.innerHTML = TOOLS.map(([k, n, d, cat, file]) => `
-    <a class="tool card" data-cat="${cat}" href="${ANALYTICS_BASE}${file}" target="_blank" rel="noopener">
+  grid.innerHTML = TOOLS.map(([k, n, d, cat]) => `
+    <article class="tool card" data-cat="${cat}">
       <div class="tool-top"><span class="tool-ic">${icon(k)}</span><span class="tool-cat">${cat}</span></div>
       <div><h3>${n}</h3><p>${d}</p></div>
-      <span class="tool-go">Open tool <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 12 12 4M6 4h6v6"/></svg></span>
-    </a>`).join('');
+    </article>`).join('');
   const bar = $('[data-tool-filter]');
   if (!bar) return;
   const cats = ['All', ...new Set(TOOLS.map(t => t[3]))];
