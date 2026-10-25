@@ -17,7 +17,9 @@ const ICONS = {
   sr: '<path d="M3 7h18M3 17h18"/><path d="M5 15l4-6 4 4 4-5"/>',
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   calc: '<rect x="5" y="3" width="14" height="18" rx="3"/><path d="M8 7h8M8 11h2M14 11h2M8 15h2M14 15h2"/>',
-  trophy: '<path d="M8 4h8v5a4 4 0 0 1-8 0V4z"/><path d="M8 6H4a3 3 0 0 0 4 4M16 6h4a3 3 0 0 1-4 4M12 13v4M8 21h8"/>'
+  trophy: '<path d="M8 4h8v5a4 4 0 0 1-8 0V4z"/><path d="M8 6H4a3 3 0 0 0 4 4M16 6h4a3 3 0 0 1-4 4M12 13v4M8 21h8"/>',
+  rsi: '<path d="M3 6l5 4 4-2 9 6"/><path d="M3 18l5-3 4 2 9-5"/>',
+  season: '<rect x="3" y="4" width="18" height="17" rx="3"/><path d="M3 9h18M8 2v4M16 2v4M8 13v5M12 15v3M16 12v6"/>'
 };
 const TOOLS = [
   ['cal', 'Economic Calendar', 'High-impact releases, forecasts and actuals — filtered by currency and impact.', 'Fundamentals', 'economic-calendar.html'],
@@ -28,6 +30,8 @@ const TOOLS = [
   ['vol', 'Volatility Scanner', 'Find the pairs that are actually moving — and the ones that aren\'t.', 'Technical', 'volatility-scanner.html'],
   ['corr', 'Correlation Matrix', 'Avoid doubling risk. See which pairs move together.', 'Risk', 'correlation-matrix.html'],
   ['pat', 'Pattern Recognition', 'Candlestick and chart patterns detected automatically.', 'Signals', 'pattern-recognition.html'],
+  ['rsi', 'RSI Divergence', 'Finds fresh regular and hidden RSI divergences from 15m to Daily, using TradingView\'s logic — with a chart for every hit.', 'Signals', 'rsi-divergence.html'],
+  ['season', 'Seasonality', 'How every pair performed in each month over up to 20 years — averages, bullish and bearish years, heatmap and a monthly ranking.', 'Signals', 'seasonality.html'],
   ['sr', 'Support / Resistance', 'Key levels and pivots for every major pair.', 'Technical', 'support-resistance.html'],
   ['clock', 'Trading Sessions', 'Sydney, Tokyo, London, New York — and their overlaps.', 'Timing', 'trading-sessions.html'],
   ['calc', 'Position Size Calculator', 'Exact lot size from risk, stop-loss and account size.', 'Risk', 'position-size-calculator.html'],

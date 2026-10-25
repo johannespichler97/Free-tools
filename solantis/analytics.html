@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Analytics Platform — Solantis</title>
-<meta name="description" content="Solantis Advanced Analytics Platform: economic calendar, currency strength, aggregate signals, volatility, correlation and more — twelve professional trading tools in one place.">
+<meta name="description" content="Solantis Advanced Analytics Platform: economic calendar, currency strength, aggregate signals, volatility, correlation and more — fourteen professional trading tools in one place.">
 <link rel="icon" href="assets/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -67,16 +67,16 @@
   <div class="wrap">
     <span class="eyebrow">Advanced Analytics Platform</span>
     <h1 class="display split">Trade with clarity.<br><span class="grad">Not noise.</span></h1>
-    <p class="lead rv">A complete suite of professional analysis tools for Solantis traders — economic calendar, currency strength, consensus signals, news, volatility, correlation and trading challenges. Everything you check before you click buy, in one place.</p>
+    <p class="lead rv">A complete suite of professional analysis tools for Solantis traders — economic calendar, currency strength, consensus signals, RSI divergences, seasonality, news, volatility, correlation and trading challenges. Everything you check before you click buy, in one place.</p>
     <div class="actions rv rv-d1">
       <a class="btn btn-primary" href="https://register.solantis.pro/register">Open account <svg class="arr" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9h12M10 4l5 5-5 5"/></svg></a>
       <a class="btn btn-ghost" href="#tools">Browse the tools</a>
     </div>
     <div class="stats rv rv-d2">
-      <div class="stat"><b data-countup="12">12</b><span>Trading tools</span></div>
+      <div class="stat"><b data-countup="14">14</b><span>Trading tools</span></div>
       <div class="stat"><b data-countup="27">27</b><span>FX &amp; metal pairs</span></div>
       <div class="stat"><b data-countup="16">16</b><span>Indicators per signal</span></div>
-      <div class="stat"><b data-countup="7">7</b><span>Timeframes, M1 to W1</span></div>
+      <div class="stat"><b data-countup="20">20</b><span>Years of seasonal history</span></div>
     </div>
   </div>
 </section>
@@ -86,7 +86,7 @@
     <div class="sec-head split-head">
       <div>
         <span class="eyebrow rv">The toolkit</span>
-        <h2 class="display h2 split" style="margin-top:20px">Twelve tools.<br>One platform.</h2>
+        <h2 class="display h2 split" style="margin-top:20px">Fourteen tools.<br>One platform.</h2>
       </div>
       <p class="lead rv rv-d1">Fundamentals, technicals, signals, risk and timing — focused tools for forex, crypto and gold traders. Filter by what you need right now.</p>
     </div>
@@ -176,6 +176,45 @@
         <p class="panel-note">Example data</p>
       </div>
     </div>
+
+    <div class="deep">
+      <div>
+        <span class="eyebrow rv">RSI Divergence Scanner</span>
+        <h3 class="split">Every divergence,<br><span class="grad">explained on the chart.</span></h3>
+        <p class="rv">27 instruments, four timeframes, one scan. Each hit comes with its own chart, so you see exactly why it was flagged — and when it was confirmed.</p>
+        <ul class="rv rv-d1 dv-steps" id="dvSteps">
+          <li><span><b>First RSI low</b> — the RSI turns up, lower than the 5 candles on each side.</span></li>
+          <li><span><b>Second, higher RSI low</b> — price makes a lower low, the RSI doesn't. Selling pressure is fading.</span></li>
+          <li><span><b>Divergence drawn</b> — price and RSI lines point in opposite directions.</span></li>
+          <li><span><b>Confirmed</b> — five more candles close. The signal can no longer repaint.</span></li>
+        </ul>
+      </div>
+      <div class="panel rv">
+        <div class="wdg" style="background:none;padding:0;min-height:0"><h4>EUR/USD · 1h <small>Regular bullish divergence</small></h4></div>
+        <svg id="dv" class="dv" viewBox="0 0 520 330" aria-label="RSI divergence example"></svg>
+        <p class="dv-cap" id="dvCap">&nbsp;</p>
+        <p class="panel-note">Demo data</p>
+      </div>
+    </div>
+
+    <div class="deep flip">
+      <div>
+        <span class="eyebrow rv">Seasonality</span>
+        <h3 class="split">Twenty years of history,<br><span class="grad">one question answered.</span></h3>
+        <p class="rv">How did this pair behave in this month — and how consistent was it? Average return, bullish and bearish years, a year-by-month heatmap and a ranking of all 27 instruments for any month.</p>
+        <ul class="rv rv-d1">
+          <li><span><b>Calendar-exact months</b> — built from daily closes, not shifted provider candles.</span></li>
+          <li><span><b>Consistency first</b> — the bullish/bearish count shows whether one outlier year drives the average.</span></li>
+          <li><span><b>5 to 20 years</b> — complete calendar years only; the current year is shown separately.</span></li>
+        </ul>
+      </div>
+      <div class="panel rv">
+        <div class="wdg" style="background:none;padding:0;min-height:0"><h4>EUR/USD · 2016–2025 <small>Average return by month</small></h4></div>
+        <div class="sea" id="sea"></div>
+        <div class="sea-sum" id="seaSum"></div>
+        <p class="panel-note">Historical data · click a month</p>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -243,6 +282,65 @@
 <script>
 (() => {
 const { $ } = SOL;
+
+/* RSI divergence demo: lower price low, higher RSI low, drawn step by step */
+(() => {
+  const svg = $('#dv'), cap = $('#dvCap'), steps = [...document.querySelectorAll('#dvSteps li')];
+  let seed = 7; const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+  const N = 44, P1 = 13, P2 = 30;
+  const bump = (i, c, w) => Math.exp(-Math.pow((i - c) / w, 2));
+  const price = [], rsi = [];
+  for (let i = 0; i < N; i++) {
+    price.push(1.0862 - i * .00002 - .0042 * bump(i, P1, 4) - .0058 * bump(i, P2, 4.5) + .0016 * Math.max(0, i - P2) / 10 + (rnd() - .5) * .0005);
+    rsi.push(54 - 30 * bump(i, P1, 3.2) - 21 * bump(i, P2, 3.4) + Math.max(0, i - P2) * .9 + (rnd() - .5) * 4);
+  }
+  rsi[P1] = 24; rsi[P2] = 33;
+  const lo = Math.min(...price) - .0006, hi = Math.max(...price) + .0006;
+  const X = i => 18 + i * (470 / (N - 1)), PY = v => 12 + (1 - (v - lo) / (hi - lo)) * 170, RY = v => 220 + (1 - v / 100) * 100;
+  let c = '';
+  price.forEach((v, i) => {
+    const o = i ? price[i - 1] : v + .0003, up = v >= o, x = X(i);
+    const hh = Math.max(o, v) + .00025 + rnd() * .0002, ll = Math.min(o, v) - .00025 - rnd() * .0002;
+    c += `<line x1="${x}" x2="${x}" y1="${PY(hh)}" y2="${PY(ll)}" stroke="${up ? '#26a65b' : '#e0453c'}"/><rect x="${x - 3.5}" width="7" y="${PY(Math.max(o, v))}" height="${Math.max(1.5, PY(Math.min(o, v)) - PY(Math.max(o, v)))}" fill="${up ? '#26a65b' : '#e0453c'}"/>`;
+  });
+  const rl = rsi.map((v, i) => (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + RY(v).toFixed(1)).join('');
+  const lowP = i => PY(price[i] - .0005);
+  svg.innerHTML = `
+    <line x1="10" x2="510" y1="${RY(70)}" y2="${RY(70)}" class="dv-g"/><line x1="10" x2="510" y1="${RY(30)}" y2="${RY(30)}" class="dv-g"/>
+    <text x="512" y="${RY(70) + 4}" class="dv-t" text-anchor="end">70</text><text x="512" y="${RY(30) + 4}" class="dv-t" text-anchor="end">30</text>
+    <text x="12" y="214" class="dv-t">RSI(14)</text>
+    <g>${c}</g>
+    <path d="${rl}" class="dv-rsi" pathLength="1"/>
+    <g class="dv-s1"><circle cx="${X(P1)}" cy="${RY(rsi[P1])}" r="5" class="dv-pt"/><text x="${X(P1)}" y="${RY(rsi[P1]) + 18}" class="dv-l" text-anchor="middle">P1</text></g>
+    <g class="dv-s2"><circle cx="${X(P2)}" cy="${RY(rsi[P2])}" r="5" class="dv-pt"/><text x="${X(P2)}" y="${RY(rsi[P2]) + 18}" class="dv-l" text-anchor="middle">P2</text></g>
+    <g class="dv-s3"><line x1="${X(P1)}" y1="${lowP(P1)}" x2="${X(P2)}" y2="${lowP(P2)}" class="dv-line"/><line x1="${X(P1)}" y1="${RY(rsi[P1])}" x2="${X(P2)}" y2="${RY(rsi[P2])}" class="dv-line"/></g>
+    <g class="dv-s4"><rect x="${X(P2)}" y="8" width="${X(P2 + 5) - X(P2)}" height="314" class="dv-conf"/><text x="${(X(P2) + X(P2 + 5)) / 2}" y="22" class="dv-l" text-anchor="middle">+5</text></g>`;
+  const caps = ['<b>P1</b> · first RSI low at 24', '<b>P2</b> · price lower, RSI higher at 33', '<b>Divergence</b> · price and RSI disagree', '<b>Confirmed</b> · 5 candles closed after P2'];
+  let k = 0;
+  const show = () => {
+    svg.setAttribute('class', 'dv run s' + k);
+    steps.forEach((li, i) => li.classList.toggle('on', i < k));
+    cap.innerHTML = k ? caps[k - 1] : '&nbsp;';
+    k = (k + 1) % 5;
+  };
+  show(); setInterval(show, 2000);
+})();
+
+/* seasonality: EUR/USD 2016–2025, from month-end daily closes */
+(() => {
+  const S = [['Jan', 0.24, 4, 6], ['Feb', -0.8, 2, 8], ['Mar', 0.76, 6, 4], ['Apr', 0.3, 5, 5], ['May', 0.07, 6, 4], ['Jun', 0.36, 5, 5], ['Jul', 0.29, 7, 3], ['Aug', 0.11, 4, 6], ['Sep', -0.85, 4, 6], ['Oct', -0.78, 2, 8], ['Nov', 0.4, 6, 4], ['Dec', 0.92, 8, 2]];
+  const FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const box = $('#sea'), sum = $('#seaSum'), max = 1;
+  box.innerHTML = S.map(([m, a, u, d], i) => `<button class="sea-m" data-i="${i}" aria-label="${FULL[i]}"><span class="sea-plot"><span class="sea-bar ${a >= 0 ? 'p' : 'n'}" style="--h:${Math.abs(a) / max * 50}%"></span></span><span class="sea-lbl">${m}</span><span class="sea-ud"><em class="u">▲${u}</em><em class="d">▼${d}</em></span></button>`).join('');
+  const label = (a, u, d) => { const n = u + d; if (a > 0 && u / n >= .7) return 'Historically bullish'; if (a > 0 && u / n >= .6) return 'Leaning bullish'; if (a < 0 && d / n >= .7) return 'Historically bearish'; if (a < 0 && d / n >= .6) return 'Leaning bearish'; return 'No clear tendency'; };
+  const pick = i => {
+    const [, a, u, d] = S[i];
+    [...box.children].forEach((b, j) => b.classList.toggle('on', j === i));
+    sum.innerHTML = `<div><span>${FULL[i]}</span><b class="${a >= 0 ? 'p' : 'n'}">${a >= 0 ? '+' : ''}${a.toFixed(2)}%</b><small>average</small></div><div><span>Years</span><b><em class="u">▲${u}</em> <em class="d">▼${d}</em></b><small>of ${u + d}</small></div><div><span>Tendency</span><b class="t">${label(a, u, d)}</b></div>`;
+  };
+  box.addEventListener('click', e => { const b = e.target.closest('.sea-m'); if (b) pick(+b.dataset.i); });
+  pick(new Date().getMonth());
+})();
 
 /* leaderboard (example data), gains drift and rows re-rank */
 const lb = $('#lb');
