@@ -678,7 +678,6 @@ function savePrefs() {
   INPUT_IDS.forEach(id => o[id] = document.getElementById(id).value);
   PREFS.set(o);
 }
-let deepLinked = false;
 (function restorePrefs() {
   const p = PREFS.get();
   const sel = document.getElementById('pairSelect');
@@ -703,15 +702,13 @@ let deepLinked = false;
   });
   // Deep link from the dashboard: ?symbol=OANDA:GBP_JPY selects GBPJPY
   const q = (new URLSearchParams(location.search).get('symbol') || '').replace(/^OANDA:/, '').replace('_', '');
-  if (q && hasPair(q)) { sel.value = q; deepLinked = true; savePrefs(); }
+  if (q && hasPair(q)) { sel.value = q; savePrefs(); }
 })();
 
 // ── Init ─────────────────────────────────────────────────────
 const initPair = document.getElementById('pairSelect').value;
 loadLivePrice(initPair);
 updatePipInfo(initPair);
-// Deep link: calculate straight away when all inputs are already filled in
-if (deepLinked && INPUT_IDS.every(id => parseFloat(document.getElementById(id).value) > 0)) calculate();
 </script>
   <script>
   (function(){

@@ -468,7 +468,6 @@ function savePrefs() {
   PREFS.set({ assets: [...activeAssets], tfs: [...activeTfs] });
 }
 const TF_PARAM = { M15:'15', M30:'30', H1:'60', H4:'60', D1:'D', W:'W' }; /* nearest supported timeframe */
-let deepLinked = false;
 (function restorePrefs() {
   const p = PREFS.get();
   if (Array.isArray(p.assets)) {
@@ -483,7 +482,7 @@ let deepLinked = false;
   const sym = ASSETS.find(a => a.sym === q.get('symbol')), tf = TF_PARAM[q.get('tf')];
   if (sym) activeAssets.add(sym.sym);
   if (tf) activeTfs.add(tf);
-  if (sym || tf) { deepLinked = true; savePrefs(); }
+  if (sym || tf) { savePrefs(); }
 })();
 
 /* ── BUILD CONTROLS ── */
@@ -841,7 +840,6 @@ document.getElementById('hamburger').addEventListener('click', () => {
 });
 
 buildControls();
-if (deepLinked && activeAssets.size) runScan(); /* deep link from the dashboard: scan straight away */
 </script>
 </body>
 </html>

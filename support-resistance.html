@@ -519,7 +519,6 @@ function savePrefs() {
   });
 }
 const TF_PARAM = { M15:'15', M30:'30', H1:'60', H4:'240', D1:'D', W:'W' };
-let deepLinked = false;
 (function restorePrefs() {
   const p = PREFS.get();
   const restore = (sel, attr, list, max, allowEmpty) => {
@@ -542,7 +541,7 @@ let deepLinked = false;
   const tf  = [...document.querySelectorAll('.tf-chip')].find(c => c.dataset.res === TF_PARAM[q.get('tf')]);
   ensure('.asset-chip', sym, 10);
   ensure('.tf-chip', tf, 4);
-  if (sym || tf) { deepLinked = true; savePrefs(); }
+  if (sym || tf) { savePrefs(); }
 })();
 
 updateCounter();
@@ -635,9 +634,6 @@ async function runScan() {
   btn.disabled = false;
   renderResults();
 }
-
-/* Deep link from the dashboard: scan straight away */
-if (deepLinked) runScan();
 
 /* ── Render ── */
 function renderResults() {

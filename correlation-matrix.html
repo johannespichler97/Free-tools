@@ -430,7 +430,6 @@ function savePrefs() {
   PREFS.set({ assets: getActiveAssets().map(a => a.sym), tf: getActiveTF(), lookback: getActiveLB() });
 }
 const TF_PARAM = { M15:'15', M30:'30', H1:'60', H4:'240', D1:'D', W:'W' };
-let deepLinked = false;
 (function restorePrefs() {
   const p = PREFS.get();
   const chips = [...document.querySelectorAll('.asset-chip')];
@@ -449,7 +448,7 @@ let deepLinked = false;
     if (active.length >= MAX_ASSETS) active[active.length - 1].classList.remove('active');
     sym.classList.add('active');
   }
-  if (sym || tf) { deepLinked = true; savePrefs(); }
+  if (sym || tf) { savePrefs(); }
   updateCounter();
 })();
 
@@ -571,8 +570,6 @@ async function runScan() {
   scanning = false;
 }
 
-// Deep link from the dashboard: build the matrix straight away (needs at least 2 instruments).
-if (deepLinked && getActiveAssets().length >= 2) runScan();
 
 function renderMatrix(assets, returns, resolution, lookback) {
   const n       = assets.length;

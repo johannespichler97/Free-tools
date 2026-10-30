@@ -477,7 +477,6 @@ function savePrefs() {
   PREFS.set({ assets: [...activeAssets], tfs: [...activeTfs], types: [...activeTypes], fresh, minDiff, confirmN });
 }
 const TF_PARAM = { M15:'15', M30:'15', H1:'60', H4:'240', D1:'D', W:'D' }; /* nearest supported timeframe */
-let deepLinked = false;
 (function restorePrefs() {
   const p = PREFS.get();
   const keep = (arr, ok) => Array.isArray(arr) ? arr.filter(ok) : null;
@@ -494,7 +493,7 @@ let deepLinked = false;
   const sym = ASSETS.find(a => a.sym === q.get('symbol')), tf = TF_PARAM[q.get('tf')];
   if (sym) activeAssets.add(sym.sym);
   if (tf) activeTfs.add(tf);
-  if (sym || tf) { deepLinked = true; savePrefs(); }
+  if (sym || tf) { savePrefs(); }
 })();
 
 /* ── MATH ── */
@@ -749,7 +748,6 @@ function miniChart(d, pr0, pr1, r0, r1) {
 }
 
 buildControls();
-if (deepLinked && activeAssets.size) runScan(); /* deep link from the dashboard: scan straight away */
 
 /* ── NAV ── */
 function toggleDropdown(e) {

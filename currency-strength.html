@@ -399,10 +399,9 @@ function getActiveTF() {
   return el ? el.dataset.res : '240';
 }
 
-// ── Saved settings + deep link (the pair itself is not used here; tf is applied and the scan runs) ──
+// ── Saved settings + deep link (the pair itself is not used here; tf is applied, the scan waits for the button) ──
 const TF_PARAM = { M15:'15', M30:'30', H1:'60', H4:'240', D1:'D', W:'W' };
 const query    = new URLSearchParams(location.search);
-const deepLinked = query.has('symbol') || query.has('tf');
 (function restorePrefs() {
   const pick = res => {
     const chip = [...document.querySelectorAll('.tf-chip')].find(c => c.dataset.res === res);
@@ -518,8 +517,6 @@ async function runScan() {
   scanning = false;
 }
 
-// Deep link from the dashboard: calculate straight away.
-if (deepLinked) runScan();
 
 // ── Compute currency strength scores ──
 function computeStrength(results) {
