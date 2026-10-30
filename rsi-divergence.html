@@ -462,7 +462,7 @@ const TYPES = {
   hbull: { label:'Hidden bullish',  desc:'Price higher low · RSI lower low', side:'bull' },
   hbear: { label:'Hidden bearish',  desc:'Price lower high · RSI higher high', side:'bear' },
 };
-const FRESH = [3, 5, 10, 20];
+const FRESH = [1, 2, 3, 5, 10, 20];
 const MIN_DIFF = [2, 4, 6, 8, 10];
 
 let activeAssets = new Set(ASSETS.map(a => a.sym));
@@ -592,7 +592,7 @@ function buildControls() {
   document.querySelectorAll('.cn').forEach(e => e.textContent = confirmN);
   document.querySelectorAll('.cn-th').forEach(e => e.textContent = ordinal(confirmN));
   chipRow('minDiffChips', MIN_DIFF.map(n => ({ v:n, label:`${n} pts` })), v => +v === minDiff, v => { minDiff = +v; buildControls(); render(); });
-  chipRow('freshChips', FRESH.map(n => ({ v:n, label:`${n} candles` })), v => +v === fresh, v => { fresh = +v; buildControls(); render(); });
+  chipRow('freshChips', FRESH.map(n => ({ v:n, label:`${n} candle${n > 1 ? 's' : ''}` })), v => +v === fresh, v => { fresh = +v; buildControls(); render(); });
   document.getElementById('selectedCount').textContent = activeAssets.size;
   document.getElementById('tfCount').textContent = activeTfs.size;
   document.getElementById('symPlural').textContent = activeAssets.size === 1 ? '' : 's';

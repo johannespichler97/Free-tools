@@ -154,34 +154,35 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 /* ── BIAS GRID ── */
 .bias-card { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; animation:fadeIn .25s ease; }
 .bias-table-wrap { overflow-x:auto; }
-.bias-table { width:100%; border-collapse:collapse; }
-.bias-table th { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--text-muted); padding:10px 14px; background:var(--bg-tertiary); border-bottom:1px solid var(--border); text-align:center; white-space:nowrap; }
-.bias-table th.col-pair { text-align:left; min-width:90px; }
-.bias-table td { padding:9px 14px; border-bottom:1px solid rgba(26,77,110,0.35); text-align:center; vertical-align:middle; }
-.bias-table tr:last-child td { border-bottom:none; }
-.bias-table tr:hover td { background:var(--bg-hover); }
-.pair-cell { font-family:var(--font-mono); font-size:13px; font-weight:700; color:var(--text-primary); text-align:left; }
+.bias-table { width:100%; border-collapse:separate; border-spacing:0 4px; padding:4px 8px 8px; }
+.bias-table th { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.14em; color:var(--text-muted); padding:10px 6px 6px; text-align:center; white-space:nowrap; }
+.bias-table th.col-pair { text-align:left; min-width:90px; padding-left:12px; }
+.bias-table td { padding:4px 5px; text-align:center; vertical-align:middle; }
+.bias-table tbody tr { transition:background .25s; }
+.bias-table tbody tr:hover { background:rgba(255,255,255,.035); }
+.bias-table tbody tr:hover .pair-cell { color:var(--accent-2); }
+.pair-cell { font-family:var(--font-mono); font-size:13px; font-weight:700; color:var(--text-primary); text-align:left !important; padding-left:12px !important; border-radius:12px 0 0 12px; transition:color .25s; }
 .pair-cell.metal { color:var(--accent-2); }
+.bias-table td:last-child { border-radius:0 12px 12px 0; }
 
-.bias-cell { display:flex; flex-direction:column; align-items:center; gap:3px; min-width:76px; }
-.bias-score { font-family:var(--font-mono); font-size:14px; font-weight:700; }
-.bias-label { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; padding:2px 6px; border-radius:10px; white-space:nowrap; }
-
-/* Strong Bull */
-.b4  .bias-score { color:#3fb950; }
-.b4  .bias-label { background:rgba(63,185,80,0.15); color:#3fb950; border:1px solid rgba(63,185,80,0.3); }
-/* Bull */
-.b2  .bias-score { color:#8dd9a0; }
-.b2  .bias-label { background:rgba(141,217,160,0.12); color:#8dd9a0; border:1px solid rgba(141,217,160,0.25); }
-/* Neutral */
-.b0  .bias-score { color:var(--text-muted); }
-.b0  .bias-label { background:rgba(77,122,150,0.15); color:var(--text-muted); border:1px solid rgba(77,122,150,0.25); }
-/* Bear */
-.bm2 .bias-score { color:#f08080; }
-.bm2 .bias-label { background:rgba(240,128,128,0.12); color:#f08080; border:1px solid rgba(240,128,128,0.25); }
-/* Strong Bear */
-.bm4 .bias-score { color:#f85149; }
-.bm4 .bias-label { background:rgba(248,81,73,0.15); color:#f85149; border:1px solid rgba(248,81,73,0.3); }
+/* Glass tile: tint strength follows the score, 4-bar meter shows the strength, label on hover. */
+.bias-cell { --c:138,184,208; --a:.06; height:40px; min-width:76px; border-radius:11px; display:flex; align-items:center; justify-content:center; gap:8px;
+  background:linear-gradient(180deg, rgba(var(--c), calc(var(--a) + .05)), rgba(var(--c), var(--a)));
+  border:1px solid rgba(var(--c), calc(var(--a) + .14)); box-shadow:inset 0 1px 0 rgba(255,255,255,.07);
+  transition:transform .2s, box-shadow .25s; cursor:default; }
+.bias-cell:hover { transform:translateY(-2px); box-shadow:inset 0 1px 0 rgba(255,255,255,.1), 0 0 18px rgba(var(--c), .35); }
+.bias-score { font-family:var(--font-mono); font-size:14px; font-weight:700; color:rgb(var(--c)); }
+.b4  { --c:63,185,80;  --a:.23; }
+.b2  { --c:63,185,80;  --a:.14; }
+.b0  { --a:.05; }
+.b0 .bias-score { color:var(--text-muted); }
+.bm2 { --c:248,81,73;  --a:.14; }
+.bm4 { --c:248,81,73;  --a:.23; }
+.meter { display:inline-flex; gap:2px; align-items:flex-end; height:12px; }
+.meter i { width:3px; border-radius:1px; background:rgba(var(--c), .22); }
+.meter i:nth-child(1) { height:4px; } .meter i:nth-child(2) { height:6px; } .meter i:nth-child(3) { height:9px; } .meter i:nth-child(4) { height:12px; }
+.meter i.on { background:rgb(var(--c)); box-shadow:0 0 6px rgba(var(--c), .6); }
+@media (prefers-reduced-motion: reduce) { .bias-cell, .bias-table tbody tr { transition:none; } .bias-cell:hover { transform:none; } }
 
 /* loading cell spinner */
 .cell-loading { display:inline-block; width:16px; height:16px; border:2px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .7s linear infinite; }
@@ -642,10 +643,13 @@ function fillCell(ai, ti, score) {
     return;
   }
   const cls = biasClass(score);
+  // Strength 0–4 as lit bars; the label (e.g. "Strong Bear") shows on hover.
+  const strength = Math.min(4, Math.abs(score));
+  const meter = [1, 2, 3, 4].map(k => `<i class="${k <= strength ? 'on' : ''}"></i>`).join('');
   cell.innerHTML = `
-    <div class="bias-cell ${cls}">
+    <div class="bias-cell ${cls}" title="${biasLabel(score)} (${fmtScore(score)})" aria-label="${biasLabel(score)} (${fmtScore(score)})">
       <span class="bias-score">${fmtScore(score)}</span>
-      <span class="bias-label">${biasLabel(score)}</span>
+      <span class="meter" aria-hidden="true">${meter}</span>
     </div>`;
 }
 
