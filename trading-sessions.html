@@ -435,6 +435,8 @@ canvas#timelineCanvas { display:block; width:100%; }
 
 <script>
 'use strict';
+// Saved settings: the platform provides window.MAPrefs (stored per user); standalone falls back to localStorage.
+const PREFS = (() => { const k = 'ma-prefs:trading-sessions'; let v = {}; try { v = (window.MAPrefs ? window.MAPrefs.get() : JSON.parse(localStorage.getItem(k) || '{}')) || {}; } catch (e) {} return { get: () => v, set: (o) => { v = o; try { window.MAPrefs ? window.MAPrefs.set(o) : localStorage.setItem(k, JSON.stringify(o)); } catch (e) {} } }; })();
 
 /* ─────────────────────────────────────────────
    SESSION DEFINITIONS
@@ -633,8 +635,16 @@ function buildTzSelector() {
     document.getElementById('tzDetected').textContent = `Browser: ${browserTz}`;
   }
 
+  // A time zone the user picked earlier wins over the detected one
+  const savedTz = PREFS.get().tz;
+  if (TIMEZONE_LIST.includes(savedTz)) {
+    select.value = savedTz;
+    displayTz    = savedTz;
+  }
+
   select.addEventListener('change', () => {
     displayTz = select.value;
+    PREFS.set({ tz: displayTz });
     renderCards();
   });
 }

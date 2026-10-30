@@ -416,6 +416,8 @@ Strong Sell → all timeframes Sell</div>
 <script>
 const API_KEY = 'd95lt2pr01qqtvdma7c0d95lt2pr01qqtvdma7cg';
 const BASE    = 'https://finnhub.io/api/v1';
+// Saved settings: the platform provides window.MAPrefs (stored per user); standalone falls back to localStorage.
+const PREFS = (() => { const k = 'ma-prefs:aggregate-signal'; let v = {}; try { v = (window.MAPrefs ? window.MAPrefs.get() : JSON.parse(localStorage.getItem(k) || '{}')) || {}; } catch (e) {} return { get: () => v, set: (o) => { v = o; try { window.MAPrefs ? window.MAPrefs.set(o) : localStorage.setItem(k, JSON.stringify(o)); } catch (e) {} } }; })();
 
 const ASSETS = [
   { label:'EUR/USD', sym:'OANDA:EUR_USD', type:'fx' },
@@ -461,6 +463,29 @@ let activeAssets = new Set(['OANDA:EUR_USD','OANDA:GBP_USD','OANDA:USD_JPY','OAN
 let activeTfs = new Set(['60']);
 let scanning = false;
 
+/* ── SAVED SETTINGS + DEEP LINK ── */
+function savePrefs() {
+  PREFS.set({ assets: [...activeAssets], tfs: [...activeTfs] });
+}
+const TF_PARAM = { M15:'15', M30:'30', H1:'60', H4:'60', D1:'D', W:'W' }; /* nearest supported timeframe */
+let deepLinked = false;
+(function restorePrefs() {
+  const p = PREFS.get();
+  if (Array.isArray(p.assets)) {
+    const valid = p.assets.filter(s => ASSETS.some(a => a.sym === s));
+    if (valid.length || !p.assets.length) activeAssets = new Set(valid);
+  }
+  if (Array.isArray(p.tfs)) {
+    const valid = p.tfs.filter(r => TIMEFRAMES.some(t => t.res === r));
+    if (valid.length) activeTfs = new Set(valid);
+  }
+  const q = new URLSearchParams(location.search);
+  const sym = ASSETS.find(a => a.sym === q.get('symbol')), tf = TF_PARAM[q.get('tf')];
+  if (sym) activeAssets.add(sym.sym);
+  if (tf) activeTfs.add(tf);
+  if (sym || tf) { deepLinked = true; savePrefs(); }
+})();
+
 /* ── BUILD CONTROLS ── */
 function buildControls() {
   const chips = document.getElementById('assetChips');
@@ -490,6 +515,7 @@ function toggleAsset(sym, el, isMetal) {
   if (activeAssets.has(sym)) { activeAssets.delete(sym); el.classList.remove('active'); }
   else { activeAssets.add(sym); el.classList.add('active'); }
   updateCount();
+  savePrefs();
 }
 
 function toggleTf(res) {
@@ -502,6 +528,7 @@ function selectOneTf() { activeTfs = new Set(['60']); syncTfChips(); }
 function syncTfChips() {
   document.querySelectorAll('.tf-chip').forEach(c => c.classList.toggle('active', activeTfs.has(c.dataset.res)));
   updateCount();
+  savePrefs();
 }
 /* selected timeframes in display order */
 const selectedTfs = () => TIMEFRAMES.map(t => t.res).filter(r => activeTfs.has(r));
@@ -510,12 +537,14 @@ function selectAll() {
   ASSETS.forEach(a => activeAssets.add(a.sym));
   document.querySelectorAll('.asset-chip').forEach(c => c.classList.add('active'));
   updateCount();
+  savePrefs();
 }
 
 function selectNone() {
   activeAssets.clear();
   document.querySelectorAll('.asset-chip').forEach(c => c.classList.remove('active'));
   updateCount();
+  savePrefs();
 }
 
 function updateCount() {
@@ -812,6 +841,7 @@ document.getElementById('hamburger').addEventListener('click', () => {
 });
 
 buildControls();
+if (deepLinked && activeAssets.size) runScan(); /* deep link from the dashboard: scan straight away */
 </script>
 </body>
 </html>

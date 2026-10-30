@@ -416,6 +416,8 @@ Bearish years  = years in which the month closed lower</div>
 <script>
 const API_KEY = 'd95lt2pr01qqtvdma7c0d95lt2pr01qqtvdma7cg';
 const BASE    = 'https://finnhub.io/api/v1';
+// Saved settings: the platform provides window.MAPrefs (stored per user); standalone falls back to localStorage.
+const PREFS = (() => { const k = 'ma-prefs:seasonality'; let v = {}; try { v = (window.MAPrefs ? window.MAPrefs.get() : JSON.parse(localStorage.getItem(k) || '{}')) || {}; } catch (e) {} return { get: () => v, set: (o) => { v = o; try { window.MAPrefs ? window.MAPrefs.set(o) : localStorage.setItem(k, JSON.stringify(o)); } catch (e) {} } }; })();
 
 const ASSETS = [
   { label:'EUR/USD', sym:'OANDA:EUR_USD', type:'fx' },
@@ -456,6 +458,17 @@ const DAY = 86400000;
 
 let sym = 'OANDA:EUR_USD', years = 10, focusMonth = CM, loadId = 0;
 let cur = { monthly: null };
+
+/* ── SAVED SETTINGS + DEEP LINK ── */
+const savePrefs = () => PREFS.set({ sym, years, focusMonth });
+(function restorePrefs() {
+  const p = PREFS.get();
+  if (ASSETS.some(a => a.sym === p.sym)) sym = p.sym;
+  if (YEAR_OPTS.includes(p.years)) years = p.years;
+  if (Number.isInteger(p.focusMonth) && p.focusMonth >= 0 && p.focusMonth < 12) focusMonth = p.focusMonth;
+  const q = ASSETS.find(a => a.sym === new URLSearchParams(location.search).get('symbol'));
+  if (q) { sym = q.sym; savePrefs(); }
+})();
 
 /* ── DATA ── */
 const delay = ms => new Promise(r => setTimeout(r, ms));
@@ -701,17 +714,20 @@ function updateHint() {
 function setSymbol(s) {
   if (s === sym) return;
   sym = s;
+  savePrefs();
   document.querySelectorAll('#assetChips .asset-chip').forEach(c => c.classList.toggle('active', c.dataset.sym === s));
   loadSymbol();
   renderScreener();
 }
 function setYears(n) {
   years = n;
+  savePrefs();
   document.querySelectorAll('#yearChips .tf-chip').forEach(c => c.classList.toggle('active', +c.dataset.y === n));
   updateHint(); renderAll(); renderScreener();
 }
 function setFocus(m) {
   focusMonth = m;
+  savePrefs();
   renderSummary(); renderBars(); renderScreener();
 }
 function renderAll() { renderSummary(); renderBars(); renderHeatmap(); }

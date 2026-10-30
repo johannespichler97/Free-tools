@@ -263,6 +263,8 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
 /* ── SOURCES ── */
 const FINNHUB_KEY = 'd95lt2pr01qqtvdma7c0d95lt2pr01qqtvdma7cg';
 const RSS2JSON = 'https://api.rss2json.com/v1/api.json?rss_url=';
+// Saved settings: the platform provides window.MAPrefs (stored per user); standalone falls back to localStorage.
+const PREFS = (() => { const k = 'ma-prefs:market-news'; let v = {}; try { v = (window.MAPrefs ? window.MAPrefs.get() : JSON.parse(localStorage.getItem(k) || '{}')) || {}; } catch (e) {} return { get: () => v, set: (o) => { v = o; try { window.MAPrefs ? window.MAPrefs.set(o) : localStorage.setItem(k, JSON.stringify(o)); } catch (e) {} } }; })();
 const RSS_FX = [
   { url: 'https://www.forexlive.com/feed/', name: 'ForexLive' },
 ];
@@ -388,6 +390,24 @@ let activeDays  = 1;
 let articleCache = {}; // keyed by tab
 let feedCache    = {}; // keyed by source id, shared across tabs
 let loading     = false;
+
+/* ── SAVED SETTINGS + DEEP LINK ── */
+const savePrefs = () => PREFS.set({ tab: activeTab, asset: activeAsset, days: activeDays });
+(function restorePrefs() {
+  const p = PREFS.get();
+  if (p.tab in TAB_ASSETS) activeTab = p.tab;
+  if (TAB_ASSETS[activeTab].includes(p.asset)) activeAsset = p.asset;
+  if ([1, 3, 5].includes(p.days)) activeDays = p.days;
+  /* ?symbol=OANDA:GBP_JPY selects the GBP/JPY chip (on the Forex tab unless the current tab has it) */
+  const q = (new URLSearchParams(location.search).get('symbol') || '').replace(/^OANDA:/, '').replace('_', '/');
+  if (q && FX_PAIRS.includes(q)) {
+    if (!TAB_ASSETS[activeTab].includes(q)) activeTab = 'forex';
+    activeAsset = q;
+    savePrefs();
+  }
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.id === 'tab-' + activeTab));
+  document.querySelectorAll('.day-btn').forEach(b => b.classList.toggle('active', b.id === 'day-' + activeDays));
+})();
 
 /* ── HELPERS ── */
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
@@ -601,6 +621,7 @@ function buildChips(counts, total) {
 function switchTab(tab) {
   if (tab === activeTab) return;
   activeTab = tab; activeAsset = null;
+  savePrefs();
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-' + tab).classList.add('active');
   document.getElementById('tab-' + tab).scrollIntoView({ block:'nearest', inline:'nearest' });
@@ -611,6 +632,7 @@ function switchTab(tab) {
 function setDays(days) {
   if (days === activeDays) return;
   activeDays = days;
+  savePrefs();
   document.querySelectorAll('.day-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('day-' + days).classList.add('active');
   if (articleCache[activeTab]) showFiltered(articleCache[activeTab]);
@@ -618,6 +640,7 @@ function setDays(days) {
 
 function setAsset(asset) {
   activeAsset = asset;
+  savePrefs();
   buildChips();
   if (articleCache[activeTab]) showFiltered(articleCache[activeTab]);
 }

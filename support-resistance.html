@@ -475,6 +475,8 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
   <script>
 const API_KEY  = 'd95lt2pr01qqtvdma7c0d95lt2pr01qqtvdma7cg';
 const API_BASE = 'https://finnhub.io/api/v1';
+// Saved settings: the platform provides window.MAPrefs (stored per user); standalone falls back to localStorage.
+const PREFS = (() => { const k = 'ma-prefs:support-resistance'; let v = {}; try { v = (window.MAPrefs ? window.MAPrefs.get() : JSON.parse(localStorage.getItem(k) || '{}')) || {}; } catch (e) {} return { get: () => v, set: (o) => { v = o; try { window.MAPrefs ? window.MAPrefs.set(o) : localStorage.setItem(k, JSON.stringify(o)); } catch (e) {} } }; })();
 const TF_LABELS  = {'5':'5m','15':'15m','30':'30m','60':'1H','240':'4H','D':'Daily','W':'Weekly','M':'Monthly'};
 const TF_SECONDS = {'5':300,'15':900,'30':1800,'60':3600,'240':14400,'D':86400,'W':604800,'M':2592000};
 const TF_CANDLES = {'5':200,'15':150,'30':150,'60':150,'240':120,'D':200,'W':100,'M':60};
@@ -492,11 +494,11 @@ function updateCounter() {
 
 document.querySelectorAll('.asset-chip').forEach(c => c.addEventListener('click', () => {
   if (!c.classList.contains('active') && document.querySelectorAll('.asset-chip.active').length >= 10) return;
-  c.classList.toggle('active'); updateCounter();
+  c.classList.toggle('active'); updateCounter(); savePrefs();
 }));
 document.querySelectorAll('.tf-chip').forEach(c => c.addEventListener('click', () => {
   if (!c.classList.contains('active') && document.querySelectorAll('.tf-chip.active').length >= 4) return;
-  c.classList.toggle('active'); updateCounter();
+  c.classList.toggle('active'); updateCounter(); savePrefs();
 }));
 
 function selectAllAssets() {
@@ -505,8 +507,43 @@ function selectAllAssets() {
     if (count < 10) { c.classList.add('active'); count++; }
   });
   updateCounter();
+  savePrefs();
 }
-function clearAssets() { document.querySelectorAll('.asset-chip.active').forEach(c => c.classList.remove('active')); updateCounter(); }
+function clearAssets() { document.querySelectorAll('.asset-chip.active').forEach(c => c.classList.remove('active')); updateCounter(); savePrefs(); }
+
+/* ── Saved settings + deep link ── */
+function savePrefs() {
+  PREFS.set({
+    assets: [...document.querySelectorAll('.asset-chip.active')].map(c => c.dataset.sym),
+    tfs:    [...document.querySelectorAll('.tf-chip.active')].map(c => c.dataset.res)
+  });
+}
+const TF_PARAM = { M15:'15', M30:'30', H1:'60', H4:'240', D1:'D', W:'W' };
+let deepLinked = false;
+(function restorePrefs() {
+  const p = PREFS.get();
+  const restore = (sel, attr, list, max, allowEmpty) => {
+    if (!Array.isArray(list)) return;
+    const chips = [...document.querySelectorAll(sel)];
+    const valid = list.filter(v => chips.some(c => c.dataset[attr] === v)).slice(0, max);
+    if (valid.length || (allowEmpty && !list.length)) chips.forEach(c => c.classList.toggle('active', valid.includes(c.dataset[attr])));
+  };
+  restore('.asset-chip', 'sym', p.assets, 10, true);
+  restore('.tf-chip', 'res', p.tfs, 4, false);
+  // make sure a chip is active, dropping the last other one when the max is reached
+  const ensure = (sel, chip, max) => {
+    if (!chip || chip.classList.contains('active')) return;
+    const active = [...document.querySelectorAll(sel + '.active')];
+    if (active.length >= max) active[active.length - 1].classList.remove('active');
+    chip.classList.add('active');
+  };
+  const q   = new URLSearchParams(location.search);
+  const sym = [...document.querySelectorAll('.asset-chip')].find(c => c.dataset.sym === q.get('symbol'));
+  const tf  = [...document.querySelectorAll('.tf-chip')].find(c => c.dataset.res === TF_PARAM[q.get('tf')]);
+  ensure('.asset-chip', sym, 10);
+  ensure('.tf-chip', tf, 4);
+  if (sym || tf) { deepLinked = true; savePrefs(); }
+})();
 
 updateCounter();
 
@@ -598,6 +635,9 @@ async function runScan() {
   btn.disabled = false;
   renderResults();
 }
+
+/* Deep link from the dashboard: scan straight away */
+if (deepLinked) runScan();
 
 /* ── Render ── */
 function renderResults() {

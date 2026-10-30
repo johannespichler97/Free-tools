@@ -415,6 +415,8 @@ Because only closed candles are used, a listed divergence never disappears later
 <script>
 const API_KEY = 'd95lt2pr01qqtvdma7c0d95lt2pr01qqtvdma7cg';
 const BASE    = 'https://finnhub.io/api/v1';
+// Saved settings: the platform provides window.MAPrefs (stored per user); standalone falls back to localStorage.
+const PREFS = (() => { const k = 'ma-prefs:rsi-divergence'; let v = {}; try { v = (window.MAPrefs ? window.MAPrefs.get() : JSON.parse(localStorage.getItem(k) || '{}')) || {}; } catch (e) {} return { get: () => v, set: (o) => { v = o; try { window.MAPrefs ? window.MAPrefs.set(o) : localStorage.setItem(k, JSON.stringify(o)); } catch (e) {} } }; })();
 
 const ASSETS = [
   { label:'EUR/USD', sym:'OANDA:EUR_USD', type:'fx' },
@@ -469,6 +471,31 @@ let activeAssets = new Set(ASSETS.map(a => a.sym));
 let activeTfs = new Set(TFS.map(t => t.id));
 let activeTypes = new Set(['rbull', 'rbear']);
 let fresh = 10, minDiff = 2, scanning = false, found = [], sets = [], failedSets = 0, totalSets = 0, lastScan = null;
+
+/* ── SAVED SETTINGS + DEEP LINK ── */
+function savePrefs() {
+  PREFS.set({ assets: [...activeAssets], tfs: [...activeTfs], types: [...activeTypes], fresh, minDiff, confirmN });
+}
+const TF_PARAM = { M15:'15', M30:'15', H1:'60', H4:'240', D1:'D', W:'D' }; /* nearest supported timeframe */
+let deepLinked = false;
+(function restorePrefs() {
+  const p = PREFS.get();
+  const keep = (arr, ok) => Array.isArray(arr) ? arr.filter(ok) : null;
+  const assets = keep(p.assets, v => ASSETS.some(a => a.sym === v));
+  if (assets && (assets.length || !p.assets.length)) activeAssets = new Set(assets);
+  const tfs = keep(p.tfs, v => TFS.some(t => t.id === v));
+  if (tfs && tfs.length) activeTfs = new Set(tfs);
+  const types = keep(p.types, v => v in TYPES);
+  if (types && types.length) activeTypes = new Set(types);
+  if (FRESH.includes(p.fresh)) fresh = p.fresh;
+  if (MIN_DIFF.includes(p.minDiff)) minDiff = p.minDiff;
+  if (CONFIRM.includes(p.confirmN)) confirmN = p.confirmN;
+  const q = new URLSearchParams(location.search);
+  const sym = ASSETS.find(a => a.sym === q.get('symbol')), tf = TF_PARAM[q.get('tf')];
+  if (sym) activeAssets.add(sym.sym);
+  if (tf) activeTfs.add(tf);
+  if (sym || tf) { deepLinked = true; savePrefs(); }
+})();
 
 /* ── MATH ── */
 function rsi(close, n = RSI_LEN) {
@@ -582,7 +609,7 @@ function build4h(d) {
 function chipRow(id, items, isOn, onClick, extra = () => '') {
   const el = document.getElementById(id);
   el.innerHTML = items.map(x => `<span class="${x.cls || 'tf-chip'}${isOn(x.v) ? ' active' : ''} ${extra(x)}" data-v="${x.v}">${x.label}</span>`).join('');
-  el.querySelectorAll('[data-v]').forEach(c => c.addEventListener('click', () => onClick(c.dataset.v)));
+  el.querySelectorAll('[data-v]').forEach(c => c.addEventListener('click', () => { onClick(c.dataset.v); savePrefs(); }));
 }
 function buildControls() {
   chipRow('assetChips', ASSETS.map(a => ({ v:a.sym, label:a.label, cls:'asset-chip' + (a.type === 'metal' ? ' metal' : '') })), v => activeAssets.has(v), v => { activeAssets.has(v) ? activeAssets.delete(v) : activeAssets.add(v); buildControls(); });
@@ -598,8 +625,8 @@ function buildControls() {
   document.getElementById('symPlural').textContent = activeAssets.size === 1 ? '' : 's';
   document.getElementById('tfPlural').textContent = activeTfs.size === 1 ? '' : 's';
 }
-function selectAll() { ASSETS.forEach(a => activeAssets.add(a.sym)); buildControls(); }
-function selectNone() { activeAssets.clear(); buildControls(); }
+function selectAll() { ASSETS.forEach(a => activeAssets.add(a.sym)); buildControls(); savePrefs(); }
+function selectNone() { activeAssets.clear(); buildControls(); savePrefs(); }
 
 /* ── SCAN ── */
 const SCAN_ICON = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.8"/><line x1="7" y1="4" x2="7" y2="7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="7" y1="7" x2="9" y2="9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;
@@ -722,6 +749,7 @@ function miniChart(d, pr0, pr1, r0, r1) {
 }
 
 buildControls();
+if (deepLinked && activeAssets.size) runScan(); /* deep link from the dashboard: scan straight away */
 
 /* ── NAV ── */
 function toggleDropdown(e) {

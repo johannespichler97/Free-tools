@@ -408,6 +408,8 @@ select.input-field option { background:var(--bg-tertiary); }
 <script>
 const API_KEY = 'd95lt2pr01qqtvdma7c0d95lt2pr01qqtvdma7cg';
 const API_BASE = 'https://finnhub.io/api/v1';
+// Saved settings: the platform provides window.MAPrefs (stored per user); standalone falls back to localStorage.
+const PREFS = (() => { const k = 'ma-prefs:position-size-calculator'; let v = {}; try { v = (window.MAPrefs ? window.MAPrefs.get() : JSON.parse(localStorage.getItem(k) || '{}')) || {}; } catch (e) {} return { get: () => v, set: (o) => { v = o; try { window.MAPrefs ? window.MAPrefs.set(o) : localStorage.setItem(k, JSON.stringify(o)); } catch (e) {} } }; })();
 
 let accCurrency = 'USD';
 let riskType    = 'pct';
@@ -633,6 +635,7 @@ document.getElementById('pairSelect').addEventListener('change', function() {
   updatePipInfo(this.value);
   document.getElementById('resultArea').innerHTML = `<div class="result-empty"><div class="result-empty-icon">&#9881;</div><p>Fill in your parameters and click<br><strong>Calculate Lot Size</strong></p></div>`;
   clearWarning();
+  savePrefs();
 });
 
 // Account currency toggle
@@ -643,6 +646,7 @@ document.querySelectorAll('[data-cur]').forEach(btn => {
     accCurrency = btn.dataset.cur;
     document.getElementById('accCurSuffix').textContent = accCurrency;
     document.getElementById('riskSuffix').textContent = riskType === 'pct' ? '%' : accCurrency;
+    savePrefs();
   });
 });
 
@@ -654,6 +658,7 @@ document.querySelectorAll('[data-risk]').forEach(btn => {
     riskType = btn.dataset.risk;
     document.getElementById('riskSuffix').textContent = riskType === 'pct' ? '%' : accCurrency;
     document.getElementById('riskValue').placeholder = riskType === 'pct' ? '1' : '100';
+    savePrefs();
   });
 });
 
@@ -663,11 +668,50 @@ document.getElementById('calcBtn').addEventListener('click', calculate);
 // Enter key triggers calculate
 document.querySelectorAll('input').forEach(inp => {
   inp.addEventListener('keydown', e => { if (e.key === 'Enter') calculate(); });
+  inp.addEventListener('input', savePrefs);
 });
 
+// ── Saved settings + deep link ───────────────────────────────
+const INPUT_IDS = ['accountSize', 'riskValue', 'stopLoss'];
+function savePrefs() {
+  const o = { pair: document.getElementById('pairSelect').value, accCurrency, riskType };
+  INPUT_IDS.forEach(id => o[id] = document.getElementById(id).value);
+  PREFS.set(o);
+}
+let deepLinked = false;
+(function restorePrefs() {
+  const p = PREFS.get();
+  const sel = document.getElementById('pairSelect');
+  const hasPair = v => [...sel.options].some(o => o.value === v);
+  if (hasPair(p.pair)) sel.value = p.pair;
+  const curBtn = [...document.querySelectorAll('[data-cur]')].find(b => b.dataset.cur === p.accCurrency);
+  if (curBtn) {
+    document.querySelectorAll('[data-cur]').forEach(b => b.classList.toggle('active', b === curBtn));
+    accCurrency = curBtn.dataset.cur;
+  }
+  const riskBtn = [...document.querySelectorAll('[data-risk]')].find(b => b.dataset.risk === p.riskType);
+  if (riskBtn) {
+    document.querySelectorAll('[data-risk]').forEach(b => b.classList.toggle('active', b === riskBtn));
+    riskType = riskBtn.dataset.risk;
+  }
+  document.getElementById('accCurSuffix').textContent = accCurrency;
+  document.getElementById('riskSuffix').textContent = riskType === 'pct' ? '%' : accCurrency;
+  document.getElementById('riskValue').placeholder = riskType === 'pct' ? '1' : '100';
+  INPUT_IDS.forEach(id => {
+    const v = p[id];
+    if (typeof v === 'string' && v !== '' && isFinite(v) && +v >= 0) document.getElementById(id).value = v;
+  });
+  // Deep link from the dashboard: ?symbol=OANDA:GBP_JPY selects GBPJPY
+  const q = (new URLSearchParams(location.search).get('symbol') || '').replace(/^OANDA:/, '').replace('_', '');
+  if (q && hasPair(q)) { sel.value = q; deepLinked = true; savePrefs(); }
+})();
+
 // ── Init ─────────────────────────────────────────────────────
-loadLivePrice('EURUSD');
-updatePipInfo('EURUSD');
+const initPair = document.getElementById('pairSelect').value;
+loadLivePrice(initPair);
+updatePipInfo(initPair);
+// Deep link: calculate straight away when all inputs are already filled in
+if (deepLinked && INPUT_IDS.every(id => parseFloat(document.getElementById(id).value) > 0)) calculate();
 </script>
   <script>
   (function(){

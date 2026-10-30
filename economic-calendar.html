@@ -490,6 +490,8 @@ thead th.col-actual,thead th.col-forecast,thead th.col-previous { text-align:rig
 <script>
 const API_KEY  = 'd95lt2pr01qqtvdma7c0d95lt2pr01qqtvdma7cg';
 const API_BASE = 'https://finnhub.io/api/v1';
+// Saved settings: the platform provides window.MAPrefs (stored per user); standalone falls back to localStorage.
+const PREFS = (() => { const k = 'ma-prefs:economic-calendar'; let v = {}; try { v = (window.MAPrefs ? window.MAPrefs.get() : JSON.parse(localStorage.getItem(k) || '{}')) || {}; } catch (e) {} return { get: () => v, set: (o) => { v = o; try { window.MAPrefs ? window.MAPrefs.set(o) : localStorage.setItem(k, JSON.stringify(o)); } catch (e) {} } }; })();
 let selectedTZ = 'Europe/Berlin'; // updated by TZ selector
 
 const TIMEZONE_LIST = [
@@ -1279,6 +1281,19 @@ function updateClock() {
   }
 }
 
+// ── Saved settings ────────────────────────────────────────────
+function savePrefs() {
+  const tab = document.querySelector('.tab-btn.active');
+  PREFS.set({
+    range: tab ? tab.dataset.range : 'custom',
+    from: tab ? undefined : document.getElementById('dateFrom').value,
+    to:   tab ? undefined : document.getElementById('dateTo').value,
+    impacts: [...activeFilters.impacts],
+    currencies: [...activeFilters.currencies],
+    tz: selectedTZ,
+  });
+}
+
 // ── Event listeners ───────────────────────────────────────────
 document.querySelectorAll('.tab-btn').forEach(btn => btn.addEventListener('click', () => {
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
@@ -1286,12 +1301,13 @@ document.querySelectorAll('.tab-btn').forEach(btn => btn.addEventListener('click
   const r = getDateRange(btn.dataset.range);
   document.getElementById('dateFrom').value = r.from;
   document.getElementById('dateTo').value   = r.to;
+  savePrefs();
   fetchCalendar(r.from, r.to);
 }));
 
 document.getElementById('applyDate').addEventListener('click', () => {
   const f=document.getElementById('dateFrom').value, t=document.getElementById('dateTo').value;
-  if (f&&t) { document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active')); fetchCalendar(f,t); }
+  if (f&&t) { document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active')); savePrefs(); fetchCalendar(f,t); }
 });
 
 document.getElementById('refreshBtn').addEventListener('click', () => {
@@ -1302,6 +1318,7 @@ document.querySelectorAll('.impact-chip').forEach(chip => chip.addEventListener(
   const impact = parseInt(chip.dataset.impact);
   chip.classList.toggle('active');
   chip.classList.contains('active') ? activeFilters.impacts.add(impact) : activeFilters.impacts.delete(impact);
+  savePrefs();
   applyFilters();
 }));
 
@@ -1309,6 +1326,7 @@ document.querySelectorAll('.currency-chip').forEach(chip => chip.addEventListene
   const cur = chip.dataset.currency;
   chip.classList.toggle('active');
   chip.classList.contains('active') ? activeFilters.currencies.add(cur) : activeFilters.currencies.delete(cur);
+  savePrefs();
   applyFilters();
 }));
 
@@ -1353,8 +1371,16 @@ setInterval(applyFilters, 30000);
     document.getElementById('tzDetected').textContent = `~${browserTz.split('/').pop().replace(/_/g,' ')}`;
   }
 
+  // A timezone the user picked earlier wins over the detected one
+  const savedTz = PREFS.get().tz;
+  if (TIMEZONE_LIST.includes(savedTz)) {
+    selectedTZ = savedTz;
+    select.value = savedTz;
+  }
+
   select.addEventListener('change', () => {
     selectedTZ = select.value;
+    savePrefs();
     // Recalculate date range for active tab in new timezone
     const activeTab = document.querySelector('.tab-btn.active');
     if (activeTab) {
@@ -1367,11 +1393,41 @@ setInterval(applyFilters, 30000);
   });
 })();
 
+// ── Restore saved filters + deep link ─────────────────────────
+let initRange = null;
+(function restorePrefs() {
+  const p = PREFS.get();
+  const syncChips = () => {
+    document.querySelectorAll('.impact-chip').forEach(c => c.classList.toggle('active', activeFilters.impacts.has(parseInt(c.dataset.impact))));
+    document.querySelectorAll('.currency-chip').forEach(c => c.classList.toggle('active', activeFilters.currencies.has(c.dataset.currency)));
+  };
+  // an empty list is a valid choice; a list with only unknown values falls back to the defaults
+  const keep = (list, ok) => { if (!Array.isArray(list)) return null; const v = list.filter(ok); return v.length || !list.length ? new Set(v) : null; };
+  const chipCcys = [...document.querySelectorAll('.currency-chip')].map(c => c.dataset.currency);
+  activeFilters.impacts    = keep(p.impacts, i => [1,2,3].includes(i)) || activeFilters.impacts;
+  activeFilters.currencies = keep(p.currencies, c => chipCcys.includes(c)) || activeFilters.currencies;
+  const tab = [...document.querySelectorAll('.tab-btn')].find(b => b.dataset.range === p.range);
+  const isYMD = v => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
+  if (tab) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === tab));
+    initRange = getDateRange(tab.dataset.range);
+  } else if (p.range === 'custom' && isYMD(p.from) && isYMD(p.to)) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    initRange = { from: p.from, to: p.to };
+  }
+  // ?symbol=OANDA:GBP_JPY shows only the pair's two currencies (XAU = gold)
+  const m = (new URLSearchParams(location.search).get('symbol') || '').match(/^OANDA:([A-Z]{3})_([A-Z]{3})$/);
+  const pairCcys = m ? [m[1], m[2]].filter(c => chipCcys.includes(c)) : [];
+  if (pairCcys.length) activeFilters.currencies = new Set(pairCcys);
+  syncChips();
+  if (pairCcys.length) savePrefs();
+})();
+
 // ── Init ──────────────────────────────────────────────────────
 (function init() {
   updateClock();
   setInterval(updateClock, 1000);
-  const r = getDateRange('today');
+  const r = initRange || getDateRange('today');
   document.getElementById('dateFrom').value = r.from;
   document.getElementById('dateTo').value   = r.to;
   fetchCalendar(r.from, r.to);

@@ -393,6 +393,8 @@ const API_BASE = 'https://finnhub.io/api/v1';
 const TF_LABELS  = { '1':'M1', '5':'M5', '15':'M15', '30':'M30', '60':'1H', '240':'4H', 'D':'Daily', 'W':'Weekly' };
 const TF_SECONDS = { '1':60, '5':300, '15':900, '30':1800, '60':3600, '240':14400, 'D':86400, 'W':604800 };
 const MAX_ASSETS = 10;
+// Saved settings: the platform provides window.MAPrefs (stored per user); standalone falls back to localStorage.
+const PREFS = (() => { const k = 'ma-prefs:volatility-scanner'; let v = {}; try { v = (window.MAPrefs ? window.MAPrefs.get() : JSON.parse(localStorage.getItem(k) || '{}')) || {}; } catch (e) {} return { get: () => v, set: (o) => { v = o; try { window.MAPrefs ? window.MAPrefs.set(o) : localStorage.setItem(k, JSON.stringify(o)); } catch (e) {} } }; })();
 
 // ── Asset chip interactions ──
 document.querySelectorAll('.asset-chip').forEach(chip => {
@@ -401,6 +403,7 @@ document.querySelectorAll('.asset-chip').forEach(chip => {
     if (!chip.classList.contains('active') && active.length >= MAX_ASSETS) return;
     chip.classList.toggle('active');
     updateCounter();
+    savePrefs();
   });
 });
 function selectAllAssets() {
@@ -409,10 +412,12 @@ function selectAllAssets() {
     if (count < MAX_ASSETS) { c.classList.add('active'); count++; }
   });
   updateCounter();
+  savePrefs();
 }
 function clearAssets() {
   document.querySelectorAll('.asset-chip').forEach(c => c.classList.remove('active'));
   updateCounter();
+  savePrefs();
 }
 
 // ── TF chips (single select) ──
@@ -420,6 +425,7 @@ document.querySelectorAll('.tf-chip').forEach(chip => {
   chip.addEventListener('click', () => {
     document.querySelectorAll('.tf-chip').forEach(c => c.classList.remove('active'));
     chip.classList.add('active');
+    savePrefs();
   });
 });
 
@@ -429,6 +435,7 @@ document.querySelectorAll('.atr-chip').forEach(chip => {
     document.querySelectorAll('.atr-chip').forEach(c => c.classList.remove('active'));
     chip.classList.add('active');
     updateCounter();
+    savePrefs();
   });
 });
 
@@ -448,6 +455,34 @@ function getActiveAssets() {
 }
 function getActiveTF()     { return document.querySelector('.tf-chip.active')?.dataset.res  || '240'; }
 function getActiveATR()    { return parseInt(document.querySelector('.atr-chip.active')?.dataset.period || '14'); }
+
+// ── Saved settings + deep link ──
+function savePrefs() {
+  PREFS.set({ assets: getActiveAssets().map(a => a.sym), tf: getActiveTF(), atr: getActiveATR() });
+}
+const TF_PARAM = { M15:'15', M30:'30', H1:'60', H4:'240', D1:'D', W:'W' };
+let deepLinked = false;
+(function restorePrefs() {
+  const p = PREFS.get();
+  const chips = [...document.querySelectorAll('.asset-chip')];
+  const pick = (sel, attr, v) => { const c = [...document.querySelectorAll(sel)].find(x => x.dataset[attr] === v); if (c) { document.querySelectorAll(sel).forEach(x => x.classList.toggle('active', x === c)); } return c; };
+  if (Array.isArray(p.assets)) {
+    const valid = p.assets.filter(s => chips.some(c => c.dataset.sym === s)).slice(0, MAX_ASSETS);
+    if (valid.length || !p.assets.length) chips.forEach(c => c.classList.toggle('active', valid.includes(c.dataset.sym)));
+  }
+  pick('.tf-chip', 'res', p.tf);
+  pick('.atr-chip', 'period', String(p.atr));
+  const q   = new URLSearchParams(location.search);
+  const sym = chips.find(c => c.dataset.sym === q.get('symbol'));
+  const tf  = pick('.tf-chip', 'res', TF_PARAM[q.get('tf')]);
+  if (sym && !sym.classList.contains('active')) {
+    const active = chips.filter(c => c.classList.contains('active'));
+    if (active.length >= MAX_ASSETS) active[active.length - 1].classList.remove('active');
+    sym.classList.add('active');
+  }
+  if (sym || tf) { deepLinked = true; savePrefs(); }
+  updateCounter();
+})();
 
 // ── Weekend gap (forex closed Fri 22:00 → Sun 22:00 UTC) ──
 function closedGapSecs(ts) {
@@ -553,6 +588,9 @@ async function runScan() {
   btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Scan Volatility`;
   scanning = false;
 }
+
+// Deep link from the dashboard: scan straight away.
+if (deepLinked) runScan();
 
 function renderResults(results, resolution, atrPeriod) {
   const tfLabel = TF_LABELS[resolution] || resolution;

@@ -500,6 +500,8 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 <script>
 const API_KEY  = 'd95lt2pr01qqtvdma7c0d95lt2pr01qqtvdma7cg';
 const API_BASE = 'https://finnhub.io/api/v1';
+// Saved settings: the platform provides window.MAPrefs (stored per user); standalone falls back to localStorage.
+const PREFS = (() => { const k = 'ma-prefs:pattern-recognition'; let v = {}; try { v = (window.MAPrefs ? window.MAPrefs.get() : JSON.parse(localStorage.getItem(k) || '{}')) || {}; } catch (e) {} return { get: () => v, set: (o) => { v = o; try { window.MAPrefs ? window.MAPrefs.set(o) : localStorage.setItem(k, JSON.stringify(o)); } catch (e) {} } }; })();
 
 let allResults   = [];   // { pattern, sym, symLabel, tf, tfLabel }
 let activeFilter = 'all';
@@ -1064,6 +1066,7 @@ document.querySelectorAll('.asset-chip').forEach(chip => {
     if (!chip.classList.contains('active') && active.length >= 10) return;
     chip.classList.toggle('active');
     updateCounter();
+    savePrefs();
   });
 });
 
@@ -1074,6 +1077,7 @@ document.querySelectorAll('.tf-chip').forEach(chip => {
     if (!chip.classList.contains('active') && active.length >= 4) return;
     chip.classList.toggle('active');
     updateCounter();
+    savePrefs();
   });
 });
 
@@ -1085,10 +1089,12 @@ document.getElementById('selectAllAssets').addEventListener('click', () => {
     else c.classList.remove('active');
   });
   updateCounter();
+  savePrefs();
 });
 document.getElementById('clearAssets').addEventListener('click', () => {
   document.querySelectorAll('.asset-chip').forEach(c => c.classList.remove('active'));
   updateCounter();
+  savePrefs();
 });
 
 // Filter tabs
@@ -1097,6 +1103,7 @@ document.querySelectorAll('[data-filter]').forEach(btn => {
     document.querySelectorAll('[data-filter]').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     activeFilter = btn.dataset.filter;
+    savePrefs();
     renderResults();
   });
 });
@@ -1107,11 +1114,12 @@ document.querySelectorAll('[data-sort]').forEach(btn => {
     document.querySelectorAll('[data-sort]').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     activeSort = btn.dataset.sort;
+    savePrefs();
     renderResults();
   });
 });
 
-document.getElementById('maxAgeSelect')?.addEventListener('change', renderResults);
+document.getElementById('maxAgeSelect')?.addEventListener('change', () => { savePrefs(); renderResults(); });
 
 // Card click → chart modal (event delegation)
 document.getElementById('resultsArea').addEventListener('click', e => {
@@ -1143,8 +1151,58 @@ document.addEventListener('keydown', e => {
 // Scan button
 document.getElementById('scanBtn').addEventListener('click', scan);
 
+// ── Saved settings + deep link ────────────────────────────────
+
+function savePrefs() {
+  PREFS.set({
+    assets: getSelectedAssets(),
+    tfs:    getSelectedTFs(),
+    filter: activeFilter,
+    sort:   activeSort,
+    maxAge: document.getElementById('maxAgeSelect').value
+  });
+}
+const TF_PARAM = { M15:'15', M30:'30', H1:'60', H4:'240', D1:'D', W:'W' };
+let deepLinked = false;
+(function restorePrefs() {
+  const p = PREFS.get();
+  const restore = (sel, attr, list, max, allowEmpty) => {
+    if (!Array.isArray(list)) return;
+    const chips = [...document.querySelectorAll(sel)];
+    const valid = list.filter(v => chips.some(c => c.dataset[attr] === v)).slice(0, max);
+    if (valid.length || (allowEmpty && !list.length)) chips.forEach(c => c.classList.toggle('active', valid.includes(c.dataset[attr])));
+  };
+  const pick = (attr, v) => {
+    const btn = [...document.querySelectorAll(`[data-${attr}]`)].find(b => b.dataset[attr] === v);
+    if (btn) document.querySelectorAll(`[data-${attr}]`).forEach(b => b.classList.toggle('active', b === btn));
+    return btn;
+  };
+  restore('.asset-chip', 'sym', p.assets, 10, true);
+  restore('.tf-chip', 'res', p.tfs, 4, false);
+  if (pick('filter', p.filter)) activeFilter = p.filter;
+  if (pick('sort', p.sort)) activeSort = p.sort;
+  const age = document.getElementById('maxAgeSelect');
+  if ([...age.options].some(o => o.value === p.maxAge)) age.value = p.maxAge;
+  // Deep link: make sure symbol / timeframe are selected, dropping the last other one at the max
+  const ensure = (sel, chip, max) => {
+    if (!chip || chip.classList.contains('active')) return;
+    const active = [...document.querySelectorAll(sel + '.active')];
+    if (active.length >= max) active[active.length - 1].classList.remove('active');
+    chip.classList.add('active');
+  };
+  const q   = new URLSearchParams(location.search);
+  const sym = [...document.querySelectorAll('.asset-chip')].find(c => c.dataset.sym === q.get('symbol'));
+  const tf  = [...document.querySelectorAll('.tf-chip')].find(c => c.dataset.res === TF_PARAM[q.get('tf')]);
+  ensure('.asset-chip', sym, 10);
+  ensure('.tf-chip', tf, 4);
+  if (sym || tf) { deepLinked = true; savePrefs(); }
+})();
+
 // Init counter
 updateCounter();
+
+// Deep link from the dashboard: scan straight away
+if (deepLinked) scan();
 </script>
   <script>
   (function(){

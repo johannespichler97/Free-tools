@@ -460,6 +460,8 @@ Score = S₁ + S₂ + S₃ + S₄  ∈ {−4, −2, 0, +2, +4}
 
 <script>
 const API_KEY = 'd95lt2pr01qqtvdma7c0d95lt2pr01qqtvdma7cg';
+// Saved settings: the platform provides window.MAPrefs (stored per user); standalone falls back to localStorage.
+const PREFS = (() => { const k = 'ma-prefs:trend-bias'; let v = {}; try { v = (window.MAPrefs ? window.MAPrefs.get() : JSON.parse(localStorage.getItem(k) || '{}')) || {}; } catch (e) {} return { get: () => v, set: (o) => { v = o; try { window.MAPrefs ? window.MAPrefs.set(o) : localStorage.setItem(k, JSON.stringify(o)); } catch (e) {} } }; })();
 
 // ── NAV ──────────────────────────────────────────────────────────────────────
 const hamburger = document.getElementById('hamburger');
@@ -485,22 +487,26 @@ document.querySelectorAll('.asset-chip').forEach(c => {
   c.addEventListener('click', () => {
     c.classList.toggle('active');
     updateCounter();
+    savePrefs();
   });
 });
 document.querySelectorAll('.tf-chip').forEach(c => {
   c.addEventListener('click', () => {
     c.classList.toggle('active');
     updateCounter();
+    savePrefs();
   });
 });
 
 function selectAllAssets() {
   document.querySelectorAll('.asset-chip').forEach(c => c.classList.add('active'));
   updateCounter();
+  savePrefs();
 }
 function clearAssets() {
   document.querySelectorAll('.asset-chip').forEach(c => c.classList.remove('active'));
   updateCounter();
+  savePrefs();
 }
 function getActiveAssets() {
   return [...document.querySelectorAll('.asset-chip.active')].map(c => ({
@@ -522,6 +528,35 @@ function updateCounter() {
   document.getElementById('cntTf').textContent    = t;
   document.getElementById('cntCalls').textContent = a * t;
 }
+
+// ── SAVED SETTINGS + DEEP LINK ───────────────────────────────────────────────
+function savePrefs() {
+  PREFS.set({
+    assets: getActiveAssets().map(a => a.sym),
+    tfs:    getActiveTFs().map(t => t.res)
+  });
+}
+const TF_PARAM = { M15: '15', M30: '30', H1: '60', H4: '240', D1: 'D', W: 'W' };
+let deepLinked = false;
+(function restorePrefs() {
+  const p = PREFS.get();
+  const assetChips = [...document.querySelectorAll('.asset-chip')];
+  const tfChips    = [...document.querySelectorAll('.tf-chip')];
+  if (Array.isArray(p.assets)) {
+    const valid = p.assets.filter(s => assetChips.some(c => c.dataset.sym === s));
+    if (valid.length || !p.assets.length) assetChips.forEach(c => c.classList.toggle('active', valid.includes(c.dataset.sym)));
+  }
+  if (Array.isArray(p.tfs)) {
+    const valid = p.tfs.filter(r => tfChips.some(c => c.dataset.res === r));
+    if (valid.length || !p.tfs.length) tfChips.forEach(c => c.classList.toggle('active', valid.includes(c.dataset.res)));
+  }
+  const q   = new URLSearchParams(location.search);
+  const sym = assetChips.find(c => c.dataset.sym === q.get('symbol'));
+  const tf  = tfChips.find(c => c.dataset.res === TF_PARAM[q.get('tf')]);
+  if (sym) sym.classList.add('active');
+  if (tf)  tf.classList.add('active');
+  if (sym || tf) { deepLinked = true; savePrefs(); }
+})();
 updateCounter();
 
 // ── EMA CALCULATIONS ────────────────────────────────────────────────────────
@@ -711,6 +746,9 @@ async function runScan() {
   btn.disabled = false;
   btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/></svg> Scan Trend Bias`;
 }
+
+// Deep link from the dashboard: scan straight away.
+if (deepLinked && getActiveAssets().length && getActiveTFs().length) runScan();
 </script>
 </body>
 </html>
