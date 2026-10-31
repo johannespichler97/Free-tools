@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Economic Calendar | Solantis</title>
+  <title>Economic Calendar</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
@@ -194,7 +194,7 @@ thead th.col-actual,thead th.col-forecast,thead th.col-previous { text-align:rig
   padding:5px 14px; position:relative;
 }
 .now-line::after {
-  content:''; position:absolute; left:70px; right:0; top:50%; height:1px;
+  content:''; flex:1; min-width:20px; height:1px;
   background:linear-gradient(90deg, var(--now-color) 0%, rgba(81,215,206,0.08) 100%);
 }
 .now-label {
@@ -232,7 +232,7 @@ thead th.col-actual,thead th.col-forecast,thead th.col-previous { text-align:rig
 
 /* Currency cell */
 .cell-currency { display:flex; align-items:center; gap:6px; flex-wrap:nowrap; }
-.currency-flag { width:22px; height:15px; border-radius:3px; object-fit:cover; box-shadow:0 1px 3px rgba(0,0,0,.4); }
+.cc-badge { display:inline-flex; align-items:center; justify-content:center; min-width:24px; height:17px; padding:0 4px; border-radius:4px; font-size:10px; font-weight:700; letter-spacing:.03em; color:var(--text-secondary); background:var(--bg-tertiary); border:1px solid var(--border); }
 .currency-code { font-size:13px; font-weight:700; color:var(--text-primary); }
 .flag-arrow { font-size:10px; color:var(--text-muted); margin:0 1px; }
 .flag-pair { display:flex; align-items:center; gap:4px; }
@@ -250,6 +250,10 @@ thead th.col-actual,thead th.col-forecast,thead th.col-previous { text-align:rig
 /* Event cell */
 .event-name { font-size:14px; font-weight:500; color:var(--text-primary); margin-bottom:2px; }
 .event-country { font-size:11px; color:var(--text-muted); }
+.m-meta { display:none; }
+.few-hint { display:flex; align-items:center; flex-wrap:wrap; gap:8px 12px; margin-bottom:10px; padding:10px 14px; border:1px solid var(--border); border-radius:var(--radius-lg); background:var(--bg-secondary); color:var(--text-secondary); font-size:13px; }
+.few-hint[hidden] { display:none; }
+.few-hint button { background:var(--accent-dim); border:1px solid var(--accent); color:var(--accent); padding:6px 12px; border-radius:var(--radius-sm); font-size:13px; font-weight:600; cursor:pointer; font-family:var(--font); }
 .gold-tag { margin-left:6px; font-size:10px; color:var(--gold); background:var(--gold-bg); padding:1px 6px; border-radius:10px; font-weight:700; }
 
 /* Info expand */
@@ -282,7 +286,34 @@ thead th.col-actual,thead th.col-forecast,thead th.col-previous { text-align:rig
 .footer-copy { font-size:12px; color:var(--text-muted); }
 
 @media(max-width:900px)  { .col-forecast,.col-previous{display:none} .hero h1{font-size:22px} .hero-clock{min-width:180px} .clock-time{font-size:28px} }
-@media(max-width:640px)  { .date-tabs{flex-wrap:wrap} .date-range{display:none} .col-impact{display:none} .hero-clock{display:none} .controls-bar,.main{padding-left:16px;padding-right:16px} }
+@media(max-width:767px)  { .tz-select,.date-input{font-size:16px} }
+@media(max-width:640px)  {
+  .date-tabs{flex-wrap:wrap} .date-range{display:none} .hero-clock{display:none} .controls-bar,.main{padding-left:16px;padding-right:16px}
+  /* Phones: each event is a compact two-line card (time | event + currency/values | impact) */
+  .calendar-table, .calendar-table tbody { display:block; }
+  .calendar-table thead { display:none; }
+  .day-separator, .day-separator td, .now-row, .now-row td, .info-row, .info-row td { display:block; }
+  .day-separator td { padding:7px 12px; }
+  .event-row { display:grid; grid-template-columns:46px minmax(0,1fr) auto; column-gap:10px; align-items:start; padding:8px 12px; }
+  .event-row td { display:block; padding:0 !important; }
+  .event-row td.td-currency, .event-row td.cell-actual, .event-row td.cell-forecast, .event-row td.cell-previous { display:none; }
+  .event-row .tz-label, .event-row .event-country, .rel-past, .rel-future { display:none; }
+  .event-row.is-next td:first-child { border-left:none; }
+  .event-row.is-next { box-shadow:inset 2px 0 0 var(--accent); }
+  .time-main { font-size:12.5px; line-height:1.35; }
+  .time-relative { font-size:9.5px; padding:0 4px; }
+  .event-name { font-size:13.5px; line-height:1.3; margin:0; overflow-wrap:anywhere; }
+  .m-meta { display:flex; flex-wrap:wrap; align-items:center; gap:2px 8px; margin-top:3px; font-size:11.5px; color:var(--text-muted); }
+  .m-meta .currency-code { font-size:11.5px; }
+  .m-meta .cc-badge { height:15px; font-size:9.5px; }
+  .m-val b { font-weight:600; }
+  .event-row td.cell-time { grid-column:1; grid-row:1; }
+  .event-row td.td-event  { grid-column:2; grid-row:1; }
+  .event-row td.td-impact { grid-column:3; grid-row:1; }
+  .impact-badge { padding:3px 6px; }
+  .impact-badge .impact-label { display:none; }
+  .now-line { padding:5px 12px; }
+}
 
 /* ── HAMBURGER MOBILE NAV ── */
 .hamburger { display:none; flex-direction:column; justify-content:center; gap:5px; background:none; border:none; padding:6px; cursor:pointer; border-radius:6px; transition:background .15s; margin-left:auto; }
@@ -447,6 +478,10 @@ thead th.col-actual,thead th.col-forecast,thead th.col-previous { text-align:rig
 
 
   <main class="main">
+    <div class="few-hint" id="fewHint" hidden>
+      <span id="fewHintText"></span>
+      <button type="button" id="fewHintBtn">Show next week</button>
+    </div>
     <div class="table-container">
       <div class="loading" id="loading"><div class="spinner"></div><span>Loading economic events…</span></div>
       <div class="error-state" id="errorState" style="display:none;">
@@ -509,6 +544,11 @@ function getTzOffsetMin(tz, date) {
   const utc   = new Date(d.toLocaleString('en-US', { timeZone: 'UTC' }));
   const local = new Date(d.toLocaleString('en-US', { timeZone: tz }));
   return (local - utc) / 60000;
+}
+// English city name for a zone id ("Europe/Kiev" is shown as Kyiv; the id itself stays for saved settings).
+function tzCity(tz) {
+  if (tz === 'Europe/Kiev' || tz === 'Europe/Kyiv') return 'Kyiv';
+  return tz.split('/').pop().replace(/_/g, ' ');
 }
 function fmtOffset(min) {
   const sign = min >= 0 ? '+' : '-';
@@ -872,14 +912,14 @@ function formatEventTime(dateStr) {
   if (!dateStr) return { time: '—', tz: '' };
   const d = parseApiTime(dateStr);
   if (!d) return { time: 'All Day', tz: '' };
-  const time = d.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit', timeZone: selectedTZ, hour12: false });
+  const time = d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', timeZone: selectedTZ, hour12: false });
   return { time, tz: getTZLabel() };
 }
 
 function formatEventDate(dateStr) {
   if (!dateStr) return '';
   const d = new Date(dateStr + 'T12:00:00Z');
-  return d.toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric', timeZone: selectedTZ });
+  return d.toLocaleDateString('en-GB', { weekday:'long', year:'numeric', month:'long', day:'numeric', timeZone: 'UTC' });
 }
 
 // Finnhub returns "YYYY-MM-DD HH:MM:SS" without timezone → always UTC
@@ -949,9 +989,9 @@ function detectCurrency(ev) {
   return 'USD';
 }
 
+// Flags are shown as short code badges (no external image requests).
 function flagUrl(currency) {
-  const meta = CURRENCY_META[currency];
-  return meta?.flag ? `https://flagcdn.com/w40/${meta.flag}.png` : null;
+  return CURRENCY_META[currency]?.flag || null;
 }
 
 // ISO country code → { name, flag } for the originating country
@@ -1003,8 +1043,7 @@ const COUNTRY_META = {
 };
 
 function countryFlagUrl(countryCode) {
-  const meta = COUNTRY_META[countryCode?.toUpperCase()];
-  return meta ? `https://flagcdn.com/w40/${meta.flag}.png` : null;
+  return COUNTRY_META[countryCode?.toUpperCase()]?.flag || null;
 }
 
 function countryName(countryCode) {
@@ -1051,7 +1090,7 @@ function renderTable(events) {
   const empty = document.getElementById('emptyState');
 
   if (!events.length) { table.style.display='none'; empty.style.display='flex'; return; }
-  empty.style.display='none'; table.style.display='table'; tbody.innerHTML='';
+  empty.style.display='none'; table.style.display=''; tbody.innerHTML='';
 
   // Group by Berlin date
   const grouped = {};
@@ -1111,20 +1150,11 @@ function renderTable(events) {
       const sameFlag = countryFlagSrc && currencyFlagSrc &&
         COUNTRY_META[countryCode]?.flag === CURRENCY_META[currency]?.flag;
 
-      let flagHtml;
-      if (sameFlag || (!countryFlagSrc && currencyFlagSrc)) {
-        // One flag only
-        flagHtml = currencyFlagSrc
-          ? `<img class="currency-flag" src="${currencyFlagSrc}" alt="${currency}" loading="lazy"/><span class="currency-code">${currency}</span>`
-          : `<span style="font-size:15px">🪙</span><span class="currency-code">${currency}</span>`;
-      } else if (countryFlagSrc && currencyFlagSrc) {
-        // Two flags: [country flag] → [currency flag + code]
-        flagHtml = `<img class="currency-flag" src="${countryFlagSrc}" alt="${countryCode}" loading="lazy" title="${countryName(countryCode)}"/><span class="flag-arrow">→</span><img class="currency-flag" src="${currencyFlagSrc}" alt="${currency}" loading="lazy" title="${currency}"/><span class="currency-code">${currency}</span>`;
-      } else {
-        flagHtml = currencyFlagSrc
-          ? `<img class="currency-flag" src="${currencyFlagSrc}" alt="${currency}" loading="lazy"/><span class="currency-code">${currency}</span>`
-          : `<span style="font-size:15px">🪙</span><span class="currency-code">${currency}</span>`;
-      }
+      // Country of origin badge only when it differs from the currency's own (DE → EUR)
+      const ccyHtml = `<span class="currency-code">${currency === 'XAU' ? 'GOLD' : currency}</span>`;
+      const flagHtml = (countryFlagSrc && currencyFlagSrc && !sameFlag)
+        ? `<span class="cc-badge" title="${countryName(countryCode)}">${countryCode}</span><span class="flag-arrow">→</span>${ccyHtml}`
+        : ccyHtml;
 
       const evCountryName = countryCode ? countryName(countryCode) : (CURRENCY_META[currency]?.name || currency);
 
@@ -1133,6 +1163,13 @@ function renderTable(events) {
         : '';
       const tzHtml = tzStr ? `<span class="tz-label">${tzStr}</span>` : '';
 
+      // Phone layout: currency and values on one small line under the event name
+      const hasVal = v => v !== null && v !== undefined && v !== '';
+      const mVals = [
+        hasVal(ev.actual)   ? `<span class="m-val">Act <b>${formatActual(ev.actual, ev.estimate, ev.unit)}</b></span>` : '',
+        hasVal(ev.estimate) ? `<span class="m-val">Fcst ${formatValue(ev.estimate, ev.unit)}</span>` : '',
+        hasVal(ev.prev)     ? `<span class="m-val">Prev ${formatValue(ev.prev, ev.unit)}</span>` : '',
+      ].join('');
       const info = getEventInfo(ev.event);
       const row = document.createElement('tr');
       row.className = `event-row${past&&!nowEv?' is-past':''}${!past&&idx===0&&isToday?' is-next':''}${info?' has-info':''}`;
@@ -1141,11 +1178,12 @@ function renderTable(events) {
           <div class="time-main">${timeStr}</div>
           ${tzHtml}${relHtml}
         </td>
-        <td><div class="cell-currency">${flagHtml}</div></td>
-        <td><span class="impact-badge ${cls}"><span class="impact-dots">${dots}</span>${lbl}</span></td>
-        <td>
+        <td class="td-currency"><div class="cell-currency">${flagHtml}</div></td>
+        <td class="td-impact"><span class="impact-badge ${cls}" title="${lbl} impact" aria-label="${lbl} impact"><span class="impact-dots">${dots}</span><span class="impact-label">${lbl}</span></span></td>
+        <td class="td-event">
           <div class="event-name">${ev.event||'N/A'}${goldTag}</div>
           <div class="event-country">${evCountryName}</div>
+          <div class="m-meta"><span class="cell-currency">${flagHtml}</span>${mVals}</div>
         </td>
         <td class="cell-actual">${formatActual(ev.actual,ev.estimate,ev.unit)}</td>
         <td class="cell-forecast">${formatValue(ev.estimate,ev.unit)}</td>
@@ -1203,6 +1241,7 @@ async function fetchCalendar(from, to) {
   const empty      = document.getElementById('emptyState');
 
   loading.style.display='flex'; errorState.style.display='none';
+  document.getElementById('fewHint').hidden = true;
   table.style.display='none';   empty.style.display='none';
 
   const range = from&&to ? {from,to}
@@ -1223,7 +1262,7 @@ async function fetchCalendar(from, to) {
     if (!Array.isArray(allEvents)) throw new Error('Unexpected response format.');
     loading.style.display = 'none';
     applyFilters();
-    const t = new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit',timeZone:selectedTZ});
+    const t = new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:selectedTZ,hour12:false});
     document.getElementById('lastUpdated').textContent = `Updated ${t} ${getTZLabel()}`;
 
   } catch(err) {
@@ -1234,8 +1273,38 @@ async function fetchCalendar(from, to) {
 }
 
 function applyFilters() {
-  renderTable(allEvents.filter(passesFilters));
+  const shown = allEvents.filter(passesFilters);
+  renderTable(shown);
+  updateFewHint(shown);
 }
+
+// On weekends/holidays "Today" can be almost empty: offer a one-click switch to
+// next week. The user's saved range is not changed by this (see savePrefs).
+let tempNextWeek = false;
+function updateFewHint(shown) {
+  const hint = document.getElementById('fewHint');
+  const active = document.querySelector('.tab-btn.active')?.dataset.range;
+  const n = displayRange ? shown.filter(ev => {
+    const d = parseApiTime(ev.time || ev.date || '');
+    const k = d ? toYMD(d) : '';
+    return k >= displayRange.from && k <= displayRange.to;
+  }).length : 0;
+  if (active !== 'today' || n >= 3) { hint.hidden = true; return; }
+  document.getElementById('fewHintText').textContent = n === 0
+    ? 'No events today with the current filters (weekend or holiday?).'
+    : `Only ${n} event${n === 1 ? '' : 's'} today with the current filters.`;
+  hint.hidden = false;
+}
+document.getElementById('fewHintBtn').addEventListener('click', () => {
+  const btn = document.querySelector('.tab-btn[data-range="next_week"]');
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+  tempNextWeek = true;
+  const r = getDateRange('next_week');
+  document.getElementById('dateFrom').value = r.from;
+  document.getElementById('dateTo').value   = r.to;
+  document.getElementById('fewHint').hidden = true;
+  fetchCalendar(r.from, r.to);
+});
 
 function getDateRange(range) {
   const today = toYMD(new Date());  // today in selected timezone
@@ -1256,19 +1325,19 @@ function getDateRange(range) {
 // ── Live clock (updates every second) ────────────────────────
 function updateClock() {
   const now = new Date();
-  const parts = new Intl.DateTimeFormat('de-DE', {
+  const parts = new Intl.DateTimeFormat('en-GB', {
     timeZone: selectedTZ, hour:'2-digit', minute:'2-digit', second:'2-digit', hour12: false
   }).formatToParts(now);
   const get = t => parts.find(p=>p.type===t)?.value||'--';
   document.getElementById('clockH').textContent = get('hour');
   document.getElementById('clockM').textContent = get('minute');
   document.getElementById('clockS').textContent = get('second');
-  document.getElementById('clockDate').textContent = now.toLocaleDateString('de-DE',
-    {weekday:'long',day:'2-digit',month:'long',year:'numeric',timeZone: selectedTZ});
+  document.getElementById('clockDate').textContent = now.toLocaleDateString('en-GB',
+    {weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone: selectedTZ});
   const tz     = getTZLabel();
   const offset = getTZOffset();
   document.getElementById('clockTZBadge').textContent = `${tz} (${offset})`;
-  document.getElementById('clockOffset').textContent  = selectedTZ.split('/').pop().replace(/_/g, ' ');
+  document.getElementById('clockOffset').textContent  = tzCity(selectedTZ);
   const colHdr = document.getElementById('colTimeHeader');
   if (colHdr) colHdr.textContent = `Time (${tz})`;
 
@@ -1285,7 +1354,8 @@ function updateClock() {
 function savePrefs() {
   const tab = document.querySelector('.tab-btn.active');
   PREFS.set({
-    range: tab ? tab.dataset.range : 'custom',
+    // the hint's temporary "next week" view keeps the saved "today" choice
+    range: tempNextWeek && tab && tab.dataset.range === 'next_week' ? 'today' : (tab ? tab.dataset.range : 'custom'),
     from: tab ? undefined : document.getElementById('dateFrom').value,
     to:   tab ? undefined : document.getElementById('dateTo').value,
     impacts: [...activeFilters.impacts],
@@ -1296,6 +1366,7 @@ function savePrefs() {
 
 // ── Event listeners ───────────────────────────────────────────
 document.querySelectorAll('.tab-btn').forEach(btn => btn.addEventListener('click', () => {
+  tempNextWeek = false;
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   const r = getDateRange(btn.dataset.range);
@@ -1307,7 +1378,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => btn.addEventListener('click
 
 document.getElementById('applyDate').addEventListener('click', () => {
   const f=document.getElementById('dateFrom').value, t=document.getElementById('dateTo').value;
-  if (f&&t) { document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active')); savePrefs(); fetchCalendar(f,t); }
+  if (f&&t) { tempNextWeek = false; document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active')); savePrefs(); fetchCalendar(f,t); }
 });
 
 document.getElementById('refreshBtn').addEventListener('click', () => {
@@ -1347,7 +1418,7 @@ setInterval(applyFilters, 30000);
     const min    = getTzOffsetMin(tz, now);
     const abbr   = new Intl.DateTimeFormat('en', { timeZone: tz, timeZoneName: 'short' })
                      .formatToParts(now).find(p => p.type === 'timeZoneName')?.value || '';
-    const city   = tz.split('/').pop().replace(/_/g, ' ');
+    const city   = tzCity(tz);
     opt.textContent = `${city}  (UTC${fmtOffset(min)}  ${abbr})`;
     select.appendChild(opt);
   });
@@ -1368,7 +1439,7 @@ setInterval(applyFilters, 30000);
     });
     selectedTZ = best;
     select.value = best;
-    document.getElementById('tzDetected').textContent = `~${browserTz.split('/').pop().replace(/_/g,' ')}`;
+    document.getElementById('tzDetected').textContent = `~${tzCity(browserTz)}`;
   }
 
   // A timezone the user picked earlier wins over the detected one

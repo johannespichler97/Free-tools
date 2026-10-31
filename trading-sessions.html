@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Trading Sessions | Solantis</title>
+  <title>Trading Sessions</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
@@ -127,8 +127,10 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
   background:var(--bg-secondary); border:1px solid var(--border);
   color:var(--text-primary); padding:7px 12px; border-radius:var(--radius-sm);
   font-size:13px; font-family:var(--font); cursor:pointer; outline:none;
-  min-width:260px; color-scheme:dark;
+  min-width:260px; max-width:100%; color-scheme:dark;
 }
+/* iOS zooms into form fields below 16px */
+@media (max-width:767px) { .tz-select { font-size:16px; min-width:0; flex:1 1 220px; } }
 .tz-select:focus { border-color:var(--accent); }
 .tz-select option { background:var(--bg-secondary); }
 .tz-detected-badge {
@@ -199,6 +201,7 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 .schedule-item { display:flex; flex-direction:column; gap:2px; }
 .schedule-label { font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.07em; }
 .schedule-time { font-family:var(--font-mono); font-size:13px; font-weight:600; color:var(--text-primary); }
+.schedule-note { font-size:11px; color:var(--text-muted); margin:-6px 0 12px; }
 
 /* Countdown */
 .card-countdown {
@@ -307,6 +310,9 @@ canvas#timelineCanvas { display:block; width:100%; }
   .hero { padding:20px 16px; }
   .main { padding:16px 16px 48px; }
   .tz-selector-bar { padding:10px 16px; }
+  .timeline-wrap { padding:14px 12px 12px; }
+  .timeline-canvas-wrap { min-width:0; }
+  .session-card { padding:18px 16px; }
 }
   </style>
 </head>
@@ -401,16 +407,16 @@ canvas#timelineCanvas { display:block; width:100%; }
       <div class="weekend-icon">🔒</div>
       <div class="weekend-text">
         <strong>Markets Closed — Weekend</strong>
-        <p>Forex markets are closed on Saturday and Sunday. <span class="weekend-opens" id="weekendOpens"></span></p>
+        <p>Forex is closed from Friday 17:00 to Sunday 17:00 New York time. <span class="weekend-opens" id="weekendOpens"></span></p>
       </div>
     </div>
 
     <!-- 24-hour timeline -->
     <div class="timeline-section">
-      <div class="section-heading">24-Hour UTC Timeline</div>
+      <div class="section-heading">24-Hour Timeline (UTC)</div>
       <div class="timeline-wrap">
         <div class="timeline-canvas-wrap">
-          <canvas id="timelineCanvas" height="130"></canvas>
+          <canvas id="timelineCanvas" height="140"></canvas>
         </div>
       </div>
     </div>
@@ -539,8 +545,10 @@ function fmtOffset(min) {
  */
 function getTzAbbr(tz, date) {
   const d = date || new Date();
-  const parts = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'short' }).formatToParts(d);
-  return parts.find(p => p.type === 'timeZoneName')?.value || tz;
+  const abbr = loc => new Intl.DateTimeFormat(loc, { timeZone: tz, timeZoneName: 'short' }).formatToParts(d).find(p => p.type === 'timeZoneName')?.value || '';
+  let a = abbr('en-US');
+  if (/^GMT[+-]/.test(a) && tz.startsWith('Australia/')) a = abbr('en-AU') || a; // AEST/AEDT
+  return a || tz;
 }
 
 /** City name for a zone id (Europe/Kiev is shown with the English name Kyiv). */
@@ -660,7 +668,7 @@ function buildTzSelector() {
     opt.value    = tz;
     const offsetMin = getTzOffsetMin(tz, now);
     const abbr   = getTzAbbr(tz, now);
-    const city   = tz.split('/').pop().replace(/_/g, ' ');
+    const city   = tzCity(tz);
     opt.textContent = `${city}  (UTC${fmtOffset(offsetMin)}  ${abbr})`;
     select.appendChild(opt);
   });
@@ -719,15 +727,15 @@ function updateHeroClock() {
   document.getElementById('clockM').textContent = get('minute');
   document.getElementById('clockS').textContent = get('second');
 
-  document.getElementById('clockDate').textContent = now.toLocaleDateString('en-US', {
-    weekday: 'long', day: '2-digit', month: 'long', year: 'numeric',
+  document.getElementById('clockDate').textContent = now.toLocaleDateString('en-GB', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
     timeZone: tz,
   });
 
   const abbr   = getTzAbbr(tz, now);
   const offset = getTzOffsetMin(tz, now);
   document.getElementById('clockTZBadge').textContent  = `${abbr} (UTC${fmtOffset(offset)})`;
-  document.getElementById('clockOffset').textContent   = tz.replace(/_/g, ' ');
+  document.getElementById('clockOffset').textContent   = tz === 'Europe/Kiev' ? 'Europe/Kyiv' : tz.replace(/_/g, ' ');
 }
 
 /* ─────────────────────────────────────────────
@@ -763,6 +771,7 @@ function buildCardShell(session) {
         <span class="schedule-time" id="sched-close-${session.id}">--:--</span>
       </div>
     </div>
+    <div class="schedule-note" id="sched-note-${session.id}"></div>
     <div class="card-countdown" id="countdown-${session.id}">—</div>
     <div class="progress-wrap" id="progress-wrap-${session.id}" style="display:none">
       <div class="progress-label">
@@ -791,18 +800,12 @@ function updateWeekendBanner() {
   const banner = document.getElementById('weekendBanner');
   const opensEl = document.getElementById('weekendOpens');
   if (!banner) return;
-  if (isWeekend(now)) {
+  // Weekly close/open is Friday/Sunday 17:00 New York, not the UTC weekday.
+  if (isMarketClosed(now)) {
     banner.classList.add('visible');
-    // Use the already-correct getNextOpenUTC for each session, take the earliest
-    const firstOpen = SESSIONS.reduce((earliest, s) => {
-      const next = getNextOpenUTC(s);
-      return (next !== null && next < earliest) ? next : earliest;
-    }, Infinity);
-    const wait = firstOpen - now.getTime();
-    const dayName = isFinite(firstOpen)
-      ? new Date(firstOpen).toLocaleDateString('en-US', { timeZone: displayTz, weekday: 'long' })
-      : 'Monday';
-    opensEl.textContent = `Opens in ${fmtDuration(wait)} (${dayName})`;
+    const firstOpen = nextMarketOpenUTC(now.getTime());
+    const when = new Date(firstOpen).toLocaleString('en-GB', { timeZone: displayTz, weekday: 'long', hour: '2-digit', minute: '2-digit', hour12: false });
+    opensEl.textContent = `Opens in ${fmtDuration(firstOpen - now.getTime())} (${when} ${getTzAbbr(displayTz, new Date(firstOpen))})`;
   } else {
     banner.classList.remove('visible');
     opensEl.textContent = '';
@@ -811,7 +814,7 @@ function updateWeekendBanner() {
 
 function updateCards() {
   const now = new Date();
-  const weekend = isWeekend(now);
+  const nowMs = now.getTime();
 
   SESSIONS.forEach(session => {
     /* --- Local time in session's own TZ --- */
@@ -827,12 +830,12 @@ function updateCards() {
     const offset = getTzOffsetMin(session.tz, now);
 
     document.getElementById(`localtime-${session.id}`).textContent  = localTimeStr;
-    document.getElementById(`utcoffset-${session.id}`).textContent  = `UTC${fmtOffset(offset)}  ${abbr}`;
+    document.getElementById(`utcoffset-${session.id}`).textContent  = `Now UTC${fmtOffset(offset)}  ${abbr}`;
 
-    /* --- Open/Close bounds for today in session TZ --- */
-    const { openUTC, closeUTC } = getSessionBoundsUTC(session, now);
-    const nowMs   = now.getTime();
-    const isOpen  = !weekend && nowMs >= openUTC && nowMs < closeUTC;
+    /* --- Session window: local Mon–Fri hours, inside the forex week --- */
+    const { current, next } = sessionState(session, nowMs);
+    const isOpen = !!current;
+    const shown  = current || next;
 
     /* --- Status badge --- */
     const badge = document.getElementById(`status-${session.id}`);
@@ -840,26 +843,24 @@ function updateCards() {
     badge.querySelector('.status-text').textContent = isOpen ? 'OPEN' : 'CLOSED';
 
     /* --- Schedule times in user's display TZ --- */
-    if (isOpen) {
-      // Closes today
-      document.getElementById(`sched-label-open-${session.id}`).textContent  = 'Opened at';
-      document.getElementById(`sched-label-close-${session.id}`).textContent = 'Closes at';
-      document.getElementById(`sched-open-${session.id}`).textContent  = fmtTimeInTz(openUTC, displayTz);
-      document.getElementById(`sched-close-${session.id}`).textContent = fmtTimeInTz(closeUTC, displayTz);
+    document.getElementById(`sched-label-open-${session.id}`).textContent  = isOpen ? 'Opened at' : 'Opens at';
+    document.getElementById(`sched-label-close-${session.id}`).textContent = 'Closes at';
+    const noteEl = document.getElementById(`sched-note-${session.id}`);
+    if (shown) {
+      document.getElementById(`sched-open-${session.id}`).textContent  = fmtWhenInTz(shown.open,  displayTz, nowMs);
+      document.getElementById(`sched-close-${session.id}`).textContent = fmtWhenInTz(shown.close, displayTz, nowMs);
+      // Local hours and zone for the date of the session shown (DST can differ from today).
+      const ref   = new Date(shown.localOpen);
+      const day   = ref.toLocaleDateString('en-GB', { timeZone: session.tz, weekday: 'short', day: 'numeric', month: 'short' });
+      const local = `${String(session.open).padStart(2, '0')}:00–${String(session.close).padStart(2, '0')}:00`;
+      const zAbbr = getTzAbbr(session.tz, ref), zOff = `UTC${fmtOffset(getTzOffsetMin(session.tz, ref))}`;
+      let note = `${day}: ${local} local (${/^(GMT|UTC)[+-]/.test(zAbbr) ? zOff : `${zAbbr}, ${zOff}`})`;
+      if (shown.open > shown.localOpen) note += ' · starts at the Sunday 17:00 New York open';
+      noteEl.textContent = note;
     } else {
-      // Session is closed — find next open
-      const nextOpen = getNextOpenUTC(session);
-      if (nextOpen) {
-        // Recalculate close from that next open day
-        const { closeUTC: nextClose } = getSessionBoundsUTC(session, new Date(nextOpen));
-        document.getElementById(`sched-label-open-${session.id}`).textContent  = 'Opens at';
-        document.getElementById(`sched-label-close-${session.id}`).textContent = 'Closes at';
-        document.getElementById(`sched-open-${session.id}`).textContent  = fmtTimeInTz(nextOpen, displayTz);
-        document.getElementById(`sched-close-${session.id}`).textContent = fmtTimeInTz(nextClose, displayTz);
-      } else {
-        document.getElementById(`sched-open-${session.id}`).textContent  = '--:--';
-        document.getElementById(`sched-close-${session.id}`).textContent = '--:--';
-      }
+      document.getElementById(`sched-open-${session.id}`).textContent  = '--:--';
+      document.getElementById(`sched-close-${session.id}`).textContent = '--:--';
+      noteEl.textContent = '';
     }
 
     /* --- Countdown --- */
@@ -869,9 +870,9 @@ function updateCards() {
     const progressPct  = document.getElementById(`progress-pct-${session.id}`);
 
     if (isOpen) {
-      const remaining = closeUTC - nowMs;
-      const duration  = closeUTC - openUTC;
-      const pct       = Math.min(100, Math.max(0, ((nowMs - openUTC) / duration) * 100));
+      const remaining = current.close - nowMs;
+      const duration  = current.close - current.open;
+      const pct       = Math.min(100, Math.max(0, ((nowMs - current.open) / duration) * 100));
       const isSoon    = remaining < 30 * 60 * 1000; // < 30 min remaining
 
       countEl.textContent  = `Closes in ${fmtDuration(remaining)}`;
@@ -882,10 +883,8 @@ function updateCards() {
       progressPct.textContent    = `${pct.toFixed(0)}%`;
     } else {
       progressWrap.style.display = 'none';
-      const nextOpen = getNextOpenUTC(session);
-      if (nextOpen) {
-        const wait = nextOpen - nowMs;
-        countEl.textContent = `Opens in ${fmtDuration(wait)}`;
+      if (next) {
+        countEl.textContent = `Opens in ${fmtDuration(next.open - nowMs)}`;
         countEl.className   = 'card-countdown countdown-open';
       } else {
         countEl.textContent = '—';
@@ -898,24 +897,6 @@ function updateCards() {
 /* ─────────────────────────────────────────────
    24-HOUR UTC TIMELINE (Canvas)
 ───────────────────────────────────────────── */
-const TIMELINE_COLORS = {
-  sydney:  '#51d7ce',
-  tokyo:   '#f0c040',
-  london:  '#2FA3E0',
-  newyork: '#3fb950',
-};
-
-// For crisp canvas rendering on HiDPI screens
-function setupCanvas(canvas) {
-  const dpr = window.devicePixelRatio || 1;
-  const rect = canvas.getBoundingClientRect();
-  canvas.width  = rect.width  * dpr;
-  canvas.height = rect.height * dpr;
-  const ctx = canvas.getContext('2d');
-  ctx.scale(dpr, dpr);
-  return { ctx, W: rect.width, H: rect.height };
-}
-
 function drawTimeline() {
   const canvas = document.getElementById('timelineCanvas');
   if (!canvas) return;
@@ -923,7 +904,7 @@ function drawTimeline() {
   // Use offsetWidth for layout width
   const dpr = window.devicePixelRatio || 1;
   const W   = canvas.offsetWidth || 800;
-  const H   = 130;
+  const H   = 140;
 
   canvas.width  = W * dpr;
   canvas.height = H * dpr;
@@ -931,85 +912,75 @@ function drawTimeline() {
   ctx.scale(dpr, dpr);
 
   const now = new Date();
+  const nowMs = now.getTime();
 
   // Layout
-  const PAD_L  = 6;
-  const PAD_R  = 6;
+  const PAD_L  = 8;
+  const PAD_R  = 8;
   const AXIS_H = 22;   // height of the hour labels at bottom
-  const BAR_Y  = 10;   // top of session band area
+  const BAR_Y  = 18;   // top of session band area (room for the NOW label)
   const BAR_H  = 18;   // height of each session band
   const GAP    = 6;    // gap between bands
   const LABEL_PAD = 4;
 
   const plotW = W - PAD_L - PAD_R;
+  const dayStart = (() => { const d = new Date(nowMs); d.setUTCHours(0, 0, 0, 0); return d.getTime(); })();
+  const dayEnd   = dayStart + DAY_MS;
+  const xOf = ms => PAD_L + ((ms - dayStart) / DAY_MS) * plotW;
 
   // Background
   ctx.fillStyle = '#0a2e44';
   ctx.fillRect(0, 0, W, H);
 
-  // Grid lines + hour labels
+  // Weekend closure (Friday 17:00 to Sunday 17:00 New York) shaded
+  const weeks = marketWeeksAround(dayStart);
+  for (let i = 0; i + 1 < weeks.length; i++) {
+    const a = Math.max(weeks[i].close, dayStart), b = Math.min(weeks[i + 1].open, dayEnd);
+    if (b <= a) continue;
+    ctx.fillStyle = 'rgba(248,81,73,0.07)';
+    ctx.fillRect(xOf(a), BAR_Y - 4, xOf(b) - xOf(a), H - AXIS_H - BAR_Y + 6);
+    if (xOf(b) - xOf(a) > 90) {
+      ctx.fillStyle = 'rgba(248,81,73,0.75)';
+      ctx.font = '600 10px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('MARKET CLOSED', (xOf(a) + xOf(b)) / 2, H - AXIS_H - 4);
+    }
+  }
+
+  // Grid lines + hour labels (fewer labels on narrow screens; the ends are
+  // aligned inwards so "00" and "24" are never clipped)
+  const step = plotW < 420 ? 4 : plotW < 640 ? 3 : 2;
   ctx.strokeStyle = '#1a4d6e';
   ctx.lineWidth   = 1;
   ctx.font        = '10px Inter, sans-serif';
-  ctx.textAlign   = 'center';
   ctx.fillStyle   = '#4d7a96';
 
   for (let h = 0; h <= 24; h++) {
     const x = PAD_L + (h / 24) * plotW;
-    // Grid line
     ctx.beginPath();
     ctx.moveTo(x, BAR_Y);
     ctx.lineTo(x, H - AXIS_H);
     ctx.stroke();
-    // Hour label
-    if (h % 2 === 0 || h === 24) {
-      const label = h === 24 ? '24' : String(h).padStart(2, '0');
-      ctx.fillText(label, x, H - 4);
+    if (h % step === 0) {
+      ctx.textAlign = h === 0 ? 'left' : h === 24 ? 'right' : 'center';
+      ctx.fillText(String(h).padStart(2, '0'), h === 0 ? x - 2 : h === 24 ? x + 2 : x, H - 6);
     }
   }
-
-  // Axis label: "UTC"
-  ctx.textAlign   = 'left';
-  ctx.fillStyle   = '#4d7a96';
-  ctx.font        = '10px Inter, sans-serif';
-  ctx.fillText('UTC', PAD_L, H - 4);
 
   // Draw session bands
   SESSIONS.forEach((session, idx) => {
     const y = BAR_Y + idx * (BAR_H + GAP);
-
-    // Get bounds for today AND possibly yesterday (for sessions that straddle midnight UTC)
-    const boundsToday = getSessionBoundsUTC(session, now);
-
-    // Today's local midnight in UTC
-    const todayUTCMidnight = (() => {
-      const d = new Date();
-      d.setUTCHours(0, 0, 0, 0);
-      return d.getTime();
-    })();
-    const todayUTCEnd = todayUTCMidnight + 86400000;
-
-    // Also check yesterday's session (it may extend into today's UTC day)
-    const yesterday = new Date(now.getTime() - 86400000);
-    const boundsYesterday = getSessionBoundsUTC(session, yesterday);
-
-    // Draw a band clamped to [00:00, 24:00] UTC today
-    const drawBand = (openUTC, closeUTC) => {
-      const clampedOpen  = Math.max(openUTC,  todayUTCMidnight);
-      const clampedClose = Math.min(closeUTC, todayUTCEnd);
-      if (clampedClose <= clampedOpen) return;
-
-      const xOpen  = PAD_L + ((clampedOpen  - todayUTCMidnight) / 86400000) * plotW;
-      const xClose = PAD_L + ((clampedClose - todayUTCMidnight) / 86400000) * plotW;
+    getSessionIntervals(session, dayStart, dayEnd).forEach(({ open, close }) => {
+      const xOpen  = xOf(Math.max(open, dayStart));
+      const xClose = xOf(Math.min(close, dayEnd));
       const bandW  = xClose - xOpen;
+      if (bandW <= 0) return;
 
-        // Band fill
       ctx.fillStyle = session.color + '33';
       ctx.beginPath();
       ctx.roundRect(xOpen, y, bandW, BAR_H, 4);
       ctx.fill();
 
-      // Border
       ctx.strokeStyle = session.color + 'aa';
       ctx.lineWidth   = 1.5;
       ctx.beginPath();
@@ -1021,32 +992,16 @@ function drawTimeline() {
         ctx.fillStyle   = session.color;
         ctx.font        = `600 11px Inter, sans-serif`;
         ctx.textAlign   = 'left';
-        const labelX    = xOpen + LABEL_PAD;
-        const labelY    = y + BAR_H / 2 + 4;
-        ctx.fillText(session.name, labelX, labelY);
+        ctx.fillText(session.name, xOpen + LABEL_PAD, y + BAR_H / 2 + 4);
       }
-    };
-
-    drawBand(boundsYesterday.openUTC, boundsYesterday.closeUTC);
-    drawBand(boundsToday.openUTC,     boundsToday.closeUTC);
+    });
   });
 
-  // Overlap highlight — find UTC hours with 2+ sessions open simultaneously
-  // We check every 15-minute slot
-  for (let slot = 0; slot < 24 * 4; slot++) {
-    const slotStart = todayUTCMidnight + slot * 900000; // todayUTCMidnight used below
-    break; // skip — handled via opacity stacking above
-  }
-
-  // Current UTC time marker
-  const nowMs = now.getTime();
-  const todayUTCMidnightMs = (() => { const d = new Date(); d.setUTCHours(0,0,0,0); return d.getTime(); })();
-  const fracOfDay = (nowMs - todayUTCMidnightMs) / 86400000;
-
+  // Current time marker
+  const fracOfDay = (nowMs - dayStart) / DAY_MS;
   if (fracOfDay >= 0 && fracOfDay <= 1) {
     const xNow = PAD_L + fracOfDay * plotW;
 
-    // Glow effect
     ctx.shadowColor = '#51d7ce';
     ctx.shadowBlur  = 8;
     ctx.strokeStyle = '#51d7ce';
@@ -1058,17 +1013,15 @@ function drawTimeline() {
     ctx.stroke();
     ctx.shadowBlur = 0;
 
-    // "NOW" label on the line — show time in the user's selected timezone
+    // "NOW" label above the bands — time in the user's selected timezone
     const localHM = now.toLocaleTimeString('en-GB', { timeZone: displayTz, hour: '2-digit', minute: '2-digit', hour12: false });
     ctx.fillStyle   = '#51d7ce';
     ctx.font        = `700 10px JetBrains Mono, monospace`;
-    ctx.textAlign   = xNow > W - 60 ? 'right' : 'left';
-    ctx.fillText(`▼ ${localHM}`, xNow + (xNow > W - 60 ? -4 : 4), BAR_Y - 3);
+    const right = xNow > W - 60;
+    ctx.textAlign   = right ? 'right' : 'left';
+    ctx.fillText(`▼ ${localHM}`, xNow + (right ? -4 : 4), BAR_Y - 6);
   }
 }
-
-// Keep a reference to todayUTCMidnight for the loop (broken out above for clarity)
-var todayUTCMidnight = (() => { const d = new Date(); d.setUTCHours(0,0,0,0); return d.getTime(); })();
 
 /* ─────────────────────────────────────────────
    INIT & INTERVALS
@@ -1080,8 +1033,6 @@ function tick() {
 }
 
 function tickTimeline() {
-  // Refresh midnight reference (handles day rollover)
-  todayUTCMidnight = (() => { const d = new Date(); d.setUTCHours(0,0,0,0); return d.getTime(); })();
   drawTimeline();
 }
 
