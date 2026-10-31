@@ -482,18 +482,45 @@ const TIMEZONE_LIST = [
 ];
 
 /* ─────────────────────────────────────────────
-   DST-CORRECT HELPERS
+   DST-CORRECT HELPERS (all zone maths via Intl)
 ───────────────────────────────────────────── */
+const NY_TZ  = 'America/New_York';
+const DAY_MS = 86400000;
+const WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+/** Wall-clock parts of a moment in a time zone. */
+function zonedParts(tz, date) {
+  const p = {};
+  new Intl.DateTimeFormat('en-US', {
+    timeZone: tz, hourCycle: 'h23', weekday: 'short',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+  }).formatToParts(date).forEach(x => { p[x.type] = x.value; });
+  return { y: +p.year, m: +p.month, d: +p.day, h: +p.hour % 24, mi: +p.minute, s: +p.second, wd: WD.indexOf(p.weekday) };
+}
 
 /**
- * Returns the offset in minutes between the given tz and UTC.
+ * Returns the offset in minutes between the given tz and UTC at that moment.
  * Positive = east of UTC (e.g. Tokyo = +540).
  */
 function getTzOffsetMin(tz, date) {
   const d = date || new Date();
-  const utc   = new Date(d.toLocaleString('en-US', { timeZone: 'UTC' }));
-  const local = new Date(d.toLocaleString('en-US', { timeZone: tz }));
-  return (local - utc) / 60000;
+  const p = zonedParts(tz, d);
+  const asUTC = Date.UTC(p.y, p.m - 1, p.d, p.h, p.mi, p.s);
+  return Math.round((asUTC - Math.floor(d.getTime() / 1000) * 1000) / 60000);
+}
+
+/** UTC timestamp of a wall-clock time (y-m-d h:mi) in a time zone, DST-aware. */
+function zonedToUTC(y, m, d, h, mi, tz) {
+  const guess = Date.UTC(y, m - 1, d, h, mi);
+  const t1 = guess - getTzOffsetMin(tz, new Date(guess)) * 60000;
+  return guess - getTzOffsetMin(tz, new Date(t1)) * 60000;
+}
+
+/** Calendar arithmetic on a plain date. */
+function addDays(y, m, d, n) {
+  const x = new Date(Date.UTC(y, m - 1, d + n));
+  return { y: x.getUTCFullYear(), m: x.getUTCMonth() + 1, d: x.getUTCDate(), wd: x.getUTCDay() };
 }
 
 /**
@@ -516,53 +543,77 @@ function getTzAbbr(tz, date) {
   return parts.find(p => p.type === 'timeZoneName')?.value || tz;
 }
 
+/** City name for a zone id (Europe/Kiev is shown with the English name Kyiv). */
+function tzCity(tz) {
+  if (tz === 'Europe/Kiev' || tz === 'Europe/Kyiv') return 'Kyiv';
+  return tz.split('/').pop().replace(/_/g, ' ');
+}
+
 /**
- * Given a session definition and a reference date, return the UTC timestamps
- * for that session's open and close on the calendar day that contains "forDate"
- * in the session's local timezone.
+ * Forex trading weeks: Sunday 17:00 to Friday 17:00 New York time (the
+ * platform's trading day runs 17:00 to 17:00 New York). Returns the weeks
+ * around the given moment as UTC timestamps; DST is handled by Intl.
  */
-function getSessionBoundsUTC(session, forDate) {
-  const now = forDate || new Date();
-  // Get the local date string in the session's timezone (YYYY-MM-DD)
-  const dateStr = new Intl.DateTimeFormat('en-CA', { timeZone: session.tz }).format(now);
-  const offsetMin = getTzOffsetMin(session.tz, now);
-  // Midnight UTC for that local date, corrected for the timezone offset
-  const dayStartUTC = new Date(dateStr + 'T00:00:00Z').getTime() - offsetMin * 60000;
+function marketWeeksAround(ms) {
+  const p = zonedParts(NY_TZ, new Date(ms));
+  const sun = addDays(p.y, p.m, p.d, -p.wd);
+  const weeks = [];
+  for (let k = -1; k <= 2; k++) {
+    const s = addDays(sun.y, sun.m, sun.d, 7 * k);
+    const f = addDays(s.y, s.m, s.d, 5);
+    weeks.push({ open: zonedToUTC(s.y, s.m, s.d, 17, 0, NY_TZ), close: zonedToUTC(f.y, f.m, f.d, 17, 0, NY_TZ) });
+  }
+  return weeks;
+}
+
+/** True between Friday 17:00 and Sunday 17:00 New York time. */
+function isMarketClosed(date) {
+  const ms = (date || new Date()).getTime();
+  return !marketWeeksAround(ms).some(w => ms >= w.open && ms < w.close);
+}
+
+/** UTC timestamp of the next weekly open (Sunday 17:00 New York). */
+function nextMarketOpenUTC(ms) {
+  return marketWeeksAround(ms).map(w => w.open).find(o => o > ms);
+}
+
+/**
+ * Session windows (UTC ms) between fromMs and toMs. Each session trades
+ * Monday to Friday on its own local calendar, using that date's own UTC
+ * offset, and only while the forex week is open (a Monday Sydney session that
+ * starts before Sunday 17:00 New York begins at the weekly open).
+ */
+function getSessionIntervals(session, fromMs, toMs) {
+  const weeks = marketWeeksAround(fromMs);
+  const p0 = zonedParts(session.tz, new Date(fromMs));
+  const out = [];
+  for (let k = -1; k <= 10; k++) {
+    const dd = addDays(p0.y, p0.m, p0.d, k);
+    if (dd.wd === 0 || dd.wd === 6) continue;
+    const o = zonedToUTC(dd.y, dd.m, dd.d, session.open,  0, session.tz);
+    const c = zonedToUTC(dd.y, dd.m, dd.d, session.close, 0, session.tz);
+    for (const w of weeks) {
+      const a = Math.max(o, w.open), b = Math.min(c, w.close);
+      if (b > a && b > fromMs && a < toMs) out.push({ open: a, close: b, localOpen: o });
+    }
+  }
+  return out.sort((x, y) => x.open - y.open);
+}
+
+/** Current session window (if open) and the next one. */
+function sessionState(session, nowMs) {
+  const list = getSessionIntervals(session, nowMs - DAY_MS, nowMs + 9 * DAY_MS);
   return {
-    openUTC:  dayStartUTC + session.open  * 3600000,
-    closeUTC: dayStartUTC + session.close * 3600000,
+    current: list.find(i => nowMs >= i.open && nowMs < i.close) || null,
+    next:    list.find(i => i.open > nowMs) || null,
   };
 }
 
-/**
- * Find the next open time for a session (searches up to 3 days ahead).
- */
-function isWeekend(date) {
-  const day = (date || new Date()).getUTCDay(); // 0=Sun, 6=Sat
-  return day === 0 || day === 6;
-}
-
-// Returns the UTC timestamp of the next Monday 00:00 UTC
-function nextMondayUTC(from) {
-  const d = new Date(from || Date.now());
-  d.setUTCHours(0, 0, 0, 0);
-  const day = d.getUTCDay(); // 0=Sun,6=Sat
-  const daysUntilMon = day === 0 ? 1 : (day === 6 ? 2 : 0);
-  d.setUTCDate(d.getUTCDate() + daysUntilMon);
-  return d.getTime();
-}
-
-function getNextOpenUTC(session) {
-  const now = new Date();
-  for (let d = 0; d < 7; d++) {
-    const t = new Date(now.getTime() + d * 86400000);
-    // Check weekday in the session's OWN timezone (e.g. NY at UTC-4 is still Sunday when UTC flips to Monday)
-    const localDay = new Intl.DateTimeFormat('en-US', { timeZone: session.tz, weekday: 'long' }).format(t);
-    if (localDay === 'Saturday' || localDay === 'Sunday') continue;
-    const { openUTC } = getSessionBoundsUTC(session, t);
-    if (openUTC > now.getTime()) return openUTC;
-  }
-  return null;
+/** "HH:MM", prefixed with the weekday when the moment is not today in tz. */
+function fmtWhenInTz(tsMs, tz, nowMs) {
+  const t = zonedParts(tz, new Date(tsMs)), n = zonedParts(tz, new Date(nowMs));
+  const hm = fmtTimeInTz(tsMs, tz);
+  return (t.y === n.y && t.m === n.m && t.d === n.d) ? hm : `${WD[t.wd]} ${hm}`;
 }
 
 /**
