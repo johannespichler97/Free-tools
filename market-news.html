@@ -583,13 +583,16 @@ async function load(forceRefresh) {
   btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 13 13" fill="none" style="animation:spin .7s linear infinite"><path d="M11 2.5A5.5 5.5 0 1 0 12 6.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><polyline points="9,0.5 12,2.5 9.5,5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Loading…`;
   document.getElementById('newsContent').innerHTML = skeletons(9);
   document.getElementById('resultCount').innerHTML = '';
+  // The user may switch tabs while this load runs: remember which tab it is for.
+  const tab = activeTab;
   try {
-    if (forceRefresh || !articleCache[activeTab]) {
-      articleCache[activeTab] = await loadForTab(activeTab);
+    if (forceRefresh || !articleCache[tab]) {
+      articleCache[tab] = await loadForTab(tab);
     }
-    showFiltered(articleCache[activeTab]);
+    if (tab === activeTab) showFiltered(articleCache[tab]);
   } catch(err) {
     console.error(err);
+    if (tab !== activeTab) return;
     document.getElementById('newsContent').innerHTML = `
       <div class="state-box">
         <div class="state-icon">⚠️</div>
@@ -602,6 +605,8 @@ async function load(forceRefresh) {
     loading = false;
     btn.disabled = false;
     btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M11 2.5A5.5 5.5 0 1 0 12 6.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><polyline points="9,0.5 12,2.5 9.5,5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Refresh`;
+    // A tab switch during the load was ignored above; load the new tab now.
+    if (tab !== activeTab) load(false);
   }
 }
 
