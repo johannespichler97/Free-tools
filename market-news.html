@@ -90,16 +90,17 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
 .tab-btn:hover { color:var(--text-secondary); }
 .tab-btn.active { color:var(--accent);border-bottom-color:var(--accent); }
 .day-filter { margin-left:auto;display:flex;gap:4px;align-items:center;flex-shrink:0; }
-.day-btn { background:none;border:1.5px solid var(--border);border-radius:20px;padding:3px 11px;font-size:11px;font-weight:700;color:var(--text-muted);font-family:var(--font);cursor:pointer;transition:all .15s;white-space:nowrap; }
+.day-btn { background:none;border:1.5px solid var(--border);border-radius:20px;padding:3px 11px;font-size:11px;font-weight:700;color:var(--text-secondary);font-family:var(--font);cursor:pointer;transition:all .15s;white-space:nowrap; }
 .day-btn:hover { border-color:var(--text-muted);color:var(--text-secondary); }
 .day-btn.active { border-color:var(--accent);color:var(--accent);background:var(--accent-dim); }
 .asset-row { display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:10px 0; }
 .asset-row::-webkit-scrollbar { display:none; }
-.asset-chip { background:none;border:1.5px solid var(--border);border-radius:20px;padding:4px 12px;font-size:11.5px;font-weight:600;color:var(--text-muted);font-family:var(--font-mono);cursor:pointer;transition:all .15s;white-space:nowrap;flex-shrink:0; }
+.asset-chip { background:none;border:1.5px solid var(--border);border-radius:20px;padding:4px 12px;font-size:11.5px;font-weight:600;color:var(--text-secondary);font-family:var(--font-mono);cursor:pointer;transition:all .15s;white-space:nowrap;flex-shrink:0; }
 .asset-chip:hover { border-color:var(--text-secondary);color:var(--text-secondary); }
 .asset-chip.active { border-color:var(--accent);color:var(--accent);background:var(--accent-dim); }
 .asset-chip .cnt { margin-left:7px;font-size:10px;font-weight:700;opacity:.7; }
-.asset-chip.empty { opacity:.38; }
+/* no articles: dashed and slightly dimmed, but still readable (≈5:1 contrast) */
+.asset-chip.empty { opacity:.75;border-style:dashed; }
 .asset-chip.empty.active { opacity:1; }
 
 /* MAIN */
@@ -116,12 +117,10 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
 .news-card { background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;display:flex;flex-direction:column;transition:border-color .2s,transform .15s;cursor:pointer;text-decoration:none; }
 .news-card:hover { border-color:var(--accent);transform:translateY(-2px); }
 .card-img-wrap { width:100%;height:160px;overflow:hidden;flex-shrink:0;background:var(--bg-tertiary); }
+.card-img-wrap.failed { display:none; }
 .card-img { width:100%;height:100%;object-fit:cover;display:block; }
 .card-img-wrap { position:relative; }
 .card-img-wrap .card-img { position:relative; z-index:1; }
-.card-ph { position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:10px;background:radial-gradient(circle at 18% 22%,rgba(81,215,206,.22),transparent 50%),radial-gradient(circle at 85% 90%,rgba(47,163,224,.28),transparent 55%),linear-gradient(135deg,#0a2e44,#062434); }
-.card-ph svg { opacity:.55; }
-.card-ph span { font-family:var(--font-mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent-2);opacity:.85; }
 .card-body { padding:14px 16px 16px;display:flex;flex-direction:column;gap:8px;flex:1; }
 .card-meta { display:flex;align-items:center;gap:8px;flex-wrap:wrap; }
 .source-badge { font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:2px 8px;border-radius:10px;white-space:nowrap;background:var(--accent-dim);color:var(--accent);border:1px solid rgba(47,163,224,.3); }
@@ -161,6 +160,13 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
   .header-inner,.main,.controls-inner { padding-left:16px;padding-right:16px; }
   .news-grid { grid-template-columns:1fr; }
   .day-btn { padding:3px 8px;font-size:10px; }
+}
+/* touch screens: tap targets at least 36px tall */
+@media (pointer:coarse) {
+  .day-btn, .asset-chip, .btn-refresh { min-height:36px; }
+  .day-btn { padding:0 14px;font-size:12px; }
+  .asset-chip { padding:0 14px;display:inline-flex;align-items:center; }
+  .day-filter { gap:6px; }
 }
   </style>
 </head>
@@ -270,6 +276,7 @@ const RSS_FX = [
 ];
 
 const FX_RE   = /\b(forex|fx|currenc(y|ies)|us dollar|dollar index|dxy|greenback|euro|eurozone|yen|sterling|swiss franc|yuan|renminbi|aussie|loonie|ecb|fed|federal reserve|fomc|boj|boe|snb|rba|rbnz|bank of (england|japan|canada)|central banks?|rate (cut|hike)s?|interest rates?|inflation|cpi|nonfarm|payrolls|powell|lagarde|ueda|bailey)\b/i;
+const FX_RANK_RE = new RegExp(FX_RE.source + '|\\b(usd|eur|gbp|jpy|chf|aud|nzd|cad)(\\s*/\\s*|-)?(usd|eur|gbp|jpy|chf|aud|nzd|cad)\\b|\\b(pound|franc|kiwi|boc)\\b', 'i');
 const GOLD_RE = /\b(gold|xau|silver|xag|platinum|palladium|bullion|precious metals?|oil|crude|brent|wti|opec|copper|natural gas|lng|commodit(y|ies))\b/i;
 
 const FX_PAIRS = ['EUR/USD','GBP/USD','USD/JPY','USD/CHF','AUD/USD','NZD/USD','USD/CAD',
@@ -286,17 +293,18 @@ const TAB_ASSETS = {
 };
 
 /* terms that identify a currency in a headline */
+/* the same terms as the platform dashboard's news matching (CCY_TERMS in src/lib/dashboard/widgets.ts) */
 const CCY = {
-  USD: ['usd','us dollar','u.s. dollar','greenback','dxy','dollar index'],
+  USD: ['usd','dollar','dollars','us dollar','u.s. dollar','greenback','dxy','dollar index','fed','fomc','powell','treasury','treasuries','payrolls','nonfarm'],
   EUR: ['eur','euro','euros','eurozone','euro zone','ecb','european central bank','lagarde'],
-  GBP: ['gbp','pound','sterling','boe','bank of england','bailey'],
-  JPY: ['jpy','yen','boj','bank of japan','ueda'],
-  CHF: ['chf','franc','swiss franc','snb','swiss national bank'],
-  AUD: ['aud','aussie','australian dollar','rba','reserve bank of australia'],
-  NZD: ['nzd','kiwi','new zealand dollar','rbnz'],
-  CAD: ['cad','loonie','canadian dollar','boc','bank of canada'],
-  XAU: ['gold','xau','bullion'],
-  XAG: ['silver','xag'],
+  GBP: ['gbp','pound','sterling','boe','bank of england','bailey','uk'],
+  JPY: ['jpy','yen','boj','bank of japan','ueda','japan','japanese'],
+  CHF: ['chf','franc','swiss franc','swiss','snb','swiss national bank'],
+  AUD: ['aud','aussie','australian dollar','australia','australian','rba','reserve bank of australia'],
+  NZD: ['nzd','kiwi','new zealand dollar','new zealand','rbnz'],
+  CAD: ['cad','loonie','canadian dollar','canada','canadian','boc','bank of canada'],
+  XAU: ['gold','xau','bullion','precious metals'],
+  XAG: ['silver','xag','precious metals'],
 };
 
 const ASSET_KW = {
@@ -333,15 +341,13 @@ const ASSET_KW = {
 const reEsc = s => s.replace(/[.*+?^${}()|[\]\\\/]/g, '\\$&');
 const wordRe = kws => new RegExp('\\b(' + kws.map(reEsc).join('|') + ')\\b', 'i');
 
-/* pairs match an explicit mention (EUR/GBP, EURGBP, EUR-GBP); otherwise USD pairs
-   match on the other currency and crosses need both currencies mentioned */
+/* like the platform dashboard: a headline belongs to a pair when it names the pair
+   (EUR/USD, EURUSD, EUR-USD) or mentions either currency's terms */
 function pairTest(pair) {
   const [b, q] = pair.split('/');
-  const explicit = wordRe([`${b}/${q}`, `${b}${q}`, `${b}-${q}`]);
-  const bRe = wordRe(CCY[b]), qRe = wordRe(CCY[q]);
-  if (q === 'USD') return t => explicit.test(t) || bRe.test(t);
-  if (b === 'USD') return t => explicit.test(t) || qRe.test(t);
-  return t => explicit.test(t) || (bRe.test(t) && qRe.test(t));
+  const explicit = wordRe([`${b}/${q}`, `${b}${q}`, `${b}-${q}`, `${b} / ${q}`]);
+  const either = wordRe([...CCY[b], ...CCY[q]]);
+  return t => explicit.test(t) || either.test(t);
 }
 const ASSET_TEST = {};
 FX_PAIRS.forEach(p => ASSET_TEST[p] = pairTest(p));
@@ -446,7 +452,13 @@ async function fetchJson(url, attempts = 2) {
 }
 
 const parser = new DOMParser();
-const stripHtml = html => (parser.parseFromString(html || '', 'text/html').body.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 260);
+// Block elements become separate sentences, so "<li>…tumble</li><li>Bitcoin…" does not read "tumbleBitcoin".
+const stripHtml = html => {
+  const body = parser.parseFromString(html || '', 'text/html').body;
+  body.querySelectorAll('p,div,li,br,h1,h2,h3,h4,h5,h6,tr,blockquote').forEach(el => el.before(' · '));
+  return (body.textContent || '').replace(/\s+/g, ' ').replace(/^(\s*·\s*)+/, '').replace(/(\s*·\s*){2,}/g, ' · ')
+    .replace(/([^\s.!?:;])\s·\s/g, '$1. ').replace(/\s·\s/g, ' ').trim().slice(0, 260);
+};
 
 async function fetchFinnhub(category) {
   const data = await fetchJson(`https://finnhub.io/api/v1/news?category=${category}&token=${FINNHUB_KEY}`);
@@ -509,9 +521,15 @@ async function loadForTab(tab) {
   if (failed.length === results.length) throw new Error(failed[0].reason?.message || 'All news sources failed');
   const seen = new Set();
   const key = a => a.title.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  /* The Forex feeds (Finnhub "forex", ForexLive) also carry stock and crypto
+     stories. Instead of dropping them, the Forex tab ranks currency-related items
+     first: FX terms in the headline (2) > FX terms only in the summary (1) > other
+     markets (0); newest first within each group. Other tabs stay purely by time. */
+  const fxRank = a => tab !== 'forex' ? 0 : FX_RANK_RE.test(a.title) ? 2 : FX_RANK_RE.test(a.description) ? 1 : 0;
   const list = results.flatMap(r => r.status === 'fulfilled' ? r.value : [])
     .filter(a => { const k = key(a); if (seen.has(k) || seen.has(a.link)) return false; seen.add(k); seen.add(a.link); return true; })
-    .sort((a, b) => b.ts - a.ts);
+    .map(a => ({ ...a, rank: fxRank(a) }))
+    .sort((a, b) => b.rank - a.rank || b.ts - a.ts);
   /* publisher logos (known patterns, or one image reused across many articles) are not article photos */
   const uses = {};
   list.forEach(a => { if (a.thumbnail) uses[a.thumbnail] = (uses[a.thumbnail] || 0) + 1; });
@@ -535,9 +553,10 @@ function skeletons(n = 6) {
 }
 
 function renderCard(a) {
+  // Article photo, else a topic photo; if neither loads the image area is removed
+  // (no placeholder banner, and the source is shown only once, in the badge).
   const img = `<div class="card-img-wrap">
-      <div class="card-ph"><svg width="34" height="22" viewBox="0 0 34 22" fill="none"><path d="M1 18l7-7 6 5 8-10 11 9" stroke="#51d7ce" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>${esc(a.source)}</span></div>
-      <img class="card-img" src="${esc(a.thumbnail || a.cover)}" data-fallback="${esc(a.cover)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="if(this.src!==this.dataset.fallback){this.src=this.dataset.fallback}else{this.remove()}">
+      <img class="card-img" src="${esc(a.thumbnail || a.cover)}" data-fallback="${esc(a.cover)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="if(this.src!==this.dataset.fallback){this.src=this.dataset.fallback}else{this.parentNode.classList.add('failed')}">
     </div>`;
   const sum = a.description ? `<div class="card-summary">${esc(a.description)}</div>` : '';
   return `

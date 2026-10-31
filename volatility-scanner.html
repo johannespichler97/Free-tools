@@ -140,12 +140,13 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 
 /* ── VOL TABLE ── */
 .vol-card { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; animation:fadeIn .25s ease; }
-.vol-card-header { display:grid; grid-template-columns:44px 150px 68px 1fr 96px 76px; align-items:center; padding:10px 18px; border-bottom:1px solid var(--border); background:var(--bg-tertiary); gap:8px; }
-.vol-th { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--text-muted); }
+.vol-card-header { display:grid; grid-template-columns:44px 150px 68px 1fr 84px 104px; align-items:center; padding:10px 18px; border-bottom:1px solid var(--border); background:var(--bg-tertiary); gap:8px; }
+.vol-th { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--text-muted); white-space:nowrap; }
+.vol-note { font-size:12px; color:var(--text-muted); line-height:1.6; margin-top:12px; }
 .vol-th.right { text-align:right; }
 .vol-th.center { text-align:center; }
 
-.vol-row { display:grid; grid-template-columns:44px 150px 68px 1fr 96px 76px; align-items:center; padding:11px 18px; border-bottom:1px solid rgba(26,77,110,0.4); gap:8px; transition:background .12s; }
+.vol-row { display:grid; grid-template-columns:44px 150px 68px 1fr 84px 104px; align-items:center; padding:11px 18px; border-bottom:1px solid rgba(26,77,110,0.4); gap:8px; transition:background .12s; }
 .vol-row:last-child { border-bottom:none; }
 .vol-row:hover { background:var(--bg-hover); }
 
@@ -165,7 +166,8 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 
 .vol-pips { font-family:var(--font-mono); font-size:13px; font-weight:700; color:var(--text-primary); text-align:right; }
 .vol-pips span { font-size:10px; color:var(--text-muted); font-weight:400; margin-left:2px; }
-.vol-pct  { font-family:var(--font-mono); font-size:12px; color:var(--text-secondary); text-align:right; }
+.vol-pct  { font-family:var(--font-mono); font-size:13px; font-weight:700; color:var(--text-primary); text-align:right; }
+.vol-pips { font-weight:500; color:var(--text-secondary); white-space:nowrap; }
 
 /* Skeleton */
 .skeleton-bar { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); height:320px; overflow:hidden; position:relative; }
@@ -185,13 +187,22 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 
 @media(max-width:800px) {
   .vol-card-header,
-  .vol-row { grid-template-columns:36px 110px 60px 1fr 80px; }
-  .vol-pct { display:none; }
+  .vol-row { grid-template-columns:34px 92px 56px 1fr 74px 92px; }
 }
+/* Phones: rank · pair · tier · ATR % · ATR on one line, the bar full width below */
 @media(max-width:560px) {
   .vol-card-header,
-  .vol-row { grid-template-columns:30px 100px 1fr 72px; }
-  .vol-tier { display:none; }
+  .vol-row { grid-template-columns:26px minmax(0,1fr) 46px 66px 80px; gap:4px 6px; padding-left:10px; padding-right:10px; }
+  .vol-th-bar { display:none; }
+  .vol-bar-wrap { grid-column:2 / -1; grid-row:2; height:4px; }
+  .vol-pair { font-size:12px; }
+  .vol-pct, .vol-pips { font-size:12px; }
+  .vol-tier { padding:3px 4px; }
+  .summary-bar { padding:12px 10px; }
+  .summary-stat { padding:0 8px; }
+  .summary-stat-val { font-size:18px; }
+  .summary-stat-label { font-size:9px; letter-spacing:.04em; }
+  .summary-updated { margin-left:0; flex-basis:100%; margin-top:8px; }
 }
 @media(max-width:640px) { .header-inner,.main,.controls-bar { padding-left:16px; padding-right:16px; } }
 
@@ -218,6 +229,24 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
   .nav-link { padding:13px 22px; border-radius:0; font-size:14px; border-bottom:1px solid rgba(26,77,110,0.4); }
   .nav-link:last-child { border-bottom:none; }
   .header-actions .btn-primary { display:none; }
+}
+  
+/* ── Shared: readable chips, touch targets, wrapping, sticky columns ── */
+:root { --sticky-bg:#08283a; }
+.asset-chip, .tf-chip, .atr-chip, .lb-chip { opacity:1; color:var(--text-secondary); }
+.asset-chip:not(.active):hover, .tf-chip:not(.active):hover, .atr-chip:not(.active):hover, .lb-chip:not(.active):hover { opacity:1; color:var(--text-primary); border-color:var(--text-secondary); }
+.chip-action-btn, .sort-btn, .filter-tab { color:var(--text-secondary); }
+.state-icon { opacity:.55 !important; color:var(--text-secondary); line-height:0; }
+.method-formula { white-space:pre-wrap !important; overflow-wrap:anywhere; overflow-x:visible !important; }
+code { white-space:normal; overflow-wrap:anywhere; }
+.deeplink-note { font-size:12px; color:var(--text-secondary); background:var(--accent-dim); border:1px solid rgba(47,163,224,.3); border-radius:var(--radius-sm); padding:8px 12px; line-height:1.5; }
+.deeplink-note strong { color:var(--text-primary); }
+.swipe-hint { display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--text-secondary); margin:0 0 8px; }
+.swipe-hint[hidden] { display:none; }
+@media (max-width:767px) { input, select, textarea { font-size:16px !important; } }
+@media (pointer:coarse) {
+  .asset-chip, .tf-chip, .atr-chip, .lb-chip, .chip-action-btn, .sort-btn, .filter-tab { min-height:36px; display:inline-flex; align-items:center; justify-content:center; }
+  select { min-height:36px; }
 }
   </style>
 </head>
@@ -274,7 +303,7 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
   <section class="hero">
     <div class="hero-inner">
       <h1>Volatility Scanner</h1>
-      <p>Ranks instruments by ATR (Average True Range) — the higher the ATR, the more the pair is moving.</p>
+      <p>Ranks instruments by ATR (Average True Range) as a percentage of price, so pairs with different price levels compare fairly. Currency distances are shown in pips, gold and silver in USD.</p>
     </div>
   </section>
 
@@ -289,36 +318,36 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
         </div>
       </div>
       <div class="asset-chips" id="assetChips">
-        <span class="asset-chip active" data-sym="OANDA:EUR_USD" data-pip="0.0001">EURUSD</span>
-        <span class="asset-chip active" data-sym="OANDA:GBP_USD" data-pip="0.0001">GBPUSD</span>
-        <span class="asset-chip active" data-sym="OANDA:USD_JPY" data-pip="0.01">USDJPY</span>
-        <span class="asset-chip active" data-sym="OANDA:AUD_USD" data-pip="0.0001">AUDUSD</span>
-        <span class="asset-chip active" data-sym="OANDA:USD_CAD" data-pip="0.0001">USDCAD</span>
-        <span class="asset-chip active" data-sym="OANDA:USD_CHF" data-pip="0.0001">USDCHF</span>
-        <span class="asset-chip active" data-sym="OANDA:NZD_USD" data-pip="0.0001">NZDUSD</span>
-        <span class="asset-chip active" data-sym="OANDA:EUR_JPY" data-pip="0.01">EURJPY</span>
-        <span class="asset-chip active" data-sym="OANDA:GBP_JPY" data-pip="0.01">GBPJPY</span>
-        <span class="asset-chip"        data-sym="OANDA:EUR_GBP" data-pip="0.0001">EURGBP</span>
-        <span class="asset-chip"        data-sym="OANDA:EUR_AUD" data-pip="0.0001">EURAUD</span>
-        <span class="asset-chip"        data-sym="OANDA:EUR_CAD" data-pip="0.0001">EURCAD</span>
-        <span class="asset-chip"        data-sym="OANDA:EUR_CHF" data-pip="0.0001">EURCHF</span>
-        <span class="asset-chip"        data-sym="OANDA:EUR_NZD" data-pip="0.0001">EURNZD</span>
-        <span class="asset-chip"        data-sym="OANDA:GBP_AUD" data-pip="0.0001">GBPAUD</span>
-        <span class="asset-chip"        data-sym="OANDA:GBP_CAD" data-pip="0.0001">GBPCAD</span>
-        <span class="asset-chip"        data-sym="OANDA:GBP_CHF" data-pip="0.0001">GBPCHF</span>
-        <span class="asset-chip"        data-sym="OANDA:GBP_NZD" data-pip="0.0001">GBPNZD</span>
-        <span class="asset-chip"        data-sym="OANDA:AUD_JPY" data-pip="0.01">AUDJPY</span>
-        <span class="asset-chip"        data-sym="OANDA:CAD_JPY" data-pip="0.01">CADJPY</span>
-        <span class="asset-chip"        data-sym="OANDA:NZD_JPY" data-pip="0.01">NZDJPY</span>
-        <span class="asset-chip"        data-sym="OANDA:CHF_JPY" data-pip="0.01">CHFJPY</span>
-        <span class="asset-chip"        data-sym="OANDA:AUD_CAD" data-pip="0.0001">AUDCAD</span>
-        <span class="asset-chip"        data-sym="OANDA:AUD_CHF" data-pip="0.0001">AUDCHF</span>
-        <span class="asset-chip"        data-sym="OANDA:AUD_NZD" data-pip="0.0001">AUDNZD</span>
-        <span class="asset-chip"        data-sym="OANDA:NZD_CAD" data-pip="0.0001">NZDCAD</span>
-        <span class="asset-chip"        data-sym="OANDA:NZD_CHF" data-pip="0.0001">NZDCHF</span>
-        <span class="asset-chip"        data-sym="OANDA:CAD_CHF" data-pip="0.0001">CADCHF</span>
-        <span class="asset-chip metal active" data-sym="OANDA:XAU_USD" data-pip="0.10">XAUUSD</span>
-        <span class="asset-chip metal"        data-sym="OANDA:XAG_USD" data-pip="0.01">XAGUSD</span>
+        <span class="asset-chip active" data-sym="OANDA:EUR_USD" data-pip="0.0001">EUR/USD</span>
+        <span class="asset-chip active" data-sym="OANDA:GBP_USD" data-pip="0.0001">GBP/USD</span>
+        <span class="asset-chip active" data-sym="OANDA:USD_JPY" data-pip="0.01">USD/JPY</span>
+        <span class="asset-chip active" data-sym="OANDA:AUD_USD" data-pip="0.0001">AUD/USD</span>
+        <span class="asset-chip active" data-sym="OANDA:USD_CAD" data-pip="0.0001">USD/CAD</span>
+        <span class="asset-chip active" data-sym="OANDA:USD_CHF" data-pip="0.0001">USD/CHF</span>
+        <span class="asset-chip active" data-sym="OANDA:NZD_USD" data-pip="0.0001">NZD/USD</span>
+        <span class="asset-chip active" data-sym="OANDA:EUR_JPY" data-pip="0.01">EUR/JPY</span>
+        <span class="asset-chip active" data-sym="OANDA:GBP_JPY" data-pip="0.01">GBP/JPY</span>
+        <span class="asset-chip"        data-sym="OANDA:EUR_GBP" data-pip="0.0001">EUR/GBP</span>
+        <span class="asset-chip"        data-sym="OANDA:EUR_AUD" data-pip="0.0001">EUR/AUD</span>
+        <span class="asset-chip"        data-sym="OANDA:EUR_CAD" data-pip="0.0001">EUR/CAD</span>
+        <span class="asset-chip"        data-sym="OANDA:EUR_CHF" data-pip="0.0001">EUR/CHF</span>
+        <span class="asset-chip"        data-sym="OANDA:EUR_NZD" data-pip="0.0001">EUR/NZD</span>
+        <span class="asset-chip"        data-sym="OANDA:GBP_AUD" data-pip="0.0001">GBP/AUD</span>
+        <span class="asset-chip"        data-sym="OANDA:GBP_CAD" data-pip="0.0001">GBP/CAD</span>
+        <span class="asset-chip"        data-sym="OANDA:GBP_CHF" data-pip="0.0001">GBP/CHF</span>
+        <span class="asset-chip"        data-sym="OANDA:GBP_NZD" data-pip="0.0001">GBP/NZD</span>
+        <span class="asset-chip"        data-sym="OANDA:AUD_JPY" data-pip="0.01">AUD/JPY</span>
+        <span class="asset-chip"        data-sym="OANDA:CAD_JPY" data-pip="0.01">CAD/JPY</span>
+        <span class="asset-chip"        data-sym="OANDA:NZD_JPY" data-pip="0.01">NZD/JPY</span>
+        <span class="asset-chip"        data-sym="OANDA:CHF_JPY" data-pip="0.01">CHF/JPY</span>
+        <span class="asset-chip"        data-sym="OANDA:AUD_CAD" data-pip="0.0001">AUD/CAD</span>
+        <span class="asset-chip"        data-sym="OANDA:AUD_CHF" data-pip="0.0001">AUD/CHF</span>
+        <span class="asset-chip"        data-sym="OANDA:AUD_NZD" data-pip="0.0001">AUD/NZD</span>
+        <span class="asset-chip"        data-sym="OANDA:NZD_CAD" data-pip="0.0001">NZD/CAD</span>
+        <span class="asset-chip"        data-sym="OANDA:NZD_CHF" data-pip="0.0001">NZD/CHF</span>
+        <span class="asset-chip"        data-sym="OANDA:CAD_CHF" data-pip="0.0001">CAD/CHF</span>
+        <span class="asset-chip metal active" data-sym="OANDA:XAU_USD" data-pip="0.01">XAU/USD</span>
+        <span class="asset-chip metal"        data-sym="OANDA:XAG_USD" data-pip="0.001">XAG/USD</span>
       </div>
 
       <hr class="ctrl-divider" />
@@ -330,12 +359,15 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
           <span class="tf-chip" data-res="5">M5</span>
           <span class="tf-chip" data-res="15">M15</span>
           <span class="tf-chip" data-res="30">M30</span>
-          <span class="tf-chip" data-res="60">1H</span>
-          <span class="tf-chip active" data-res="240">4H</span>
-          <span class="tf-chip" data-res="D">Daily</span>
-          <span class="tf-chip" data-res="W">Weekly</span>
+          <span class="tf-chip" data-res="60">H1</span>
+          <span class="tf-chip active" data-res="240">H4</span>
+          <span class="tf-chip" data-res="D">D1</span>
+          <span class="tf-chip" data-res="W">W</span>
         </div>
-        <span class="ctrl-label" style="margin-left:16px">ATR Period</span>
+      </div>
+
+      <div class="ctrl-row">
+        <span class="ctrl-label">ATR Period</span>
         <div class="atr-chips" id="atrChips">
           <span class="atr-chip" data-period="7">7</span>
           <span class="atr-chip active" data-period="14">14</span>
@@ -371,7 +403,7 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 
   <main class="main" id="mainArea">
     <div class="state-box">
-      <div class="state-icon">📡</div>
+      <div class="state-icon"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.9 19.1a10 10 0 0 1 0-14.2M19.1 4.9a10 10 0 0 1 0 14.2M7.8 16.2a6 6 0 0 1 0-8.4M16.2 7.8a6 6 0 0 1 0 8.4"/><circle cx="12" cy="12" r="2"/></svg></div>
       <div class="state-title">Ready to scan</div>
       <div class="state-sub">Select instruments and press <strong>Scan Volatility</strong> to rank by ATR.</div>
     </div>
@@ -390,11 +422,39 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
   <script>
 const API_KEY  = 'd95lt2pr01qqtvdma7c0d95lt2pr01qqtvdma7cg';
 const API_BASE = 'https://finnhub.io/api/v1';
-const TF_LABELS  = { '1':'M1', '5':'M5', '15':'M15', '30':'M30', '60':'1H', '240':'4H', 'D':'Daily', 'W':'Weekly' };
+const TF_LABELS  = { '1':'M1', '5':'M5', '15':'M15', '30':'M30', '60':'H1', '240':'H4', 'D':'D1', 'W':'W' };
 const TF_SECONDS = { '1':60, '5':300, '15':900, '30':1800, '60':3600, '240':14400, 'D':86400, 'W':604800 };
 const MAX_ASSETS = 10;
 // Saved settings: the platform provides window.MAPrefs (stored per user); standalone falls back to localStorage.
 const PREFS = (() => { const k = 'ma-prefs:volatility-scanner'; let v = {}; try { v = (window.MAPrefs ? window.MAPrefs.get() : JSON.parse(localStorage.getItem(k) || '{}')) || {}; } catch (e) {} return { get: () => v, set: (o) => { v = o; try { window.MAPrefs ? window.MAPrefs.set(o) : localStorage.setItem(k, JSON.stringify(o)); } catch (e) {} } }; })();
+
+// ── Shared display helpers: time with zone, pair labels, icons, deep links, swipe hints ──
+const TZ_NAME  = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'local time'; } catch (e) { return 'local time'; } })();
+const fmtClock = d => d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', hourCycle:'h23' }) + ' (' + TZ_NAME + ')';
+const fmtWhen  = d => d.toLocaleString('en-GB', { weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit', hourCycle:'h23' }) + ' (' + TZ_NAME + ')';
+const pairLabel = sym => sym.replace('OANDA:', '').replace('_', '/');
+const ICON_PATHS = {"signal": "<path d=\"M4.9 19.1a10 10 0 0 1 0-14.2M19.1 4.9a10 10 0 0 1 0 14.2M7.8 16.2a6 6 0 0 1 0-8.4M16.2 7.8a6 6 0 0 1 0 8.4\"/><circle cx=\"12\" cy=\"12\" r=\"2\"/>", "bars": "<path d=\"M3 21h18M6 17V11M11 17V5M16 17v-8M21 17v-4\"/>", "trend": "<polyline points=\"3 17 9 11 13 15 21 7\"/><polyline points=\"15 7 21 7 21 13\"/>", "grid": "<rect x=\"3\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"3\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"14\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"/>", "search": "<circle cx=\"11\" cy=\"11\" r=\"7\"/><line x1=\"21\" y1=\"21\" x2=\"16\" y2=\"16\"/>", "alert": "<path d=\"M12 3 2 20h20L12 3z\"/><line x1=\"12\" y1=\"10\" x2=\"12\" y2=\"14\"/><line x1=\"12\" y1=\"17\" x2=\"12\" y2=\"17.5\"/>"};
+const icon = n => `<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON_PATHS[n]}</svg>`;
+// A deep link (?symbol=…&tf=…) only preselects for this visit. Until the user changes that
+// control, saving keeps their own saved value for it (KEEP holds those values).
+const KEEP = {};
+const keepSaved = o => { Object.keys(KEEP).forEach(k => { o[k] = KEEP[k]; }); return o; };
+function showDeepLinkNote(what) {
+  const box = document.querySelector('.controls-box');
+  if (!box || !what) return;
+  const n = document.createElement('div');
+  n.className = 'deeplink-note';
+  n.innerHTML = `Opened from a link: showing <strong>${what}</strong> for this visit. Your saved selection stays as it is unless you change it here.`;
+  box.prepend(n);
+}
+function updateSwipeHints() {
+  document.querySelectorAll('[data-swipe]').forEach(h => {
+    const el = document.getElementById(h.dataset.swipe);
+    h.hidden = !el || el.scrollWidth <= el.clientWidth + 2;
+  });
+}
+window.addEventListener('resize', updateSwipeHints);
+const swipeHint = id => `<div class="swipe-hint" data-swipe="${id}" hidden><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>Swipe sideways to see all columns</div>`;
 
 // ── Asset chip interactions ──
 document.querySelectorAll('.asset-chip').forEach(chip => {
@@ -402,6 +462,7 @@ document.querySelectorAll('.asset-chip').forEach(chip => {
     const active = document.querySelectorAll('.asset-chip.active');
     if (!chip.classList.contains('active') && active.length >= MAX_ASSETS) return;
     chip.classList.toggle('active');
+    delete KEEP.assets;
     updateCounter();
     savePrefs();
   });
@@ -411,11 +472,13 @@ function selectAllAssets() {
   document.querySelectorAll('.asset-chip').forEach(c => {
     if (count < MAX_ASSETS) { c.classList.add('active'); count++; }
   });
+  delete KEEP.assets;
   updateCounter();
   savePrefs();
 }
 function clearAssets() {
   document.querySelectorAll('.asset-chip').forEach(c => c.classList.remove('active'));
+  delete KEEP.assets;
   updateCounter();
   savePrefs();
 }
@@ -425,6 +488,7 @@ document.querySelectorAll('.tf-chip').forEach(chip => {
   chip.addEventListener('click', () => {
     document.querySelectorAll('.tf-chip').forEach(c => c.classList.remove('active'));
     chip.classList.add('active');
+    delete KEEP.tf;
     savePrefs();
   });
 });
@@ -458,7 +522,7 @@ function getActiveATR()    { return parseInt(document.querySelector('.atr-chip.a
 
 // ── Saved settings + deep link ──
 function savePrefs() {
-  PREFS.set({ assets: getActiveAssets().map(a => a.sym), tf: getActiveTF(), atr: getActiveATR() });
+  PREFS.set(keepSaved({ assets: getActiveAssets().map(a => a.sym), tf: getActiveTF(), atr: getActiveATR() }));
 }
 const TF_PARAM = { M15:'15', M30:'30', H1:'60', H4:'240', D1:'D', W:'W' };
 (function restorePrefs() {
@@ -471,15 +535,13 @@ const TF_PARAM = { M15:'15', M30:'30', H1:'60', H4:'240', D1:'D', W:'W' };
   }
   pick('.tf-chip', 'res', p.tf);
   pick('.atr-chip', 'period', String(p.atr));
+  // Deep link: exactly this pair / timeframe for this visit, nothing is saved
   const q   = new URLSearchParams(location.search);
   const sym = chips.find(c => c.dataset.sym === q.get('symbol'));
-  const tf  = pick('.tf-chip', 'res', TF_PARAM[q.get('tf')]);
-  if (sym && !sym.classList.contains('active')) {
-    const active = chips.filter(c => c.classList.contains('active'));
-    if (active.length >= MAX_ASSETS) active[active.length - 1].classList.remove('active');
-    sym.classList.add('active');
-  }
-  if (sym || tf) { savePrefs(); }
+  const tfRes = TF_PARAM[q.get('tf')];
+  if (sym) { KEEP.assets = p.assets; chips.forEach(c => c.classList.toggle('active', c === sym)); }
+  if (tfRes && pick('.tf-chip', 'res', tfRes)) KEEP.tf = p.tf;
+  if (sym || 'tf' in KEEP) showDeepLinkNote([sym && pairLabel(sym.dataset.sym), 'tf' in KEEP && TF_LABELS[tfRes]].filter(Boolean).join(' · '));
   updateCounter();
 })();
 
@@ -589,19 +651,28 @@ async function runScan() {
 }
 
 
+// Distances as traders read them: pips for currencies, USD for gold and silver
+const isMetal = sym => /XA[UG]/.test(sym);
+function fmtAtr(r) {
+  if (isMetal(r.sym)) return { val: r.atr.toFixed(r.sym.includes('XAU') ? 2 : 3), unit: 'USD' };
+  return { val: (r.atr / r.pip).toFixed(1), unit: 'pips' };
+}
+
 function renderResults(results, resolution, atrPeriod) {
   const tfLabel = TF_LABELS[resolution] || resolution;
+  // Ranked by ATR as % of price (as the platform dashboard does), not by raw pips
   const rows = Object.values(results)
-    .filter(r => r.atr !== null)
-    .sort((a, b) => b.atr - a.atr);
-  const failed = Object.values(results).filter(r => r.atr === null);
+    .filter(r => r.atr !== null && r.lastClose)
+    .map(r => ({ ...r, pct: r.atr / r.lastClose * 100 }))
+    .sort((a, b) => b.pct - a.pct);
+  const failed = Object.values(results).filter(r => r.atr === null || !r.lastClose);
 
   if (!rows.length) {
-    document.getElementById('mainArea').innerHTML = `<div class="state-box"><div class="state-icon">⚠️</div><div class="state-title">No data returned</div><div class="state-sub">Try a different timeframe or check your connection.</div></div>`;
+    document.getElementById('mainArea').innerHTML = `<div class="state-box"><div class="state-icon">${icon('alert')}</div><div class="state-title">No data returned</div><div class="state-sub">Try a different timeframe or check your connection.</div></div>`;
     return;
   }
 
-  const maxATR = rows[0].atr;
+  const maxPct = rows[0].pct;
   const n = rows.length;
   const highCut = Math.ceil(n / 3);
   const lowCut  = n - Math.floor(n / 3);
@@ -609,26 +680,24 @@ function renderResults(results, resolution, atrPeriod) {
   function tier(i)    { return i < highCut ? 'high' : i >= lowCut ? 'low' : 'med'; }
   function tierLabel(i){ return i < highCut ? 'HIGH'  : i >= lowCut ? 'LOW'  : 'MED'; }
 
-  const now = new Date();
-  const updatedStr = now.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  const updatedStr = fmtClock(new Date());
 
   const highCount = rows.filter((_, i) => tier(i) === 'high').length;
   const medCount  = rows.filter((_, i) => tier(i) === 'med').length;
   const lowCount  = rows.filter((_, i) => tier(i) === 'low').length;
 
   const tableRows = rows.map((r, i) => {
-    const t       = tier(i);
-    const pct     = (r.atr / maxATR * 100).toFixed(1);
-    const pips    = (r.atr / r.pip).toFixed(1);
-    const pctPrice = r.lastClose ? (r.atr / r.lastClose * 100).toFixed(3) : '—';
+    const t     = tier(i);
+    const width = (r.pct / maxPct * 100).toFixed(1);
+    const v     = fmtAtr(r);
     return `
-      <div class="vol-row">
+      <div class="vol-row" data-sym="${r.sym}" data-pct="${r.pct}" data-atr="${r.atr}">
         <div class="vol-rank">#${i + 1}</div>
         <div class="vol-pair">${r.label}</div>
         <div class="vol-tier ${t}">${tierLabel(i)}</div>
-        <div class="vol-bar-wrap"><div class="vol-bar-inner ${t}" style="width:${pct}%"></div></div>
-        <div class="vol-pips">${pips}<span>pips</span></div>
-        <div class="vol-pct">${pctPrice}%</div>
+        <div class="vol-bar-wrap"><div class="vol-bar-inner ${t}" style="width:${width}%"></div></div>
+        <div class="vol-pct">${r.pct.toFixed(3)}%</div>
+        <div class="vol-pips">${v.val}<span>${v.unit}</span></div>
       </div>`;
   }).join('');
 
@@ -662,13 +731,14 @@ function renderResults(results, resolution, atrPeriod) {
         <div class="vol-th">#</div>
         <div class="vol-th">Instrument</div>
         <div class="vol-th center">Tier</div>
-        <div class="vol-th">ATR Bar</div>
-        <div class="vol-th right">ATR (pips)</div>
-        <div class="vol-th right">ATR (%)</div>
+        <div class="vol-th vol-th-bar">ATR % of price</div>
+        <div class="vol-th right">ATR %</div>
+        <div class="vol-th right">ATR</div>
       </div>
       ${tableRows}
       ${failedNote}
     </div>
+    <p class="vol-note">Ranked and tiered by ATR as a percentage of the last price (top third High, bottom third Low). The ATR column shows the same value as a distance: pips for currency pairs, USD for gold and silver.</p>
   `;
 }
   </script>

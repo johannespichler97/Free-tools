@@ -246,6 +246,8 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 .heat th.cur { color:var(--accent); }
 .heat td { text-align:center; padding:7px 2px; border-radius:4px; color:var(--text-primary); white-space:nowrap; }
 .heat td.yr { text-align:left; color:var(--text-secondary); font-weight:600; padding-left:4px; background:none; }
+/* Year column stays visible while the months scroll sideways */
+.heat td.yr, .heat thead th:first-child { position:sticky; left:0; z-index:2; background:var(--sticky-bg); box-shadow:6px 0 8px -6px rgba(0,0,0,.6); }
 .heat td.empty { color:var(--text-muted); background:rgba(14,58,84,.35); }
 .heat td.mtd { font-style:italic; outline:1px dashed var(--accent); outline-offset:-1px; }
 .heat tr.cy td.yr { color:var(--accent); }
@@ -274,6 +276,24 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
   .scr-row { grid-template-columns:16px 62px minmax(36px,1fr) 54px 32px; gap:6px; padding:8px 6px; font-size:11.5px; }
   .scr-row.head span:nth-child(3) { visibility:hidden; }
   .scr-n { display:none; }
+}
+  
+/* ── Shared: readable chips, touch targets, wrapping, sticky columns ── */
+:root { --sticky-bg:#08283a; }
+.asset-chip, .tf-chip, .atr-chip, .lb-chip { opacity:1; color:var(--text-secondary); }
+.asset-chip:not(.active):hover, .tf-chip:not(.active):hover, .atr-chip:not(.active):hover, .lb-chip:not(.active):hover { opacity:1; color:var(--text-primary); border-color:var(--text-secondary); }
+.chip-action-btn, .sort-btn, .filter-tab { color:var(--text-secondary); }
+.state-icon { opacity:.55 !important; color:var(--text-secondary); line-height:0; }
+.method-formula { white-space:pre-wrap !important; overflow-wrap:anywhere; overflow-x:visible !important; }
+code { white-space:normal; overflow-wrap:anywhere; }
+.deeplink-note { font-size:12px; color:var(--text-secondary); background:var(--accent-dim); border:1px solid rgba(47,163,224,.3); border-radius:var(--radius-sm); padding:8px 12px; line-height:1.5; }
+.deeplink-note strong { color:var(--text-primary); }
+.swipe-hint { display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--text-secondary); margin:0 0 8px; }
+.swipe-hint[hidden] { display:none; }
+@media (max-width:767px) { input, select, textarea { font-size:16px !important; } }
+@media (pointer:coarse) {
+  .asset-chip, .tf-chip, .atr-chip, .lb-chip, .chip-action-btn, .sort-btn, .filter-tab { min-height:36px; display:inline-flex; align-items:center; justify-content:center; }
+  select { min-height:36px; }
 }
   </style>
 </head>
@@ -363,6 +383,7 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 
     <section class="panel">
       <div class="panel-head"><h2>Monthly returns by year</h2><span class="panel-sub">Monthly change in %, green = up, red = down</span></div>
+      <div class="swipe-hint" data-swipe="heatmap" hidden><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>Swipe sideways to see all months</div>
       <div id="heatmap" class="heat-wrap"><div class="card-loading"><div class="spinner"></div></div></div>
     </section>
 
@@ -419,6 +440,34 @@ const BASE    = 'https://finnhub.io/api/v1';
 // Saved settings: the platform provides window.MAPrefs (stored per user); standalone falls back to localStorage.
 const PREFS = (() => { const k = 'ma-prefs:seasonality'; let v = {}; try { v = (window.MAPrefs ? window.MAPrefs.get() : JSON.parse(localStorage.getItem(k) || '{}')) || {}; } catch (e) {} return { get: () => v, set: (o) => { v = o; try { window.MAPrefs ? window.MAPrefs.set(o) : localStorage.setItem(k, JSON.stringify(o)); } catch (e) {} } }; })();
 
+// ── Shared display helpers: time with zone, pair labels, icons, deep links, swipe hints ──
+const TZ_NAME  = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'local time'; } catch (e) { return 'local time'; } })();
+const fmtClock = d => d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', hourCycle:'h23' }) + ' (' + TZ_NAME + ')';
+const fmtWhen  = d => d.toLocaleString('en-GB', { weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit', hourCycle:'h23' }) + ' (' + TZ_NAME + ')';
+const pairLabel = sym => sym.replace('OANDA:', '').replace('_', '/');
+const ICON_PATHS = {"signal": "<path d=\"M4.9 19.1a10 10 0 0 1 0-14.2M19.1 4.9a10 10 0 0 1 0 14.2M7.8 16.2a6 6 0 0 1 0-8.4M16.2 7.8a6 6 0 0 1 0 8.4\"/><circle cx=\"12\" cy=\"12\" r=\"2\"/>", "bars": "<path d=\"M3 21h18M6 17V11M11 17V5M16 17v-8M21 17v-4\"/>", "trend": "<polyline points=\"3 17 9 11 13 15 21 7\"/><polyline points=\"15 7 21 7 21 13\"/>", "grid": "<rect x=\"3\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"3\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"14\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"/>", "search": "<circle cx=\"11\" cy=\"11\" r=\"7\"/><line x1=\"21\" y1=\"21\" x2=\"16\" y2=\"16\"/>", "alert": "<path d=\"M12 3 2 20h20L12 3z\"/><line x1=\"12\" y1=\"10\" x2=\"12\" y2=\"14\"/><line x1=\"12\" y1=\"17\" x2=\"12\" y2=\"17.5\"/>"};
+const icon = n => `<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON_PATHS[n]}</svg>`;
+// A deep link (?symbol=…&tf=…) only preselects for this visit. Until the user changes that
+// control, saving keeps their own saved value for it (KEEP holds those values).
+const KEEP = {};
+const keepSaved = o => { Object.keys(KEEP).forEach(k => { o[k] = KEEP[k]; }); return o; };
+function showDeepLinkNote(what) {
+  const box = document.querySelector('.controls-box');
+  if (!box || !what) return;
+  const n = document.createElement('div');
+  n.className = 'deeplink-note';
+  n.innerHTML = `Opened from a link: showing <strong>${what}</strong> for this visit. Your saved selection stays as it is unless you change it here.`;
+  box.prepend(n);
+}
+function updateSwipeHints() {
+  document.querySelectorAll('[data-swipe]').forEach(h => {
+    const el = document.getElementById(h.dataset.swipe);
+    h.hidden = !el || el.scrollWidth <= el.clientWidth + 2;
+  });
+}
+window.addEventListener('resize', updateSwipeHints);
+const swipeHint = id => `<div class="swipe-hint" data-swipe="${id}" hidden><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>Swipe sideways to see all columns</div>`;
+
 const ASSETS = [
   { label:'EUR/USD', sym:'OANDA:EUR_USD', type:'fx' },
   { label:'GBP/USD', sym:'OANDA:GBP_USD', type:'fx' },
@@ -445,6 +494,9 @@ const ASSETS = [
   { label:'NZD/JPY', sym:'OANDA:NZD_JPY', type:'fx' },
   { label:'CAD/JPY', sym:'OANDA:CAD_JPY', type:'fx' },
   { label:'CHF/JPY', sym:'OANDA:CHF_JPY', type:'fx' },
+  { label:'NZD/CAD', sym:'OANDA:NZD_CAD', type:'fx' },
+  { label:'NZD/CHF', sym:'OANDA:NZD_CHF', type:'fx' },
+  { label:'CAD/CHF', sym:'OANDA:CAD_CHF', type:'fx' },
   { label:'XAU/USD', sym:'OANDA:XAU_USD', type:'metal' },
   { label:'XAG/USD', sym:'OANDA:XAG_USD', type:'metal' },
 ];
@@ -460,14 +512,15 @@ let sym = 'OANDA:EUR_USD', years = 10, focusMonth = CM, loadId = 0;
 let cur = { monthly: null };
 
 /* ── SAVED SETTINGS + DEEP LINK ── */
-const savePrefs = () => PREFS.set({ sym, years, focusMonth });
+const savePrefs = () => PREFS.set(keepSaved({ sym, years, focusMonth }));
 (function restorePrefs() {
   const p = PREFS.get();
   if (ASSETS.some(a => a.sym === p.sym)) sym = p.sym;
   if (YEAR_OPTS.includes(p.years)) years = p.years;
   if (Number.isInteger(p.focusMonth) && p.focusMonth >= 0 && p.focusMonth < 12) focusMonth = p.focusMonth;
   const q = ASSETS.find(a => a.sym === new URLSearchParams(location.search).get('symbol'));
-  if (q) { sym = q.sym; savePrefs(); }
+  // Deep link: this symbol for this visit, nothing is saved
+  if (q) { KEEP.sym = p.sym; sym = q.sym; showDeepLinkNote(q.label); }
 })();
 
 /* ── DATA ── */
@@ -645,6 +698,7 @@ function renderHeatmap() {
   rows += `<tr class="sum"><td class="yr">Average</td>${stats.map(s => cell(s.n ? s.avg : null)).join('')}${cell(totals.length ? avg(totals) : null, ' tot')}</tr>`;
   const ud = (u, d) => `<td><span class="up">${u}</span><span style="color:var(--text-muted)">/</span><span class="down">${d}</span></td>`;
   rows += `<tr class="sum"><td class="yr" title="bullish / bearish years">▲ / ▼</td>${stats.map(s => s.n ? ud(s.up, s.down) : '<td class="empty">–</td>').join('')}${totals.length ? ud(totals.filter(v => v > 0).length, totals.filter(v => v < 0).length) : '<td class="empty">–</td>'}</tr>`;
+  setTimeout(updateSwipeHints);
   box.innerHTML = `<table class="heat"><thead><tr><th style="text-align:left">Year</th>${MONTHS.map((mn, m) => `<th class="${m === CM ? 'cur' : ''}">${mn}</th>`).join('')}<th>Year</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
@@ -714,6 +768,7 @@ function updateHint() {
 function setSymbol(s) {
   if (s === sym) return;
   sym = s;
+  delete KEEP.sym;
   savePrefs();
   document.querySelectorAll('#assetChips .asset-chip').forEach(c => c.classList.toggle('active', c.dataset.sym === s));
   loadSymbol();

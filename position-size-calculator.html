@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Position Size Calculator | Solantis</title>
+  <title>Position Size Calculator</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
@@ -148,6 +148,18 @@ select.input-field option { background:var(--bg-tertiary); }
 /* Warning */
 .calc-warning { background:rgba(248,81,73,0.1); border:1px solid rgba(248,81,73,0.3); border-radius:var(--radius-sm); padding:10px 14px; font-size:12px; color:#f85149; margin-top:12px; display:none; }
 
+/* Inline field messages */
+.field-msg { font-size:12px; margin-top:6px; line-height:1.45; }
+.field-msg:empty { display:none; }
+.field-msg.error { color:var(--negative); }
+.field-msg.warn  { color:var(--gold); }
+.input-field.invalid { border-color:var(--negative); }
+.result-notes { display:flex; flex-direction:column; gap:6px; margin-top:12px; }
+.result-note { font-size:12px; line-height:1.45; padding:9px 12px; border-radius:var(--radius-sm); }
+.result-note.warn { color:var(--gold); background:rgba(240,180,41,0.08); border:1px solid rgba(240,180,41,0.3); }
+.result-note.info { color:var(--text-secondary); background:var(--bg-tertiary); }
+.lp-note { font-size:10px; color:var(--text-muted); }
+
 /* Pip info */
 .pip-info { font-size:11px; color:var(--text-muted); margin-top:6px; }
 
@@ -158,7 +170,11 @@ select.input-field option { background:var(--bg-tertiary); }
 .footer-disclaimer a { color:var(--accent); text-decoration:none; }
 .footer-copy { font-size:12px; color:var(--text-muted); margin-top:6px; }
 
-@media(max-width:640px) { .header-inner { padding:0 16px; } .main { padding:16px 16px 40px; } }
+@media(max-width:640px) { .header-inner { padding:0 16px; } .main { padding:16px 16px 40px; } .calc-card { padding:18px 16px; } .result-lot-value { font-size:40px; } }
+/* iOS zooms into form fields below 16px */
+@media(max-width:767px) { .input-field { font-size:16px; } }
+/* touch screens: buttons at least 36px tall */
+@media (pointer:coarse) { .toggle-btn { min-height:40px; } .btn-calc { min-height:48px; } }
 
 /* ── HAMBURGER MOBILE NAV ── */
 .hamburger { display:none; flex-direction:column; justify-content:center; gap:5px; background:none; border:none; padding:6px; cursor:pointer; border-radius:6px; transition:background .15s; margin-left:auto; }
@@ -328,9 +344,10 @@ select.input-field option { background:var(--bg-tertiary); }
         <div class="input-group">
           <label class="input-label">Account Size</label>
           <div class="input-suffix-wrap">
-            <input type="number" class="input-field" id="accountSize" placeholder="10 000" min="0" step="100" />
+            <input type="number" class="input-field" id="accountSize" placeholder="e.g. 10000" min="0" step="100" inputmode="decimal" value="10000" />
             <span class="input-suffix" id="accCurSuffix">USD</span>
           </div>
+          <div class="field-msg" id="msg-accountSize"></div>
         </div>
 
         <!-- Risk -->
@@ -341,18 +358,20 @@ select.input-field option { background:var(--bg-tertiary); }
             <button class="toggle-btn" data-risk="amount">Fixed Amount</button>
           </div>
           <div class="input-suffix-wrap">
-            <input type="number" class="input-field" id="riskValue" placeholder="1" min="0" step="0.1" />
+            <input type="number" class="input-field" id="riskValue" placeholder="e.g. 1" min="0" step="0.1" inputmode="decimal" value="1" />
             <span class="input-suffix" id="riskSuffix">%</span>
           </div>
+          <div class="field-msg" id="msg-riskValue"></div>
         </div>
 
         <!-- Stop Loss -->
         <div class="input-group">
-          <label class="input-label">Stop Loss</label>
+          <label class="input-label" id="stopLabel" for="stopLoss">Stop Loss (pips)</label>
           <div class="input-suffix-wrap">
-            <input type="number" class="input-field" id="stopLoss" placeholder="20" min="0" step="1" />
-            <span class="input-suffix">pips</span>
+            <input type="number" class="input-field" id="stopLoss" placeholder="e.g. 20" min="0" step="any" inputmode="decimal" value="20" />
+            <span class="input-suffix" id="stopSuffix">pips</span>
           </div>
+          <div class="field-msg" id="msg-stopLoss"></div>
           <div class="pip-info" id="pipInfo">1 pip = 0.0001 for EURUSD</div>
         </div>
 
@@ -373,6 +392,7 @@ select.input-field option { background:var(--bg-tertiary); }
                 <span class="lp-loading"><span class="spinner-sm"></span> Loading…</span>
               </div>
               <div class="lp-change" id="lpChange"></div>
+              <div class="lp-note" id="lpNote"></div>
             </div>
             <div class="lp-right">
               <div class="lp-updated" id="lpUpdated"></div>
@@ -414,16 +434,26 @@ const PREFS = (() => { const k = 'ma-prefs:position-size-calculator'; let v = {}
 let accCurrency = 'USD';
 let riskType    = 'pct';
 let priceCache  = {};
+let baseCache   = {};
 
-// Contract sizes and pip sizes per instrument
+// Same instrument maths as the platform (pipSize in src/lib/indicators/instruments.ts and the
+// dashboard "pip value"): pip 0.01 for XAU/USD and JPY pairs, 0.001 for XAG/USD, else 0.0001;
+// one lot = 100 oz gold, 5,000 oz silver or 100,000 units of a currency.
 const CONTRACT = { XAUUSD: 100, XAGUSD: 5000 };
 const PIP_SIZE  = { XAUUSD: 0.01, XAGUSD: 0.001 };
+const isMetal = pair => pair === 'XAUUSD' || pair === 'XAGUSD';
+// Default stops as on the platform dashboard: metals as a USD price distance, currencies in pips.
+const defaultStop = pair => pair === 'XAUUSD' ? '10' : pair === 'XAGUSD' ? '0.2' : '20';
+const DEFAULT_ACCOUNT = '10000';
+const defaultRisk = type => type === 'pct' ? '1' : '100';
 
 function getContractSize(pair) { return CONTRACT[pair] || 100000; }
 function getPipSize(pair) {
   if (PIP_SIZE[pair]) return PIP_SIZE[pair];
   return pair.endsWith('JPY') ? 0.01 : 0.0001;
 }
+// Quote decimals as on the platform (priceDigits)
+function priceDecimals(pair) { return pair === 'XAUUSD' ? 2 : pair === 'XAGUSD' ? 4 : pair.includes('JPY') ? 3 : 5; }
 
 function toFinnhubSymbol(pair) {
   if (pair === 'XAUUSD') return 'OANDA:XAU_USD';
@@ -460,37 +490,108 @@ async function toUSD(currency) {
   }
 }
 
-function updateLivePrice(pair, data) {
+/* ── Trading day: 17:00 to 17:00 New York (DST handled by Intl) ── */
+const NY_TZ = 'America/New_York';
+function nyParts(ms) {
+  const p = {};
+  new Intl.DateTimeFormat('en-US', { timeZone: NY_TZ, hourCycle: 'h23', weekday: 'short', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+    .formatToParts(new Date(ms)).forEach(x => { p[x.type] = x.value; });
+  return { y: +p.year, m: +p.month, d: +p.day, h: +p.hour % 24, mi: +p.minute, wd: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(p.weekday) };
+}
+function nyToUTC(y, m, d, h) {
+  const guess = Date.UTC(y, m - 1, d, h);
+  const off = t => { const p = nyParts(t); return (Date.UTC(p.y, p.m - 1, p.d, p.h, p.mi) - Math.floor(t / 60000) * 60000) / 60000; };
+  const t1 = guess - off(guess) * 60000;
+  return guess - off(t1) * 60000;
+}
+/** First 17:00 New York strictly after ms. */
+function nextNy17(ms) {
+  const p = nyParts(ms);
+  let t = nyToUTC(p.y, p.m, p.d, 17);
+  if (t <= ms) { const x = new Date(Date.UTC(p.y, p.m - 1, p.d + 1)); t = nyToUTC(x.getUTCFullYear(), x.getUTCMonth() + 1, x.getUTCDate(), 17); }
+  return t;
+}
+/** Forex is closed from Friday 17:00 to Sunday 17:00 New York. */
+function isMarketClosed(ms) {
+  const p = nyParts(ms);
+  return p.wd === 6 || (p.wd === 5 && p.h >= 17) || (p.wd === 0 && p.h < 17);
+}
+
+/**
+ * Close of the previous trading day (17:00 New York), the baseline of the daily change,
+ * like the platform's changeBaseline: daily candles open at 17:00 New York; while the last
+ * candle is still forming (or the market is closed for the weekend, so the last price is
+ * Friday's close) the change is measured against the close before it.
+ */
+async function fetchPrevClose(pair) {
+  const c = baseCache[pair];
+  if (c && Date.now() - c.ts < 300000) return c.base;
+  const to = Math.floor(Date.now() / 1000), from = to - 12 * 86400;
+  const sym = toFinnhubSymbol(pair);
+  const res = await fetch(`${API_BASE}/forex/candle?symbol=${sym}&resolution=D&from=${from}&to=${to}&token=${API_KEY}`);
+  if (!res.ok) throw new Error(`API error ${res.status}`);
+  const d = await res.json();
+  if (d.s !== 'ok' || !Array.isArray(d.c) || !Array.isArray(d.t) || d.c.length < 2) throw new Error('No daily candles');
+  const n = d.c.length;
+  const lastClose = nextNy17(d.t[n - 1] * 1000 + 2 * 3600000); // candle open + 1 trading day
+  const now = Date.now();
+  const base = (now < lastClose || isMarketClosed(now)) ? d.c[n - 2] : d.c[n - 1];
+  baseCache[pair] = { base, ts: Date.now() };
+  return base;
+}
+
+async function updateLivePrice(pair, data) {
+  let base = data.pc, exact = false;
+  try { base = await fetchPrevClose(pair); exact = true; } catch (e) { /* fall back to the quote's previous close */ }
+  if (document.getElementById('pairSelect').value !== pair) return;
   document.getElementById('lpPair').textContent = pair;
-  const decimals = pair.includes('JPY') ? 3 : (pair === 'XAUUSD' || pair === 'XAGUSD') ? 2 : 5;
+  const decimals = priceDecimals(pair);
   document.getElementById('lpPrice').textContent = data.c.toFixed(decimals);
-  const diff = data.c - data.pc;
-  const pct  = ((diff / data.pc) * 100).toFixed(2);
-  const el   = document.getElementById('lpChange');
-  el.textContent = `${diff >= 0 ? '+' : ''}${diff.toFixed(decimals)} (${pct}%)`;
-  el.className = 'lp-change ' + (diff >= 0 ? 'up' : 'down');
-  document.getElementById('lpUpdated').textContent = 'Updated ' + new Date().toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  const el = document.getElementById('lpChange');
+  if (base) {
+    const diff = data.c - base;
+    const pct  = ((diff / base) * 100).toFixed(2);
+    el.textContent = `${diff >= 0 ? '+' : ''}${diff.toFixed(decimals)} (${diff >= 0 ? '+' : ''}${pct}%)`;
+    el.className = 'lp-change ' + (diff >= 0 ? 'up' : 'down');
+    document.getElementById('lpNote').textContent = exact
+      ? (isMarketClosed(Date.now()) ? 'Market closed · Friday vs. previous close (17:00 New York)' : 'vs. previous close (17:00 New York)')
+      : 'vs. previous close';
+  } else {
+    el.textContent = '';
+    document.getElementById('lpNote').textContent = '';
+  }
+  document.getElementById('lpUpdated').textContent = 'Updated ' + new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', second:'2-digit', hour12: false });
 }
 
 function updatePipInfo(pair) {
-  const ps = getPipSize(pair);
   const cs = getContractSize(pair);
   let info = '';
-  if (pair === 'XAUUSD') info = '1 pip = $0.01 · 100 oz per lot · ~$1 pip value/lot';
-  else if (pair === 'XAGUSD') info = '1 pip = $0.001 · 5,000 oz per lot · ~$5 pip value/lot';
-  else if (pair.endsWith('JPY')) info = `1 pip = 0.01 · ${cs.toLocaleString()} units per lot`;
-  else info = `1 pip = 0.0001 · ${cs.toLocaleString()} units per lot`;
+  if (pair === 'XAUUSD') info = 'Stop as a price distance in USD (e.g. 15.00 = gold moves $15). 1 lot = 100 oz, so a $1 move = $100 per lot (pip 0.01 = $1).';
+  else if (pair === 'XAGUSD') info = 'Stop as a price distance in USD (e.g. 0.20 = silver moves $0.20). 1 lot = 5,000 oz, so a $0.01 move = $50 per lot (pip 0.001 = $5).';
+  else if (pair.endsWith('JPY')) info = `1 pip = 0.01 · ${cs.toLocaleString('en-US')} units per lot`;
+  else info = `1 pip = 0.0001 · ${cs.toLocaleString('en-US')} units per lot`;
   document.getElementById('pipInfo').textContent = info;
+}
+
+// Stop field: pips for currencies, a USD price distance for metals (as on the platform dashboard).
+function updateStopField(pair) {
+  const metal = isMetal(pair);
+  document.getElementById('stopLabel').textContent = metal ? 'Stop distance (USD)' : 'Stop Loss (pips)';
+  document.getElementById('stopSuffix').textContent = metal ? 'USD' : 'pips';
+  const inp = document.getElementById('stopLoss');
+  inp.placeholder = pair === 'XAUUSD' ? 'e.g. 15.00 for $15' : pair === 'XAGUSD' ? 'e.g. 0.20 for $0.20' : 'e.g. 20';
+  inp.step = pair === 'XAUUSD' ? '0.1' : pair === 'XAGUSD' ? '0.01' : '1';
 }
 
 async function loadLivePrice(pair) {
   document.getElementById('lpPair').textContent = pair;
   document.getElementById('lpPrice').innerHTML = '<span class="lp-loading"><span class="spinner-sm"></span> Loading…</span>';
   document.getElementById('lpChange').textContent = '';
+  document.getElementById('lpNote').textContent = '';
   document.getElementById('lpUpdated').textContent = '';
   try {
     const data = await fetchQuote(pair);
-    updateLivePrice(pair, data);
+    await updateLivePrice(pair, data);
   } catch(e) {
     document.getElementById('lpPrice').textContent = 'Unavailable';
   }
@@ -505,119 +606,124 @@ function clearWarning() {
   document.getElementById('calcWarning').style.display = 'none';
 }
 
+/* ── Inline field messages ── */
+function setMsg(id, text, kind) {
+  const el = document.getElementById('msg-' + id);
+  el.textContent = text || '';
+  el.className = 'field-msg' + (text ? ' ' + kind : '');
+  document.getElementById(id).classList.toggle('invalid', !!text && kind === 'error');
+}
+const fmtNum = (n, d = 2) => n.toLocaleString('en-US', { maximumFractionDigits: d });
+
+/** Checks the inputs; shows inline errors (block the calculation) and warnings. */
+function checkInputs() {
+  const pair    = document.getElementById('pairSelect').value;
+  const metal   = isMetal(pair);
+  const accSize = parseFloat(document.getElementById('accountSize').value);
+  const riskVal = parseFloat(document.getElementById('riskValue').value);
+  const stop    = parseFloat(document.getElementById('stopLoss').value);
+  let ok = true;
+
+  if (isNaN(accSize) || accSize <= 0) { setMsg('accountSize', 'Enter an account size above 0.', 'error'); ok = false; }
+  else setMsg('accountSize', '');
+
+  const riskPct = riskType === 'pct' ? riskVal : (accSize > 0 ? riskVal / accSize * 100 : NaN);
+  if (isNaN(riskVal) || riskVal <= 0) { setMsg('riskValue', 'Enter a risk above 0.', 'error'); ok = false; }
+  else if (riskType === 'pct' && riskVal > 100) { setMsg('riskValue', 'Risk cannot be more than 100 % of the account.', 'error'); ok = false; }
+  else if (riskType === 'amount' && accSize > 0 && riskVal > accSize) { setMsg('riskValue', 'The risk amount is larger than the whole account.', 'error'); ok = false; }
+  else if (riskPct > 5) setMsg('riskValue', `Risking ${fmtNum(riskPct, 1)} % of the account on one trade is very high (most traders risk 0.5–2 %).`, 'warn');
+  else setMsg('riskValue', '');
+
+  if (isNaN(stop) || stop <= 0) {
+    setMsg('stopLoss', metal ? 'Enter a stop distance above 0 USD (e.g. 15.00 for $15).' : 'Enter a stop of more than 0 pips.', 'error'); ok = false;
+  } else if (!metal && stop < 1) setMsg('stopLoss', 'A stop below 1 pip is unrealistically tight (spread alone is usually larger).', 'warn');
+  else setMsg('stopLoss', '');
+
+  return { ok, pair, metal, accSize, riskVal, stop };
+}
+
 function formatCur(amount, cur) {
-  if (cur === 'USC') return `${amount.toFixed(0)}¢`;
+  if (cur === 'USC') return `${amount.toLocaleString('en-US', { maximumFractionDigits: 0 })}¢`;
   return new Intl.NumberFormat('en-US', { style:'currency', currency: cur, maximumFractionDigits: 2 }).format(amount);
 }
 
 async function calculate() {
   clearWarning();
-  const pair      = document.getElementById('pairSelect').value;
-  const accSize   = parseFloat(document.getElementById('accountSize').value);
-  const riskVal   = parseFloat(document.getElementById('riskValue').value);
-  const slPips    = parseFloat(document.getElementById('stopLoss').value);
-
-  if (isNaN(accSize) || accSize <= 0) { showWarning('Please enter a valid account size.'); return; }
-  if (isNaN(riskVal) || riskVal <= 0) { showWarning('Please enter a valid risk value.'); return; }
-  if (isNaN(slPips)  || slPips  <= 0) { showWarning('Please enter a valid stop loss in pips.'); return; }
-  if (riskType === 'pct' && riskVal > 100) { showWarning('Risk percentage cannot exceed 100%.'); return; }
+  const inp = checkInputs();
+  if (!inp.ok) return;
+  const { pair, metal, accSize, riskVal, stop } = inp;
 
   const btn = document.getElementById('calcBtn');
   btn.disabled = true;
   btn.textContent = 'Calculating…';
 
   try {
-    // Risk amount in account currency
-    let riskAmt = riskType === 'pct' ? accSize * (riskVal / 100) : riskVal;
-
-    // Convert risk to USD
-    let riskUSD;
-    if (accCurrency === 'USD') {
-      riskUSD = riskAmt;
-    } else if (accCurrency === 'USC') {
-      riskUSD = riskAmt / 100;
-    } else {
-      const rate = await toUSD(accCurrency);
-      riskUSD = riskAmt * rate;
-    }
+    // Risk target in account currency, and the USD value of one account-currency unit
+    const riskAmt  = riskType === 'pct' ? accSize * (riskVal / 100) : riskVal;
+    const usdPerAcc = accCurrency === 'USD' ? 1 : accCurrency === 'USC' ? 0.01 : await toUSD(accCurrency);
+    const riskUSD  = riskAmt * usdPerAcc;
 
     // Fetch current pair price
     const quote = await fetchQuote(pair);
     updateLivePrice(pair, quote);
 
-    // Pip value in USD per standard lot
-    const pipSz   = getPipSize(pair);
-    const ctrSize = getContractSize(pair);
+    // Pip value in USD per standard lot (same as the platform dashboard)
+    const pipSz    = getPipSize(pair);
+    const ctrSize  = getContractSize(pair);
     const quoteCur = pair.slice(-3); // last 3 chars = quote currency
+    const quoteToUSD = quoteCur === 'USD' ? 1 : await toUSD(quoteCur);
+    const pipValueUSD = pipSz * ctrSize * quoteToUSD;
 
-    let pipValueUSD;
-    if (quoteCur === 'USD') {
-      pipValueUSD = pipSz * ctrSize;
-    } else {
-      const quoteToUSD = await toUSD(quoteCur);
-      pipValueUSD = pipSz * ctrSize * quoteToUSD;
+    // Metals: the stop is a USD price distance → pips = distance / pip size
+    const pips = metal ? stop / pipSz : stop;
+    const stopPrice = pips * pipSz;
+    if (stopPrice >= quote.c) {
+      setMsg('stopLoss', `The stop (${metal ? '$' + fmtNum(stop) : fmtNum(stop, 1) + ' pips'}) is larger than the price itself (${quote.c.toFixed(priceDecimals(pair))}).`, 'error');
+      return;
+    }
+    if (stopPrice > quote.c * 0.1) {
+      setMsg('stopLoss', `This stop is ${fmtNum(stopPrice / quote.c * 100, 1)} % of the price, an unusually wide stop. ${metal ? 'Metals take the stop as a USD price distance, not in pips.' : ''}`, 'warn');
     }
 
-    // Lot size
-    const lotSize = riskUSD / (slPips * pipValueUSD);
-
-    if (!isFinite(lotSize) || lotSize <= 0) {
+    const rawLots = riskUSD / (pips * pipValueUSD);
+    if (!isFinite(rawLots) || rawLots <= 0) {
       showWarning('Could not calculate a valid lot size. Please check your inputs.');
       return;
     }
+    // Round DOWN to 0.01 lots so the actual risk never exceeds the target
+    const lots = Math.floor(rawLots * 100 + 1e-9) / 100;
+    const pipValueAcc = pipValueUSD / usdPerAcc;
+    const actualRisk  = lots * pips * pipValueAcc;
+    const notionalAcc = lots * ctrSize * quote.c * quoteToUSD / usdPerAcc;
 
-    // Position value in USD
-    const posValueUSD = lotSize * ctrSize * quote.c;
-
-    // Convert pip value and position value to account currency for display
-    let accRate = 1;
-    if (accCurrency === 'EUR') {
-      const eurusd = await fetchQuote('EURUSD');
-      accRate = 1 / eurusd.c;
-    } else if (accCurrency === 'USC') {
-      accRate = 100;
+    const notes = [];
+    if (lots < 0.01) {
+      const minRisk = 0.01 * pips * pipValueAcc;
+      notes.push(['warn', `The exact size is ${rawLots.toFixed(4)} lots, below the usual 0.01 lot minimum. The smallest trade (0.01 lots) would risk ${formatCur(minRisk, accCurrency)} (${fmtNum(minRisk / accSize * 100)} % of the account).`]);
+    } else {
+      notes.push(['info', `Rounded down from ${rawLots.toFixed(4)} lots to whole 0.01 lots, so the actual risk stays at or below your target.`]);
     }
+    if (lots > 100) notes.push(['warn', `${fmtNum(lots)} lots is an unusually large position (notional ${formatCur(notionalAcc, accCurrency)}). Check the account size, risk and stop.`]);
+    else if (notionalAcc > accSize * 50) notes.push(['warn', `The position is ${fmtNum(notionalAcc / accSize, 0)}× your account size (leverage). Check that your broker allows this.`]);
 
-    const pipValDisplay = pipValueUSD * lotSize / accRate;
-    const posValDisplay = posValueUSD / (accCurrency === 'USC' ? 0.01 : accRate === 1 ? 1 : 1 / accRate);
-
-    // Format lot size nicely
-    let lotDisplay;
-    if (lotSize >= 1) lotDisplay = lotSize.toFixed(2);
-    else if (lotSize >= 0.01) lotDisplay = lotSize.toFixed(2);
-    else lotDisplay = lotSize.toFixed(4);
-
-    const displayCur = accCurrency === 'USC' ? 'USD' : accCurrency;
-
+    const detail = (label, value) => `<div class="result-detail"><span class="result-detail-label">${label}</span><span class="result-detail-value">${value}</span></div>`;
     document.getElementById('resultArea').innerHTML = `
       <div class="result-box">
         <div class="result-lot">
           <div class="result-lot-label">Lot Size</div>
-          <div class="result-lot-value">${lotDisplay}</div>
-          <div class="result-lot-unit">Standard Lots</div>
+          <div class="result-lot-value">${lots.toFixed(2)}</div>
+          <div class="result-lot-unit">Standard Lots${lots < 0.01 ? ' (below 0.01 minimum)' : ''}</div>
         </div>
         <div class="result-details">
-          <div class="result-detail">
-            <span class="result-detail-label">Risk Amount</span>
-            <span class="result-detail-value">${formatCur(riskAmt, accCurrency)}</span>
-          </div>
-          <div class="result-detail">
-            <span class="result-detail-label">Risk Amount (USD)</span>
-            <span class="result-detail-value">${formatCur(riskUSD, 'USD')}</span>
-          </div>
-          <div class="result-detail">
-            <span class="result-detail-label">Pip Value / Lot</span>
-            <span class="result-detail-value">${formatCur(pipValueUSD, 'USD')}</span>
-          </div>
-          <div class="result-detail">
-            <span class="result-detail-label">Total Pip Value</span>
-            <span class="result-detail-value">${formatCur(pipValueUSD * lotSize, 'USD')}</span>
-          </div>
-          <div class="result-detail">
-            <span class="result-detail-label">Live Price (${pair})</span>
-            <span class="result-detail-value">${quote.c.toFixed(getPipSize(pair) < 0.001 ? 5 : pair.includes('JPY') ? 3 : 2)}</span>
-          </div>
+          ${detail('Risk Target', formatCur(riskAmt, accCurrency))}
+          ${detail(`Actual Risk (${lots.toFixed(2)} lots)`, `${formatCur(actualRisk, accCurrency)} · ${fmtNum(actualRisk / accSize * 100)} %`)}
+          ${detail('Stop', metal ? `$${fmtNum(stop, 3)} = ${fmtNum(pips, 1)} pips` : `${fmtNum(stop, 1)} pip${stop === 1 ? '' : 's'}`)}
+          ${detail(`Pip Value / Lot (${fmtNum(pipSz, 4)})`, formatCur(pipValueAcc, accCurrency))}
+          ${metal ? detail('$1 Move / Lot', formatCur(ctrSize * quoteToUSD / usdPerAcc, accCurrency)) : ''}
+          ${detail('Position Value', formatCur(notionalAcc, accCurrency))}
+          ${detail(`Live Price (${pair})`, quote.c.toFixed(priceDecimals(pair)))}
         </div>
+        <div class="result-notes">${notes.map(([k, t]) => `<div class="result-note ${k}">${t}</div>`).join('')}</div>
       </div>`;
   } catch(e) {
     showWarning('Failed to fetch live prices. Please try again. (' + e.message + ')');
@@ -629,12 +735,18 @@ async function calculate() {
 
 // ── Event listeners ──────────────────────────────────────────
 
-// Pair change → update live price
+// Pair change → update live price; switching between pips and a USD stop resets the stop to a sensible default
+let currentPair = document.getElementById('pairSelect').value;
+const stopKind = pair => isMetal(pair) ? pair : 'fx';
 document.getElementById('pairSelect').addEventListener('change', function() {
+  if (stopKind(this.value) !== stopKind(currentPair)) document.getElementById('stopLoss').value = defaultStop(this.value);
+  currentPair = this.value;
   loadLivePrice(this.value);
   updatePipInfo(this.value);
+  updateStopField(this.value);
   document.getElementById('resultArea').innerHTML = `<div class="result-empty"><div class="result-empty-icon">&#9881;</div><p>Fill in your parameters and click<br><strong>Calculate Lot Size</strong></p></div>`;
   clearWarning();
+  checkInputs();
   savePrefs();
 });
 
@@ -650,14 +762,18 @@ document.querySelectorAll('[data-cur]').forEach(btn => {
   });
 });
 
-// Risk type toggle
+// Risk type toggle (a default value of the other type is swapped for this type's default)
 document.querySelectorAll('[data-risk]').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('[data-risk]').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
+    const prev = riskType;
     riskType = btn.dataset.risk;
+    const rv = document.getElementById('riskValue');
+    if (prev !== riskType && (rv.value === '' || rv.value === defaultRisk(prev))) rv.value = defaultRisk(riskType);
     document.getElementById('riskSuffix').textContent = riskType === 'pct' ? '%' : accCurrency;
-    document.getElementById('riskValue').placeholder = riskType === 'pct' ? '1' : '100';
+    rv.placeholder = riskType === 'pct' ? 'e.g. 1' : 'e.g. 100';
+    checkInputs();
     savePrefs();
   });
 });
@@ -668,10 +784,12 @@ document.getElementById('calcBtn').addEventListener('click', calculate);
 // Enter key triggers calculate
 document.querySelectorAll('input').forEach(inp => {
   inp.addEventListener('keydown', e => { if (e.key === 'Enter') calculate(); });
-  inp.addEventListener('input', savePrefs);
+  inp.addEventListener('input', () => { checkInputs(); savePrefs(); });
 });
 
 // ── Saved settings + deep link ───────────────────────────────
+// Shape unchanged: { pair, accCurrency, riskType, accountSize, riskValue, stopLoss } (strings);
+// for XAUUSD/XAGUSD stopLoss is the USD price distance, as the platform dashboard reads it.
 const INPUT_IDS = ['accountSize', 'riskValue', 'stopLoss'];
 function savePrefs() {
   const o = { pair: document.getElementById('pairSelect').value, accCurrency, riskType };
@@ -695,20 +813,32 @@ function savePrefs() {
   }
   document.getElementById('accCurSuffix').textContent = accCurrency;
   document.getElementById('riskSuffix').textContent = riskType === 'pct' ? '%' : accCurrency;
-  document.getElementById('riskValue').placeholder = riskType === 'pct' ? '1' : '100';
+  document.getElementById('riskValue').placeholder = riskType === 'pct' ? 'e.g. 1' : 'e.g. 100';
+  // Deep link from the dashboard: ?symbol=OANDA:GBP_JPY selects GBPJPY
+  const q = (new URLSearchParams(location.search).get('symbol') || '').replace(/^OANDA:/, '').replace('_', '');
+  const linked = q && hasPair(q) && q !== sel.value;
+  // Saved values win; empty fields get real defaults (which are saved, so the dashboard uses the same)
+  const defaults = { accountSize: DEFAULT_ACCOUNT, riskValue: defaultRisk(riskType), stopLoss: defaultStop(sel.value) };
+  let filled = false;
   INPUT_IDS.forEach(id => {
     const v = p[id];
     if (typeof v === 'string' && v !== '' && isFinite(v) && +v >= 0) document.getElementById(id).value = v;
+    else { document.getElementById(id).value = defaults[id]; filled = true; }
   });
-  // Deep link from the dashboard: ?symbol=OANDA:GBP_JPY selects GBPJPY
-  const q = (new URLSearchParams(location.search).get('symbol') || '').replace(/^OANDA:/, '').replace('_', '');
-  if (q && hasPair(q)) { sel.value = q; savePrefs(); }
+  if (linked) {
+    if (stopKind(q) !== stopKind(sel.value)) document.getElementById('stopLoss').value = defaultStop(q);
+    sel.value = q;
+  }
+  currentPair = sel.value;
+  if (filled || linked) savePrefs();
 })();
 
 // ── Init ─────────────────────────────────────────────────────
 const initPair = document.getElementById('pairSelect').value;
 loadLivePrice(initPair);
 updatePipInfo(initPair);
+updateStopField(initPair);
+checkInputs();
 </script>
   <script>
   (function(){

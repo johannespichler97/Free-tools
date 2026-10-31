@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pattern Recognition | Solantis</title>
+  <title>Pattern Recognition</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
@@ -141,7 +141,10 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 .filter-tab.bear.active { border-color:var(--negative); color:var(--negative); background:var(--negative-bg); }
 
 /* Sort row */
-.sort-row { display:flex; align-items:center; gap:8px; margin-bottom:14px; font-size:12px; color:var(--text-muted); }
+.sort-row { display:flex; align-items:center; gap:8px; margin-bottom:14px; font-size:12px; color:var(--text-muted); flex-wrap:wrap; }
+.age-label { margin-left:12px; }
+.age-hint { font-size:11px; color:var(--text-muted); flex-basis:100%; }
+@media(max-width:560px){ .age-label { margin-left:0; } .summary-filters { margin-left:0; flex-basis:100%; } .summary-stat { padding:0 10px; } }
 .sort-btn { padding:4px 10px; border-radius:20px; border:1px solid var(--border); background:transparent; color:var(--text-muted); font-size:11px; font-weight:600; cursor:pointer; font-family:var(--font); transition:all .15s; }
 .sort-btn.active { border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
 
@@ -201,8 +204,11 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 .skeleton-card::after { content:''; position:absolute; inset:0; background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,.04) 50%,transparent 100%); background-size:400px 100%; animation:shimmer 1.4s infinite; }
 
 /* ── CHART MODAL ── */
-.chart-overlay { display:none; position:fixed; inset:0; z-index:200; background:rgba(6,36,52,0.88); backdrop-filter:blur(6px); align-items:center; justify-content:center; padding:20px; }
-.chart-modal { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); width:100%; max-width:760px; overflow:hidden; animation:fadeIn .2s ease; }
+.chart-overlay { display:none; grid-column:1 / -1; }
+/* Shown inline below the clicked card's row (a fixed modal would be placed against the
+   auto-height iframe in the platform and could open outside the visible area). */
+.chart-modal { background:var(--bg-secondary); border:1px solid rgba(47,163,224,.45); border-radius:var(--radius-lg); width:100%; overflow:hidden; animation:fadeIn .2s ease; }
+@media(max-width:560px){ .chart-canvas-wrap { padding:8px !important; } .chart-modal-header, .chart-modal-footer { padding:10px 12px !important; } .chart-hint { margin-left:0 !important; } }
 .chart-modal-header { padding:14px 18px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:12px; }
 .chart-modal-meta { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
 .chart-modal-title { font-family:var(--font-mono); font-size:16px; font-weight:700; color:var(--text-primary); }
@@ -232,6 +238,7 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 
 @media(max-width:700px) { .pattern-grid,.skeleton-grid { grid-template-columns:1fr; } .card-levels { grid-template-columns:1fr 1fr; } }
 @media(max-width:640px) { .header-inner,.main,.controls-bar { padding-left:16px; padding-right:16px; } }
+@media(max-width:560px) { .summary-bar { padding:12px 10px; gap:8px; } .summary-stat { padding:0 8px; } .summary-stat-val { font-size:18px; } .summary-stat-label { font-size:9px; letter-spacing:.04em; } }
 
 /* ── HAMBURGER MOBILE NAV ── */
 .hamburger { display:none; flex-direction:column; justify-content:center; gap:5px; background:none; border:none; padding:6px; cursor:pointer; border-radius:6px; transition:background .15s; margin-left:auto; }
@@ -262,6 +269,24 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
   .nav-link:last-child { border-bottom:none; }
   .header-actions { gap:8px; }
   .header-actions .btn-primary { display:none; }
+}
+  
+/* ── Shared: readable chips, touch targets, wrapping, sticky columns ── */
+:root { --sticky-bg:#08283a; }
+.asset-chip, .tf-chip, .atr-chip, .lb-chip { opacity:1; color:var(--text-secondary); }
+.asset-chip:not(.active):hover, .tf-chip:not(.active):hover, .atr-chip:not(.active):hover, .lb-chip:not(.active):hover { opacity:1; color:var(--text-primary); border-color:var(--text-secondary); }
+.chip-action-btn, .sort-btn, .filter-tab { color:var(--text-secondary); }
+.state-icon { opacity:.55 !important; color:var(--text-secondary); line-height:0; }
+.method-formula { white-space:pre-wrap !important; overflow-wrap:anywhere; overflow-x:visible !important; }
+code { white-space:normal; overflow-wrap:anywhere; }
+.deeplink-note { font-size:12px; color:var(--text-secondary); background:var(--accent-dim); border:1px solid rgba(47,163,224,.3); border-radius:var(--radius-sm); padding:8px 12px; line-height:1.5; }
+.deeplink-note strong { color:var(--text-primary); }
+.swipe-hint { display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--text-secondary); margin:0 0 8px; }
+.swipe-hint[hidden] { display:none; }
+@media (max-width:767px) { input, select, textarea { font-size:16px !important; } }
+@media (pointer:coarse) {
+  .asset-chip, .tf-chip, .atr-chip, .lb-chip, .chip-action-btn, .sort-btn, .filter-tab { min-height:36px; display:inline-flex; align-items:center; justify-content:center; }
+  select { min-height:36px; }
 }
   </style>
 </head>
@@ -336,43 +361,43 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
       </div>
       <div class="asset-chips" id="assetChips">
         <!-- AUD -->
-        <span class="asset-chip active" data-sym="OANDA:AUD_CAD">AUDCAD</span>
-        <span class="asset-chip" data-sym="OANDA:AUD_CHF">AUDCHF</span>
-        <span class="asset-chip" data-sym="OANDA:AUD_JPY">AUDJPY</span>
-        <span class="asset-chip" data-sym="OANDA:AUD_NZD">AUDNZD</span>
-        <span class="asset-chip active" data-sym="OANDA:AUD_USD">AUDUSD</span>
+        <span class="asset-chip active" data-sym="OANDA:AUD_CAD">AUD/CAD</span>
+        <span class="asset-chip" data-sym="OANDA:AUD_CHF">AUD/CHF</span>
+        <span class="asset-chip" data-sym="OANDA:AUD_JPY">AUD/JPY</span>
+        <span class="asset-chip" data-sym="OANDA:AUD_NZD">AUD/NZD</span>
+        <span class="asset-chip active" data-sym="OANDA:AUD_USD">AUD/USD</span>
         <!-- CAD -->
-        <span class="asset-chip" data-sym="OANDA:CAD_CHF">CADCHF</span>
-        <span class="asset-chip" data-sym="OANDA:CAD_JPY">CADJPY</span>
+        <span class="asset-chip" data-sym="OANDA:CAD_CHF">CAD/CHF</span>
+        <span class="asset-chip" data-sym="OANDA:CAD_JPY">CAD/JPY</span>
         <!-- CHF -->
-        <span class="asset-chip" data-sym="OANDA:CHF_JPY">CHFJPY</span>
+        <span class="asset-chip" data-sym="OANDA:CHF_JPY">CHF/JPY</span>
         <!-- EUR -->
-        <span class="asset-chip" data-sym="OANDA:EUR_AUD">EURAUD</span>
-        <span class="asset-chip" data-sym="OANDA:EUR_CAD">EURCAD</span>
-        <span class="asset-chip" data-sym="OANDA:EUR_CHF">EURCHF</span>
-        <span class="asset-chip" data-sym="OANDA:EUR_GBP">EURGBP</span>
-        <span class="asset-chip" data-sym="OANDA:EUR_JPY">EURJPY</span>
-        <span class="asset-chip" data-sym="OANDA:EUR_NZD">EURNZD</span>
-        <span class="asset-chip active" data-sym="OANDA:EUR_USD">EURUSD</span>
+        <span class="asset-chip" data-sym="OANDA:EUR_AUD">EUR/AUD</span>
+        <span class="asset-chip" data-sym="OANDA:EUR_CAD">EUR/CAD</span>
+        <span class="asset-chip" data-sym="OANDA:EUR_CHF">EUR/CHF</span>
+        <span class="asset-chip" data-sym="OANDA:EUR_GBP">EUR/GBP</span>
+        <span class="asset-chip" data-sym="OANDA:EUR_JPY">EUR/JPY</span>
+        <span class="asset-chip" data-sym="OANDA:EUR_NZD">EUR/NZD</span>
+        <span class="asset-chip active" data-sym="OANDA:EUR_USD">EUR/USD</span>
         <!-- GBP -->
-        <span class="asset-chip" data-sym="OANDA:GBP_AUD">GBPAUD</span>
-        <span class="asset-chip" data-sym="OANDA:GBP_CAD">GBPCAD</span>
-        <span class="asset-chip" data-sym="OANDA:GBP_CHF">GBPCHF</span>
-        <span class="asset-chip" data-sym="OANDA:GBP_JPY">GBPJPY</span>
-        <span class="asset-chip" data-sym="OANDA:GBP_NZD">GBPNZD</span>
-        <span class="asset-chip active" data-sym="OANDA:GBP_USD">GBPUSD</span>
+        <span class="asset-chip" data-sym="OANDA:GBP_AUD">GBP/AUD</span>
+        <span class="asset-chip" data-sym="OANDA:GBP_CAD">GBP/CAD</span>
+        <span class="asset-chip" data-sym="OANDA:GBP_CHF">GBP/CHF</span>
+        <span class="asset-chip" data-sym="OANDA:GBP_JPY">GBP/JPY</span>
+        <span class="asset-chip" data-sym="OANDA:GBP_NZD">GBP/NZD</span>
+        <span class="asset-chip active" data-sym="OANDA:GBP_USD">GBP/USD</span>
         <!-- NZD -->
-        <span class="asset-chip" data-sym="OANDA:NZD_CAD">NZDCAD</span>
-        <span class="asset-chip" data-sym="OANDA:NZD_CHF">NZDCHF</span>
-        <span class="asset-chip" data-sym="OANDA:NZD_JPY">NZDJPY</span>
-        <span class="asset-chip" data-sym="OANDA:NZD_USD">NZDUSD</span>
+        <span class="asset-chip" data-sym="OANDA:NZD_CAD">NZD/CAD</span>
+        <span class="asset-chip" data-sym="OANDA:NZD_CHF">NZD/CHF</span>
+        <span class="asset-chip" data-sym="OANDA:NZD_JPY">NZD/JPY</span>
+        <span class="asset-chip" data-sym="OANDA:NZD_USD">NZD/USD</span>
         <!-- USD -->
-        <span class="asset-chip" data-sym="OANDA:USD_CAD">USDCAD</span>
-        <span class="asset-chip" data-sym="OANDA:USD_CHF">USDCHF</span>
-        <span class="asset-chip active" data-sym="OANDA:USD_JPY">USDJPY</span>
+        <span class="asset-chip" data-sym="OANDA:USD_CAD">USD/CAD</span>
+        <span class="asset-chip" data-sym="OANDA:USD_CHF">USD/CHF</span>
+        <span class="asset-chip active" data-sym="OANDA:USD_JPY">USD/JPY</span>
         <!-- Metals -->
-        <span class="asset-chip metal" data-sym="OANDA:XAG_USD">XAGUSD</span>
-        <span class="asset-chip metal active" data-sym="OANDA:XAU_USD">XAUUSD</span>
+        <span class="asset-chip metal" data-sym="OANDA:XAG_USD">XAG/USD</span>
+        <span class="asset-chip metal active" data-sym="OANDA:XAU_USD">XAU/USD</span>
       </div>
 
       <hr class="ctrl-divider" />
@@ -381,14 +406,14 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
       <div class="ctrl-row">
         <span class="ctrl-label">Timeframes <span style="font-size:10px;color:var(--text-muted);font-weight:400;letter-spacing:0">(max 4)</span></span>
         <div class="tf-chips">
-          <span class="tf-chip" data-res="5">5m</span>
-          <span class="tf-chip" data-res="15">15m</span>
-          <span class="tf-chip" data-res="30">30m</span>
-          <span class="tf-chip" data-res="60">1H</span>
-          <span class="tf-chip" data-res="240">4H</span>
-          <span class="tf-chip active" data-res="D">Daily</span>
-          <span class="tf-chip active" data-res="W">Weekly</span>
-          <span class="tf-chip" data-res="M">Monthly</span>
+          <span class="tf-chip" data-res="5">M5</span>
+          <span class="tf-chip" data-res="15">M15</span>
+          <span class="tf-chip" data-res="30">M30</span>
+          <span class="tf-chip" data-res="60">H1</span>
+          <span class="tf-chip" data-res="240">H4</span>
+          <span class="tf-chip active" data-res="D">D1</span>
+          <span class="tf-chip active" data-res="W">W</span>
+          <span class="tf-chip" data-res="M">MN</span>
         </div>
       </div>
 
@@ -448,8 +473,8 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
       <button class="sort-btn active" data-sort="default">Timeframe scanned</button>
       <button class="sort-btn" data-sort="tf">Higher TF first</button>
       <button class="sort-btn" data-sort="time">Latest</button>
-      <span style="margin-left:12px;">Max age:</span>
-      <select id="maxAgeSelect" style="background:var(--bg-tertiary);color:var(--text-primary);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;font-family:var(--font);cursor:pointer;">
+      <span class="age-label">Max age:</span>
+      <select id="maxAgeSelect" aria-label="Maximum pattern age" style="background:var(--bg-tertiary);color:var(--text-primary);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;font-family:var(--font);cursor:pointer;">
         <option value="1">1 day</option>
         <option value="2">2 days</option>
         <option value="3" selected>3 days</option>
@@ -458,11 +483,12 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
         <option value="6">6 days</option>
         <option value="7">7 days</option>
       </select>
+      <span class="age-hint" id="ageHint"></span>
     </div>
 
     <div id="resultsArea">
       <div class="state-box">
-        <div class="state-icon">&#128202;</div>
+        <div class="state-icon"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18M6 17V11M11 17V5M16 17v-8M21 17v-4"/></svg></div>
         <div class="state-title">Ready to scan</div>
         <p class="state-sub">Select your instruments and timeframes above, then click <strong>Scan Selected</strong> to run a multi-asset analysis.</p>
       </div>
@@ -503,10 +529,38 @@ const API_BASE = 'https://finnhub.io/api/v1';
 // Saved settings: the platform provides window.MAPrefs (stored per user); standalone falls back to localStorage.
 const PREFS = (() => { const k = 'ma-prefs:pattern-recognition'; let v = {}; try { v = (window.MAPrefs ? window.MAPrefs.get() : JSON.parse(localStorage.getItem(k) || '{}')) || {}; } catch (e) {} return { get: () => v, set: (o) => { v = o; try { window.MAPrefs ? window.MAPrefs.set(o) : localStorage.setItem(k, JSON.stringify(o)); } catch (e) {} } }; })();
 
+// ── Shared display helpers: time with zone, pair labels, icons, deep links, swipe hints ──
+const TZ_NAME  = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'local time'; } catch (e) { return 'local time'; } })();
+const fmtClock = d => d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', hourCycle:'h23' }) + ' (' + TZ_NAME + ')';
+const fmtWhen  = d => d.toLocaleString('en-GB', { weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit', hourCycle:'h23' }) + ' (' + TZ_NAME + ')';
+const pairLabel = sym => sym.replace('OANDA:', '').replace('_', '/');
+const ICON_PATHS = {"signal": "<path d=\"M4.9 19.1a10 10 0 0 1 0-14.2M19.1 4.9a10 10 0 0 1 0 14.2M7.8 16.2a6 6 0 0 1 0-8.4M16.2 7.8a6 6 0 0 1 0 8.4\"/><circle cx=\"12\" cy=\"12\" r=\"2\"/>", "bars": "<path d=\"M3 21h18M6 17V11M11 17V5M16 17v-8M21 17v-4\"/>", "trend": "<polyline points=\"3 17 9 11 13 15 21 7\"/><polyline points=\"15 7 21 7 21 13\"/>", "grid": "<rect x=\"3\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"3\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"14\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"/>", "search": "<circle cx=\"11\" cy=\"11\" r=\"7\"/><line x1=\"21\" y1=\"21\" x2=\"16\" y2=\"16\"/>", "alert": "<path d=\"M12 3 2 20h20L12 3z\"/><line x1=\"12\" y1=\"10\" x2=\"12\" y2=\"14\"/><line x1=\"12\" y1=\"17\" x2=\"12\" y2=\"17.5\"/>"};
+const icon = n => `<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON_PATHS[n]}</svg>`;
+// A deep link (?symbol=…&tf=…) only preselects for this visit. Until the user changes that
+// control, saving keeps their own saved value for it (KEEP holds those values).
+const KEEP = {};
+const keepSaved = o => { Object.keys(KEEP).forEach(k => { o[k] = KEEP[k]; }); return o; };
+function showDeepLinkNote(what) {
+  const box = document.querySelector('.controls-box');
+  if (!box || !what) return;
+  const n = document.createElement('div');
+  n.className = 'deeplink-note';
+  n.innerHTML = `Opened from a link: showing <strong>${what}</strong> for this visit. Your saved selection stays as it is unless you change it here.`;
+  box.prepend(n);
+}
+function updateSwipeHints() {
+  document.querySelectorAll('[data-swipe]').forEach(h => {
+    const el = document.getElementById(h.dataset.swipe);
+    h.hidden = !el || el.scrollWidth <= el.clientWidth + 2;
+  });
+}
+window.addEventListener('resize', updateSwipeHints);
+const swipeHint = id => `<div class="swipe-hint" data-swipe="${id}" hidden><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>Swipe sideways to see all columns</div>`;
+
 let allResults   = [];   // { pattern, sym, symLabel, tf, tfLabel }
 let activeFilter = 'all';
 let activeSort   = 'rr';
-const TF_LABELS   = { '5':'5m', '15':'15m', '30':'30m', '60':'1H', '240':'4H', 'D':'Daily', 'W':'Weekly', 'M':'Monthly' };
+const TF_LABELS   = { '5':'M5', '15':'M15', '30':'M30', '60':'H1', '240':'H4', 'D':'D1', 'W':'W', 'M':'MN' };
 const TF_ORDER    = { 'M':0, 'W':1, 'D':2, '240':3, '60':4, '30':5, '15':6, '5':7 };
 const TF_SECONDS  = { '5':300, '15':900, '30':1800, '60':3600, '240':14400, 'D':86400, 'W':604800, 'M':2592000 };
 
@@ -515,7 +569,7 @@ const TF_SECONDS  = { '5':300, '15':900, '30':1800, '60':3600, '240':14400, 'D':
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 function symLabel(sym) {
-  return sym.replace('OANDA:', '').replace('_', '');
+  return pairLabel(sym);
 }
 
 function isJPY(sym) { return sym.includes('JPY'); }
@@ -523,17 +577,14 @@ function isMetal(sym) { return sym.includes('XAU') || sym.includes('XAG'); }
 
 function fmtPrice(val, sym) {
   if (!val) return '—';
-  if (isMetal(sym)) return val.toFixed(2);
+  if (isMetal(sym)) return val.toFixed(sym.includes('XAG') ? 4 : 2);
   if (isJPY(sym)) return val.toFixed(3);
   return val.toFixed(5);
 }
 
 function fmtTime(ts) {
   if (!ts) return '';
-  const d = new Date(ts * 1000);
-  const date = d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
-  const time = d.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
-  return `${date} · ${time}`;
+  return fmtWhen(new Date(ts * 1000));
 }
 
 function calcRR(entry, sl, tp1) {
@@ -605,26 +656,44 @@ function buildCard(item) {
 
 // Max age per timeframe (calendar days, accounts for ~2/7 weekend days)
 
+// Max age: N days, but at least N candles on Weekly/Monthly (a day-based limit would hide
+// almost every pattern there). The hint below the select says which applies.
+const maxAgeSecs = (tf, n) => n * Math.max(86400, TF_SECONDS[tf] || 86400);
+function updateAgeHint() {
+  const n = parseInt(document.getElementById('maxAgeSelect').value, 10), pl = n > 1 ? 's' : '';
+  const big = getSelectedTFs().filter(t => t === 'W' || t === 'M')
+    .map(t => `on ${TF_LABELS[t]} the last ${n} candle${pl} (${n} ${t === 'W' ? 'week' : 'month'}${pl})`);
+  document.getElementById('ageHint').textContent = `Shows patterns completed in the last ${n} day${pl}` + (big.length ? `; ${big.join(', ')}` : '') + '.';
+}
+
 function renderResults() {
+  closeChartModal();
   let items = [...allResults];
   const now = Date.now() / 1000;
+  updateAgeHint();
 
   // Only show confirmed patterns
-  items = items.filter(i => {
+  const confirmed = items.filter(i => {
     const s = (i.pattern.status || '').toLowerCase();
     return s === 'complete' || s === 'successful';
   });
+  const unconfirmed = items.length - confirmed.length;
+  items = confirmed;
 
-  // Age filter: user-selected 1–7 days, measured from end_time
-  const maxAgeDays = parseInt(document.getElementById('maxAgeSelect')?.value || '3', 10);
-  items = items.filter(i => {
+  // Age filter: 1–7 days (candles on W / MN), measured from end_time
+  const maxAge = parseInt(document.getElementById('maxAgeSelect')?.value || '3', 10);
+  const fresh = items.filter(i => {
     const endTs = i.pattern.end_time || i.pattern.sortTime;
     if (!endTs) return true;
-    return (now - endTs) <= maxAgeDays * 86400;
+    return (now - endTs) <= maxAgeSecs(i.tf, maxAge);
   });
+  const tooOld = items.length - fresh.length;
+  items = fresh;
 
   // Stoploss filter: hide signals already marked as SL hit by background check
-  items = items.filter(i => !i._slHit);
+  const open = items.filter(i => !i._slHit);
+  const slHit = items.length - open.length;
+  items = open;
 
   // Update summary counters to match exactly what's displayed
   const dispBull = items.filter(i => i.pattern.patterntype?.toLowerCase() === 'bullish').length;
@@ -634,16 +703,34 @@ function renderResults() {
   document.getElementById('sumBear').textContent  = dispBear;
 
   // Filter by type
+  const beforeType = items.length;
   if (activeFilter !== 'all') {
     items = items.filter(i => i.pattern.patterntype?.toLowerCase() === activeFilter);
   }
+  const otherType = beforeType - items.length;
 
   if (items.length === 0) {
+    let title, sub;
+    if (!allResults.length) {
+      // The data source itself returned nothing — not something the user can fix with filters
+      title = 'No chart patterns reported';
+      sub = 'No chart patterns are reported for these pairs and timeframes right now. The pattern data refreshes as new candles close; check again later.';
+    } else {
+      const parts = [];
+      if (tooOld) parts.push(`${tooOld} older than the max age`);
+      if (otherType) parts.push(`${otherType} ${activeFilter === 'bullish' ? 'bearish' : 'bullish'} (type filter)`);
+      if (slHit) parts.push(`${slHit} already past their stop level`);
+      if (unconfirmed) parts.push(`${unconfirmed} not yet confirmed`);
+      title = 'All patterns are hidden';
+      sub = `${allResults.length} pattern${allResults.length !== 1 ? 's were' : ' was'} reported, but none matches: ${parts.join(', ')}.` +
+        (tooOld && otherType ? ' Raise <strong>Max age</strong> or set the type filter to <strong>All</strong> to see more.'
+          : tooOld ? ' Raise <strong>Max age</strong> to see more.' : otherType ? ' Set the type filter to <strong>All</strong> to see them.' : '');
+    }
     document.getElementById('resultsArea').innerHTML = `
       <div class="state-box">
-        <div class="state-icon">&#128269;</div>
-        <div class="state-title">No patterns found</div>
-        <p class="state-sub">No patterns detected for the selected instruments and timeframes. Try adding more assets or different timeframes.</p>
+        <div class="state-icon">${icon('search')}</div>
+        <div class="state-title">${title}</div>
+        <p class="state-sub">${sub}</p>
       </div>`;
     return;
   }
@@ -727,10 +814,6 @@ async function scan() {
       const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
-        if (data.points && data.points.length > 0 && !window._patternFieldsLogged) {
-          console.log('[Finnhub pattern] Raw fields:', JSON.stringify(data.points[0], null, 2));
-          window._patternFieldsLogged = true;
-        }
         (data.points || []).forEach(p => allResults.push({ pattern:p, sym, symLabel:label, tf, tfLabel:tfLbl }));
       }
     } catch {}
@@ -752,7 +835,7 @@ async function scan() {
 
   document.getElementById('sumScanned').textContent = combos.length;
   document.getElementById('summaryBar').style.display = 'flex';
-  document.getElementById('sortRow').style.display = allResults.length > 0 ? 'flex' : 'none';
+  document.getElementById('sortRow').style.display = 'flex';
 
   await checkSLHits();
   renderResults();
@@ -836,8 +919,12 @@ async function checkSLHits() {
 
 // ── Chart modal ────────────────────────────────────────────────
 
-async function openChartModal(item) {
-  console.log(`[Pattern raw] ${item.symLabel} ${item.tfLabel}:`, JSON.stringify(item.pattern, null, 2));
+function closeChartModal() {
+  const modal = document.getElementById('chartModal');
+  modal.style.display = 'none';
+  document.body.appendChild(modal);
+}
+async function openChartModal(item, card) {
 
   try {
 
@@ -866,12 +953,18 @@ async function openChartModal(item) {
     ${markerTime  ? `<div class="chart-level"><div class="chart-level-lbl">${isTriggered ? 'Triggered' : 'Pattern Formed'}</div><div class="chart-level-val v-time">${fmtTime(markerTime)}</div></div>` : ''}
     <span class="chart-hint">Pattern range highlighted on chart</span>`;
 
-  modal.style.display = 'flex';
+  // insert after the last card in the clicked card's row
+  let anchor = card;
+  for (let n = card && card.nextElementSibling; n && n.offsetTop === card.offsetTop; n = n.nextElementSibling) anchor = n;
+  if (anchor) anchor.after(modal);
+  modal.style.display = 'block';
+  modal.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 
   // Set canvas resolution after layout
   await new Promise(r => requestAnimationFrame(r));
-  const W = canvas.parentElement.clientWidth - 32;
-  const H = 380;
+  const pad = parseFloat(getComputedStyle(canvas.parentElement).paddingLeft) * 2;
+  const W = canvas.parentElement.clientWidth - pad;
+  const H = W < 500 ? 300 : 380;
   canvas.width  = W;
   canvas.height = H;
 
@@ -892,10 +985,8 @@ async function openChartModal(item) {
   const from       = startTime ? Math.min(startTime - tfSec * 5, minFrom) : minFrom;
   try {
     const url  = `${API_BASE}/forex/candle?symbol=${encodeURIComponent(item.sym)}&resolution=${item.tf}&from=${from}&to=${to}&token=${API_KEY}`;
-    console.log('[candle fetch] url:', url);
     const res  = await fetch(url);
     const data = res.ok ? await res.json() : null;
-    console.log('[candle fetch] status:', data?.s, '| candles:', data?.t?.length, '| from:', new Date(from*1000).toISOString(), '| to:', new Date(to*1000).toISOString());
     if (data && data.s === 'ok' && data.t && data.t.length > 0) {
       renderCandleChart(canvas, data, item);
     } else {
@@ -1065,6 +1156,7 @@ document.querySelectorAll('.asset-chip').forEach(chip => {
     const active = document.querySelectorAll('.asset-chip.active');
     if (!chip.classList.contains('active') && active.length >= 10) return;
     chip.classList.toggle('active');
+    delete KEEP.assets;
     updateCounter();
     savePrefs();
   });
@@ -1076,7 +1168,9 @@ document.querySelectorAll('.tf-chip').forEach(chip => {
     const active = document.querySelectorAll('.tf-chip.active');
     if (!chip.classList.contains('active') && active.length >= 4) return;
     chip.classList.toggle('active');
+    delete KEEP.tfs;
     updateCounter();
+    updateAgeHint();
     savePrefs();
   });
 });
@@ -1088,11 +1182,13 @@ document.getElementById('selectAllAssets').addEventListener('click', () => {
     if (count < 10) { c.classList.add('active'); count++; }
     else c.classList.remove('active');
   });
+  delete KEEP.assets;
   updateCounter();
   savePrefs();
 });
 document.getElementById('clearAssets').addEventListener('click', () => {
   document.querySelectorAll('.asset-chip').forEach(c => c.classList.remove('active'));
+  delete KEEP.assets;
   updateCounter();
   savePrefs();
 });
@@ -1133,19 +1229,13 @@ document.getElementById('resultsArea').addEventListener('click', e => {
     (TF_ORDER[i.tf] ?? 9) === tfOrd &&
     (i.pattern.sortTime || 0) === ts
   );
-  if (item) openChartModal(item);
+  if (item) openChartModal(item, card);
 });
 
 // Modal close
-document.getElementById('chartModalClose').addEventListener('click', () => {
-  document.getElementById('chartModal').style.display = 'none';
-});
-document.getElementById('chartModal').addEventListener('click', e => {
-  if (e.target === document.getElementById('chartModal'))
-    document.getElementById('chartModal').style.display = 'none';
-});
+document.getElementById('chartModalClose').addEventListener('click', closeChartModal);
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') document.getElementById('chartModal').style.display = 'none';
+  if (e.key === 'Escape') closeChartModal();
 });
 
 // Scan button
@@ -1154,13 +1244,13 @@ document.getElementById('scanBtn').addEventListener('click', scan);
 // ── Saved settings + deep link ────────────────────────────────
 
 function savePrefs() {
-  PREFS.set({
+  PREFS.set(keepSaved({
     assets: getSelectedAssets(),
     tfs:    getSelectedTFs(),
     filter: activeFilter,
     sort:   activeSort,
     maxAge: document.getElementById('maxAgeSelect').value
-  });
+  }));
 }
 const TF_PARAM = { M15:'15', M30:'30', H1:'60', H4:'240', D1:'D', W:'W' };
 (function restorePrefs() {
@@ -1182,19 +1272,14 @@ const TF_PARAM = { M15:'15', M30:'30', H1:'60', H4:'240', D1:'D', W:'W' };
   if (pick('sort', p.sort)) activeSort = p.sort;
   const age = document.getElementById('maxAgeSelect');
   if ([...age.options].some(o => o.value === p.maxAge)) age.value = p.maxAge;
-  // Deep link: make sure symbol / timeframe are selected, dropping the last other one at the max
-  const ensure = (sel, chip, max) => {
-    if (!chip || chip.classList.contains('active')) return;
-    const active = [...document.querySelectorAll(sel + '.active')];
-    if (active.length >= max) active[active.length - 1].classList.remove('active');
-    chip.classList.add('active');
-  };
+  // Deep link: exactly this pair / timeframe for this visit, nothing is saved
+  const only = (sel, chip) => document.querySelectorAll(sel).forEach(c => c.classList.toggle('active', c === chip));
   const q   = new URLSearchParams(location.search);
   const sym = [...document.querySelectorAll('.asset-chip')].find(c => c.dataset.sym === q.get('symbol'));
   const tf  = [...document.querySelectorAll('.tf-chip')].find(c => c.dataset.res === TF_PARAM[q.get('tf')]);
-  ensure('.asset-chip', sym, 10);
-  ensure('.tf-chip', tf, 4);
-  if (sym || tf) { savePrefs(); }
+  if (sym) { KEEP.assets = p.assets; only('.asset-chip', sym); }
+  if (tf)  { KEEP.tfs = p.tfs; only('.tf-chip', tf); }
+  if (sym || tf) showDeepLinkNote([sym && pairLabel(sym.dataset.sym), tf && TF_LABELS[tf.dataset.res]].filter(Boolean).join(' · '));
 })();
 
 // Init counter

@@ -222,6 +222,24 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 .method-step-text code { font-family:var(--font-mono); font-size:12px; background:var(--bg-tertiary); border:1px solid var(--border); padding:1px 5px; border-radius:4px; color:var(--accent-2); }
 .method-note { margin-top:14px; padding:10px 14px; background:var(--bg-tertiary); border-radius:var(--radius-sm); border-left:3px solid var(--accent); font-size:12px; color:var(--text-muted); line-height:1.6; }
 .method-note strong { color:var(--text-secondary); }
+  
+/* ── Shared: readable chips, touch targets, wrapping, sticky columns ── */
+:root { --sticky-bg:#08283a; }
+.asset-chip, .tf-chip, .atr-chip, .lb-chip { opacity:1; color:var(--text-secondary); }
+.asset-chip:not(.active):hover, .tf-chip:not(.active):hover, .atr-chip:not(.active):hover, .lb-chip:not(.active):hover { opacity:1; color:var(--text-primary); border-color:var(--text-secondary); }
+.chip-action-btn, .sort-btn, .filter-tab { color:var(--text-secondary); }
+.state-icon { opacity:.55 !important; color:var(--text-secondary); line-height:0; }
+.method-formula { white-space:pre-wrap !important; overflow-wrap:anywhere; overflow-x:visible !important; }
+code { white-space:normal; overflow-wrap:anywhere; }
+.deeplink-note { font-size:12px; color:var(--text-secondary); background:var(--accent-dim); border:1px solid rgba(47,163,224,.3); border-radius:var(--radius-sm); padding:8px 12px; line-height:1.5; }
+.deeplink-note strong { color:var(--text-primary); }
+.swipe-hint { display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--text-secondary); margin:0 0 8px; }
+.swipe-hint[hidden] { display:none; }
+@media (max-width:767px) { input, select, textarea { font-size:16px !important; } }
+@media (pointer:coarse) {
+  .asset-chip, .tf-chip, .atr-chip, .lb-chip, .chip-action-btn, .sort-btn, .filter-tab { min-height:36px; display:inline-flex; align-items:center; justify-content:center; }
+  select { min-height:36px; }
+}
   </style>
 </head>
 <body>
@@ -289,18 +307,18 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
       <div class="ctrl-row">
         <span class="ctrl-label">Timeframe</span>
         <div class="tf-chips" id="tfChips">
-          <span class="tf-chip" data-res="15">15m</span>
-          <span class="tf-chip" data-res="30">30m</span>
-          <span class="tf-chip" data-res="60">1H</span>
-          <span class="tf-chip active" data-res="240">4H</span>
-          <span class="tf-chip" data-res="D">Daily</span>
-          <span class="tf-chip" data-res="W">Weekly</span>
+          <span class="tf-chip" data-res="15">M15</span>
+          <span class="tf-chip" data-res="30">M30</span>
+          <span class="tf-chip" data-res="60">H1</span>
+          <span class="tf-chip active" data-res="240">H4</span>
+          <span class="tf-chip" data-res="D">D1</span>
+          <span class="tf-chip" data-res="W">W</span>
         </div>
       </div>
       <hr class="ctrl-divider" />
       <div class="scan-row">
         <span class="scan-counter">
-          Fetches <strong>28</strong> pairs &times; 1 timeframe &nbsp;|&nbsp; 5 concurrent requests
+          Compares <strong>28</strong> pairs of the 8 major currencies on the selected timeframe
         </span>
         <button class="btn-scan" id="scanBtn" onclick="runScan()">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.63"/></svg>
@@ -325,7 +343,7 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
   <!-- ── MAIN ── -->
   <main class="main" id="mainArea">
     <div class="state-box">
-      <div class="state-icon">📊</div>
+      <div class="state-icon"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18M6 17V11M11 17V5M16 17v-8M21 17v-4"/></svg></div>
       <div class="state-title">Ready to calculate</div>
       <div class="state-sub">Select a timeframe and press <strong>Calculate Strength</strong> to rank all 8 major currencies.</div>
     </div>
@@ -348,7 +366,35 @@ const API_BASE = 'https://finnhub.io/api/v1';
 // Saved settings: the platform provides window.MAPrefs (stored per user); standalone falls back to localStorage.
 const PREFS = (() => { const k = 'ma-prefs:currency-strength'; let v = {}; try { v = (window.MAPrefs ? window.MAPrefs.get() : JSON.parse(localStorage.getItem(k) || '{}')) || {}; } catch (e) {} return { get: () => v, set: (o) => { v = o; try { window.MAPrefs ? window.MAPrefs.set(o) : localStorage.setItem(k, JSON.stringify(o)); } catch (e) {} } }; })();
 
-const TF_LABELS = { '15':'15m', '30':'30m', '60':'1H', '240':'4H', 'D':'Daily', 'W':'Weekly' };
+// ── Shared display helpers: time with zone, pair labels, icons, deep links, swipe hints ──
+const TZ_NAME  = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'local time'; } catch (e) { return 'local time'; } })();
+const fmtClock = d => d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', hourCycle:'h23' }) + ' (' + TZ_NAME + ')';
+const fmtWhen  = d => d.toLocaleString('en-GB', { weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit', hourCycle:'h23' }) + ' (' + TZ_NAME + ')';
+const pairLabel = sym => sym.replace('OANDA:', '').replace('_', '/');
+const ICON_PATHS = {"signal": "<path d=\"M4.9 19.1a10 10 0 0 1 0-14.2M19.1 4.9a10 10 0 0 1 0 14.2M7.8 16.2a6 6 0 0 1 0-8.4M16.2 7.8a6 6 0 0 1 0 8.4\"/><circle cx=\"12\" cy=\"12\" r=\"2\"/>", "bars": "<path d=\"M3 21h18M6 17V11M11 17V5M16 17v-8M21 17v-4\"/>", "trend": "<polyline points=\"3 17 9 11 13 15 21 7\"/><polyline points=\"15 7 21 7 21 13\"/>", "grid": "<rect x=\"3\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"3\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"14\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"/>", "search": "<circle cx=\"11\" cy=\"11\" r=\"7\"/><line x1=\"21\" y1=\"21\" x2=\"16\" y2=\"16\"/>", "alert": "<path d=\"M12 3 2 20h20L12 3z\"/><line x1=\"12\" y1=\"10\" x2=\"12\" y2=\"14\"/><line x1=\"12\" y1=\"17\" x2=\"12\" y2=\"17.5\"/>"};
+const icon = n => `<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON_PATHS[n]}</svg>`;
+// A deep link (?symbol=…&tf=…) only preselects for this visit. Until the user changes that
+// control, saving keeps their own saved value for it (KEEP holds those values).
+const KEEP = {};
+const keepSaved = o => { Object.keys(KEEP).forEach(k => { o[k] = KEEP[k]; }); return o; };
+function showDeepLinkNote(what) {
+  const box = document.querySelector('.controls-box');
+  if (!box || !what) return;
+  const n = document.createElement('div');
+  n.className = 'deeplink-note';
+  n.innerHTML = `Opened from a link: showing <strong>${what}</strong> for this visit. Your saved selection stays as it is unless you change it here.`;
+  box.prepend(n);
+}
+function updateSwipeHints() {
+  document.querySelectorAll('[data-swipe]').forEach(h => {
+    const el = document.getElementById(h.dataset.swipe);
+    h.hidden = !el || el.scrollWidth <= el.clientWidth + 2;
+  });
+}
+window.addEventListener('resize', updateSwipeHints);
+const swipeHint = id => `<div class="swipe-hint" data-swipe="${id}" hidden><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>Swipe sideways to see all columns</div>`;
+
+const TF_LABELS = { '15':'M15', '30':'M30', '60':'H1', '240':'H4', 'D':'D1', 'W':'W' };
 const TF_SECONDS = { '15':900, '30':1800, '60':3600, '240':14400, 'D':86400, 'W':604800 };
 
 const CURRENCIES = ['EUR','USD','GBP','JPY','AUD','CAD','CHF','NZD'];
@@ -409,7 +455,8 @@ const query    = new URLSearchParams(location.search);
     return chip;
   };
   pick(PREFS.get().tf);
-  if (pick(TF_PARAM[query.get('tf')])) PREFS.set({ tf: getActiveTF() });
+  // Deep link: this timeframe for this visit, nothing is saved (a click on a timeframe saves)
+  if (pick(TF_PARAM[query.get('tf')])) showDeepLinkNote(TF_LABELS[getActiveTF()]);
 })();
 
 // ── Fetch a single pair's candle data ──
@@ -550,7 +597,7 @@ function renderResults(results, resolution) {
   const posCount = strength.filter(s => s.score > 0).length;
   const negCount = strength.filter(s => s.score < 0).length;
   const now = new Date();
-  const updatedStr = now.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  const updatedStr = fmtClock(now);
 
   // Build strength rows
   const rows = strength.map((item, i) => {
@@ -636,7 +683,7 @@ function renderResults(results, resolution) {
           <div class="method-step-num">2</div>
           <div class="method-step-text">
             <strong>% change is computed per pair</strong> as <code>(close[last] − close[last−N]) / close[last−N] × 100</code>.
-            N varies by timeframe — <strong>15m: 5 h · 30m: 6 h · 1H: 10 h · 4H: 20 h · Daily: 4 d · Weekly: 4 w</strong>.
+            N varies by timeframe — <strong>M15: 5 h · M30: 6 h · H1: 10 h · H4: 20 h · D1: 4 d · W: 4 w</strong>.
             During market hours <code>close[last]</code> is the current live price; on weekends it is the last completed candle's close.
           </div>
         </div>
@@ -667,7 +714,7 @@ function renderResults(results, resolution) {
       </div>
       <div class="method-note">
         <strong>Lookback window:</strong> To ensure at least 2 completed candles are always available —
-        including on weekends when markets are closed — the API window is inflated by ×1.4
+        including on weekends when markets are closed — the data window is extended by ×1.4
         (accounting for ~48 h of market closure per week) and the current continuous closed gap
         (Friday 22:00 UTC → Sunday 22:00 UTC) is added on top.
         You are always seeing the most recent available market data.

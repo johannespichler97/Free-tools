@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Support &amp; Resistance | Solantis</title>
+  <title>Support &amp; Resistance</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
@@ -162,7 +162,7 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 .sr-level-dist { font-family:var(--font-mono); font-size:10px; padding:1px 6px; border-radius:8px; }
 .sr-level-dist.r { background:var(--negative-bg); color:var(--negative); }
 .sr-level-dist.s { background:var(--positive-bg); color:var(--positive); }
-.sr-nearest-tag { font-size:9px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; }
+.sr-nearest-tag { font-size:9px; font-weight:700; color:var(--text-primary); background:var(--bg-tertiary); border:1px solid var(--border); padding:1px 5px; border-radius:6px; text-transform:uppercase; letter-spacing:.05em; }
 
 .copy-btn {
   display:inline-flex; align-items:center; justify-content:center;
@@ -172,6 +172,7 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
   flex-shrink:0; padding:0; font-size:11px;
 }
 .sr-level-row:hover .copy-btn { opacity:1; }
+@media (hover:none), (pointer:coarse) { .copy-btn { opacity:1; color:var(--text-secondary); width:36px; height:36px; } .sr-level-row { padding:0 6px; } }
 .copy-btn:hover { background:var(--bg-tertiary); color:var(--accent); }
 .copy-btn.copied { color:var(--positive); opacity:1; }
 
@@ -203,10 +204,12 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 .state-title { font-size:16px; font-weight:600; color:var(--text-secondary); }
 .state-sub { font-size:13px; max-width:360px; line-height:1.6; }
 
-/* ── CHART MODAL ── */
-.chart-overlay { display:none; position:fixed; inset:0; z-index:200; background:rgba(6,36,52,0.88); backdrop-filter:blur(6px); align-items:center; justify-content:center; padding:20px; }
-.chart-overlay.open { display:flex; }
-.chart-modal { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); width:100%; max-width:800px; overflow:hidden; animation:fadeIn .2s ease; }
+/* ── INLINE CHART PANEL ── */
+.chart-panel { grid-column:1 / -1; background:var(--bg-secondary); border:1px solid rgba(47,163,224,.45); border-radius:var(--radius-lg); overflow:hidden; animation:fadeIn .2s ease; }
+.sr-card.open { border-color:var(--accent); }
+.sr-more { font-size:10px; color:var(--text-muted); padding:2px 6px; }
+.sr-level-row.nearest { background:rgba(255,255,255,.04); }
+.sr-level-row.nearest .sr-level-price { font-weight:700; }
 .chart-modal-header { padding:14px 18px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:12px; }
 .chart-modal-meta { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
 .chart-modal-title { font-family:var(--font-mono); font-size:16px; font-weight:700; color:var(--text-primary); }
@@ -214,6 +217,7 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 .chart-modal-close { background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:22px; line-height:1; padding:4px 8px; transition:color .15s; font-family:var(--font); }
 .chart-modal-close:hover { color:var(--text-primary); }
 .chart-canvas-wrap { padding:16px; background:var(--bg-primary); position:relative; }
+@media(max-width:560px){ .chart-canvas-wrap { padding:8px; } .chart-modal-header, .chart-modal-footer { padding:10px 12px; } .chart-hint { margin-left:0; } }
 #chartCanvas { width:100%; display:block; border-radius:var(--radius-sm); }
 .chart-loading { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:13px; }
 .chart-modal-footer { padding:12px 18px; border-top:1px solid var(--border); display:flex; gap:20px; flex-wrap:wrap; align-items:center; }
@@ -234,6 +238,7 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 
 @media(max-width:700px) { .pair-group-grid,.skeleton-grid { grid-template-columns:1fr; } }
 @media(max-width:640px) { .header-inner,.main,.controls-bar { padding-left:16px; padding-right:16px; } }
+@media(max-width:560px) { .summary-bar { padding:12px 10px; gap:8px; } .summary-stat { padding:0 8px; } .summary-stat-val { font-size:18px; } .summary-stat-label { font-size:9px; letter-spacing:.04em; } }
 
 /* ── HAMBURGER MOBILE NAV ── */
 .hamburger { display:none; flex-direction:column; justify-content:center; gap:5px; background:none; border:none; padding:6px; cursor:pointer; border-radius:6px; transition:background .15s; margin-left:auto; }
@@ -264,6 +269,24 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
   .nav-link:last-child { border-bottom:none; }
   .header-actions { gap:8px; }
   .header-actions .btn-primary { display:none; }
+}
+  
+/* ── Shared: readable chips, touch targets, wrapping, sticky columns ── */
+:root { --sticky-bg:#08283a; }
+.asset-chip, .tf-chip, .atr-chip, .lb-chip { opacity:1; color:var(--text-secondary); }
+.asset-chip:not(.active):hover, .tf-chip:not(.active):hover, .atr-chip:not(.active):hover, .lb-chip:not(.active):hover { opacity:1; color:var(--text-primary); border-color:var(--text-secondary); }
+.chip-action-btn, .sort-btn, .filter-tab { color:var(--text-secondary); }
+.state-icon { opacity:.55 !important; color:var(--text-secondary); line-height:0; }
+.method-formula { white-space:pre-wrap !important; overflow-wrap:anywhere; overflow-x:visible !important; }
+code { white-space:normal; overflow-wrap:anywhere; }
+.deeplink-note { font-size:12px; color:var(--text-secondary); background:var(--accent-dim); border:1px solid rgba(47,163,224,.3); border-radius:var(--radius-sm); padding:8px 12px; line-height:1.5; }
+.deeplink-note strong { color:var(--text-primary); }
+.swipe-hint { display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--text-secondary); margin:0 0 8px; }
+.swipe-hint[hidden] { display:none; }
+@media (max-width:767px) { input, select, textarea { font-size:16px !important; } }
+@media (pointer:coarse) {
+  .asset-chip, .tf-chip, .atr-chip, .lb-chip, .chip-action-btn, .sort-btn, .filter-tab { min-height:36px; display:inline-flex; align-items:center; justify-content:center; }
+  select { min-height:36px; }
 }
   </style>
 </head>
@@ -338,36 +361,36 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
         </div>
       </div>
       <div class="asset-chips" id="assetChips">
-          <span class="asset-chip active"       data-sym="OANDA:AUD_CAD">AUDCAD</span>
-          <span class="asset-chip"              data-sym="OANDA:AUD_CHF">AUDCHF</span>
-          <span class="asset-chip"              data-sym="OANDA:AUD_JPY">AUDJPY</span>
-          <span class="asset-chip"              data-sym="OANDA:AUD_NZD">AUDNZD</span>
-          <span class="asset-chip active"       data-sym="OANDA:AUD_USD">AUDUSD</span>
-          <span class="asset-chip"              data-sym="OANDA:CAD_CHF">CADCHF</span>
-          <span class="asset-chip"              data-sym="OANDA:CAD_JPY">CADJPY</span>
-          <span class="asset-chip"              data-sym="OANDA:CHF_JPY">CHFJPY</span>
-          <span class="asset-chip"              data-sym="OANDA:EUR_AUD">EURAUD</span>
-          <span class="asset-chip"              data-sym="OANDA:EUR_CAD">EURCAD</span>
-          <span class="asset-chip"              data-sym="OANDA:EUR_CHF">EURCHF</span>
-          <span class="asset-chip"              data-sym="OANDA:EUR_GBP">EURGBP</span>
-          <span class="asset-chip"              data-sym="OANDA:EUR_JPY">EURJPY</span>
-          <span class="asset-chip"              data-sym="OANDA:EUR_NZD">EURNZD</span>
-          <span class="asset-chip active"       data-sym="OANDA:EUR_USD">EURUSD</span>
-          <span class="asset-chip"              data-sym="OANDA:GBP_AUD">GBPAUD</span>
-          <span class="asset-chip"              data-sym="OANDA:GBP_CAD">GBPCAD</span>
-          <span class="asset-chip"              data-sym="OANDA:GBP_CHF">GBPCHF</span>
-          <span class="asset-chip"              data-sym="OANDA:GBP_JPY">GBPJPY</span>
-          <span class="asset-chip"              data-sym="OANDA:GBP_NZD">GBPNZD</span>
-          <span class="asset-chip active"       data-sym="OANDA:GBP_USD">GBPUSD</span>
-          <span class="asset-chip"              data-sym="OANDA:NZD_CAD">NZDCAD</span>
-          <span class="asset-chip"              data-sym="OANDA:NZD_CHF">NZDCHF</span>
-          <span class="asset-chip"              data-sym="OANDA:NZD_JPY">NZDJPY</span>
-          <span class="asset-chip"              data-sym="OANDA:NZD_USD">NZDUSD</span>
-          <span class="asset-chip"              data-sym="OANDA:USD_CAD">USDCAD</span>
-          <span class="asset-chip"              data-sym="OANDA:USD_CHF">USDCHF</span>
-          <span class="asset-chip active"       data-sym="OANDA:USD_JPY">USDJPY</span>
-          <span class="asset-chip metal"        data-sym="OANDA:XAG_USD">XAGUSD</span>
-          <span class="asset-chip metal active" data-sym="OANDA:XAU_USD">XAUUSD</span>
+          <span class="asset-chip active"       data-sym="OANDA:AUD_CAD">AUD/CAD</span>
+          <span class="asset-chip"              data-sym="OANDA:AUD_CHF">AUD/CHF</span>
+          <span class="asset-chip"              data-sym="OANDA:AUD_JPY">AUD/JPY</span>
+          <span class="asset-chip"              data-sym="OANDA:AUD_NZD">AUD/NZD</span>
+          <span class="asset-chip active"       data-sym="OANDA:AUD_USD">AUD/USD</span>
+          <span class="asset-chip"              data-sym="OANDA:CAD_CHF">CAD/CHF</span>
+          <span class="asset-chip"              data-sym="OANDA:CAD_JPY">CAD/JPY</span>
+          <span class="asset-chip"              data-sym="OANDA:CHF_JPY">CHF/JPY</span>
+          <span class="asset-chip"              data-sym="OANDA:EUR_AUD">EUR/AUD</span>
+          <span class="asset-chip"              data-sym="OANDA:EUR_CAD">EUR/CAD</span>
+          <span class="asset-chip"              data-sym="OANDA:EUR_CHF">EUR/CHF</span>
+          <span class="asset-chip"              data-sym="OANDA:EUR_GBP">EUR/GBP</span>
+          <span class="asset-chip"              data-sym="OANDA:EUR_JPY">EUR/JPY</span>
+          <span class="asset-chip"              data-sym="OANDA:EUR_NZD">EUR/NZD</span>
+          <span class="asset-chip active"       data-sym="OANDA:EUR_USD">EUR/USD</span>
+          <span class="asset-chip"              data-sym="OANDA:GBP_AUD">GBP/AUD</span>
+          <span class="asset-chip"              data-sym="OANDA:GBP_CAD">GBP/CAD</span>
+          <span class="asset-chip"              data-sym="OANDA:GBP_CHF">GBP/CHF</span>
+          <span class="asset-chip"              data-sym="OANDA:GBP_JPY">GBP/JPY</span>
+          <span class="asset-chip"              data-sym="OANDA:GBP_NZD">GBP/NZD</span>
+          <span class="asset-chip active"       data-sym="OANDA:GBP_USD">GBP/USD</span>
+          <span class="asset-chip"              data-sym="OANDA:NZD_CAD">NZD/CAD</span>
+          <span class="asset-chip"              data-sym="OANDA:NZD_CHF">NZD/CHF</span>
+          <span class="asset-chip"              data-sym="OANDA:NZD_JPY">NZD/JPY</span>
+          <span class="asset-chip"              data-sym="OANDA:NZD_USD">NZD/USD</span>
+          <span class="asset-chip"              data-sym="OANDA:USD_CAD">USD/CAD</span>
+          <span class="asset-chip"              data-sym="OANDA:USD_CHF">USD/CHF</span>
+          <span class="asset-chip active"       data-sym="OANDA:USD_JPY">USD/JPY</span>
+          <span class="asset-chip metal"        data-sym="OANDA:XAG_USD">XAG/USD</span>
+          <span class="asset-chip metal active" data-sym="OANDA:XAU_USD">XAU/USD</span>
         </div>
 
       <hr class="ctrl-divider" />
@@ -376,14 +399,14 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
         <span class="ctrl-label">Timeframes <span style="font-size:10px;color:var(--text-muted);font-weight:400;letter-spacing:0">(max 4)</span></span>
       </div>
       <div class="tf-chips" id="tfChips">
-          <span class="tf-chip" data-res="5">5m</span>
-          <span class="tf-chip" data-res="15">15m</span>
-          <span class="tf-chip" data-res="30">30m</span>
-          <span class="tf-chip" data-res="60">1H</span>
-          <span class="tf-chip" data-res="240">4H</span>
-          <span class="tf-chip active" data-res="D">Daily</span>
-          <span class="tf-chip active" data-res="W">Weekly</span>
-          <span class="tf-chip" data-res="M">Monthly</span>
+          <span class="tf-chip" data-res="5">M5</span>
+          <span class="tf-chip" data-res="15">M15</span>
+          <span class="tf-chip" data-res="30">M30</span>
+          <span class="tf-chip" data-res="60">H1</span>
+          <span class="tf-chip" data-res="240">H4</span>
+          <span class="tf-chip active" data-res="D">D1</span>
+          <span class="tf-chip active" data-res="W">W</span>
+          <span class="tf-chip" data-res="M">MN</span>
         </div>
 
       <hr class="ctrl-divider" />
@@ -436,30 +459,12 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 
     <div id="mainContent">
       <div class="state-box">
-        <div class="state-icon">📊</div>
+        <div class="state-icon"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18M6 17V11M11 17V5M16 17v-8M21 17v-4"/></svg></div>
         <div class="state-title">No results yet</div>
         <div class="state-sub">Select assets and timeframes above, then click Scan Selected.</div>
       </div>
     </div>
   </main>
-
-  <!-- ── CHART MODAL ── -->
-  <div class="chart-overlay" id="chartOverlay" onclick="closeModal(event)">
-    <div class="chart-modal" id="chartModal">
-      <div class="chart-modal-header">
-        <div class="chart-modal-meta">
-          <span class="chart-modal-title" id="modalTitle">—</span>
-          <span class="chart-modal-tf" id="modalTF">—</span>
-        </div>
-        <button class="chart-modal-close" onclick="closeModalBtn()">&#x2715;</button>
-      </div>
-      <div class="chart-canvas-wrap">
-        <canvas id="chartCanvas" height="340"></canvas>
-        <div class="chart-loading" id="chartLoading">Loading chart…</div>
-      </div>
-      <div class="chart-modal-footer" id="modalFooter"></div>
-    </div>
-  </div>
 
   <!-- ── FOOTER ── -->
   <footer class="footer">
@@ -477,7 +482,35 @@ const API_KEY  = 'd95lt2pr01qqtvdma7c0d95lt2pr01qqtvdma7cg';
 const API_BASE = 'https://finnhub.io/api/v1';
 // Saved settings: the platform provides window.MAPrefs (stored per user); standalone falls back to localStorage.
 const PREFS = (() => { const k = 'ma-prefs:support-resistance'; let v = {}; try { v = (window.MAPrefs ? window.MAPrefs.get() : JSON.parse(localStorage.getItem(k) || '{}')) || {}; } catch (e) {} return { get: () => v, set: (o) => { v = o; try { window.MAPrefs ? window.MAPrefs.set(o) : localStorage.setItem(k, JSON.stringify(o)); } catch (e) {} } }; })();
-const TF_LABELS  = {'5':'5m','15':'15m','30':'30m','60':'1H','240':'4H','D':'Daily','W':'Weekly','M':'Monthly'};
+
+// ── Shared display helpers: time with zone, pair labels, icons, deep links, swipe hints ──
+const TZ_NAME  = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'local time'; } catch (e) { return 'local time'; } })();
+const fmtClock = d => d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', hourCycle:'h23' }) + ' (' + TZ_NAME + ')';
+const fmtWhen  = d => d.toLocaleString('en-GB', { weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit', hourCycle:'h23' }) + ' (' + TZ_NAME + ')';
+const pairLabel = sym => sym.replace('OANDA:', '').replace('_', '/');
+const ICON_PATHS = {"signal": "<path d=\"M4.9 19.1a10 10 0 0 1 0-14.2M19.1 4.9a10 10 0 0 1 0 14.2M7.8 16.2a6 6 0 0 1 0-8.4M16.2 7.8a6 6 0 0 1 0 8.4\"/><circle cx=\"12\" cy=\"12\" r=\"2\"/>", "bars": "<path d=\"M3 21h18M6 17V11M11 17V5M16 17v-8M21 17v-4\"/>", "trend": "<polyline points=\"3 17 9 11 13 15 21 7\"/><polyline points=\"15 7 21 7 21 13\"/>", "grid": "<rect x=\"3\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"3\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"14\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"/>", "search": "<circle cx=\"11\" cy=\"11\" r=\"7\"/><line x1=\"21\" y1=\"21\" x2=\"16\" y2=\"16\"/>", "alert": "<path d=\"M12 3 2 20h20L12 3z\"/><line x1=\"12\" y1=\"10\" x2=\"12\" y2=\"14\"/><line x1=\"12\" y1=\"17\" x2=\"12\" y2=\"17.5\"/>"};
+const icon = n => `<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON_PATHS[n]}</svg>`;
+// A deep link (?symbol=…&tf=…) only preselects for this visit. Until the user changes that
+// control, saving keeps their own saved value for it (KEEP holds those values).
+const KEEP = {};
+const keepSaved = o => { Object.keys(KEEP).forEach(k => { o[k] = KEEP[k]; }); return o; };
+function showDeepLinkNote(what) {
+  const box = document.querySelector('.controls-box');
+  if (!box || !what) return;
+  const n = document.createElement('div');
+  n.className = 'deeplink-note';
+  n.innerHTML = `Opened from a link: showing <strong>${what}</strong> for this visit. Your saved selection stays as it is unless you change it here.`;
+  box.prepend(n);
+}
+function updateSwipeHints() {
+  document.querySelectorAll('[data-swipe]').forEach(h => {
+    const el = document.getElementById(h.dataset.swipe);
+    h.hidden = !el || el.scrollWidth <= el.clientWidth + 2;
+  });
+}
+window.addEventListener('resize', updateSwipeHints);
+const swipeHint = id => `<div class="swipe-hint" data-swipe="${id}" hidden><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>Swipe sideways to see all columns</div>`;
+const TF_LABELS  = {'5':'M5','15':'M15','30':'M30','60':'H1','240':'H4','D':'D1','W':'W','M':'MN'};
 const TF_SECONDS = {'5':300,'15':900,'30':1800,'60':3600,'240':14400,'D':86400,'W':604800,'M':2592000};
 const TF_CANDLES = {'5':200,'15':150,'30':150,'60':150,'240':120,'D':200,'W':100,'M':60};
 
@@ -494,11 +527,11 @@ function updateCounter() {
 
 document.querySelectorAll('.asset-chip').forEach(c => c.addEventListener('click', () => {
   if (!c.classList.contains('active') && document.querySelectorAll('.asset-chip.active').length >= 10) return;
-  c.classList.toggle('active'); updateCounter(); savePrefs();
+  c.classList.toggle('active'); delete KEEP.assets; updateCounter(); savePrefs();
 }));
 document.querySelectorAll('.tf-chip').forEach(c => c.addEventListener('click', () => {
   if (!c.classList.contains('active') && document.querySelectorAll('.tf-chip.active').length >= 4) return;
-  c.classList.toggle('active'); updateCounter(); savePrefs();
+  c.classList.toggle('active'); delete KEEP.tfs; updateCounter(); savePrefs();
 }));
 
 function selectAllAssets() {
@@ -506,17 +539,18 @@ function selectAllAssets() {
   document.querySelectorAll('.asset-chip').forEach(c => {
     if (count < 10) { c.classList.add('active'); count++; }
   });
+  delete KEEP.assets;
   updateCounter();
   savePrefs();
 }
-function clearAssets() { document.querySelectorAll('.asset-chip.active').forEach(c => c.classList.remove('active')); updateCounter(); savePrefs(); }
+function clearAssets() { document.querySelectorAll('.asset-chip.active').forEach(c => c.classList.remove('active')); delete KEEP.assets; updateCounter(); savePrefs(); }
 
 /* ── Saved settings + deep link ── */
 function savePrefs() {
-  PREFS.set({
+  PREFS.set(keepSaved({
     assets: [...document.querySelectorAll('.asset-chip.active')].map(c => c.dataset.sym),
     tfs:    [...document.querySelectorAll('.tf-chip.active')].map(c => c.dataset.res)
-  });
+  }));
 }
 const TF_PARAM = { M15:'15', M30:'30', H1:'60', H4:'240', D1:'D', W:'W' };
 (function restorePrefs() {
@@ -529,19 +563,14 @@ const TF_PARAM = { M15:'15', M30:'30', H1:'60', H4:'240', D1:'D', W:'W' };
   };
   restore('.asset-chip', 'sym', p.assets, 10, true);
   restore('.tf-chip', 'res', p.tfs, 4, false);
-  // make sure a chip is active, dropping the last other one when the max is reached
-  const ensure = (sel, chip, max) => {
-    if (!chip || chip.classList.contains('active')) return;
-    const active = [...document.querySelectorAll(sel + '.active')];
-    if (active.length >= max) active[active.length - 1].classList.remove('active');
-    chip.classList.add('active');
-  };
+  // Deep link: exactly this pair / timeframe for this visit, nothing is saved
+  const only = (sel, chip) => document.querySelectorAll(sel).forEach(c => c.classList.toggle('active', c === chip));
   const q   = new URLSearchParams(location.search);
   const sym = [...document.querySelectorAll('.asset-chip')].find(c => c.dataset.sym === q.get('symbol'));
   const tf  = [...document.querySelectorAll('.tf-chip')].find(c => c.dataset.res === TF_PARAM[q.get('tf')]);
-  ensure('.asset-chip', sym, 10);
-  ensure('.tf-chip', tf, 4);
-  if (sym || tf) { savePrefs(); }
+  if (sym) { KEEP.assets = p.assets; only('.asset-chip', sym); }
+  if (tf)  { KEEP.tfs = p.tfs; only('.tf-chip', tf); }
+  if (sym || tf) showDeepLinkNote([sym && pairLabel(sym.dataset.sym), tf && TF_LABELS[tf.dataset.res]].filter(Boolean).join(' · '));
 })();
 
 updateCounter();
@@ -559,11 +588,13 @@ function fmtPrice(p, sym) {
   if (sym.includes('XAG')) return p.toFixed(4);
   return p.toFixed(5);
 }
+/* Distance from the current price: pips for currencies, USD for gold and silver (as in the platform) */
 function fmtPips(diff, sym) {
-  const abs = Math.abs(diff);
-  if (sym.includes('XAU')) return `${diff>=0?'+':''}${diff.toFixed(1)}`;
-  if (sym.includes('XAG')) return `${diff>=0?'+':''}${diff.toFixed(3)}`;
-  return `${diff>=0?'+':'-'}${Math.round(abs/getPipSize(sym))} pips`;
+  const abs = Math.abs(diff), sign = diff >= 0 ? '+' : '-';
+  if (sym.includes('XAU')) return `${sign}${abs.toFixed(2)} USD`;
+  if (sym.includes('XAG')) return `${sign}${abs.toFixed(3)} USD`;
+  const pips = abs / getPipSize(sym);
+  return `${sign}${pips < 10 ? pips.toFixed(1) : Math.round(pips)} pips`;
 }
 
 /* ── Concurrency helper ── */
@@ -637,6 +668,7 @@ async function runScan() {
 
 /* ── Render ── */
 function renderResults() {
+  openCard = null;
   const TF_ORDER = {'5':0,'15':1,'30':2,'60':3,'240':4,'D':5,'W':6,'M':7};
 
   // Group by pair
@@ -676,12 +708,14 @@ function renderResults() {
   });
 
   document.getElementById('mainContent').innerHTML = html.join('') ||
-    '<div class="state-box"><div class="state-icon">🔍</div><div class="state-title">No levels found</div><div class="state-sub">Try different assets or timeframes.</div></div>';
+    '<div class="state-box"><div class="state-icon">' + icon('search') + '</div><div class="state-title">No levels found</div><div class="state-sub">Try different assets or timeframes.</div></div>';
 
-  // Wire click handlers
+  // Wire click handlers: the chart opens inline below the card's row
   allResults.forEach(item => {
     const el = document.getElementById(`card-${item.sym.replace(/[^a-z0-9]/gi,'_')}-${item.tf}`);
-    if (el) el.addEventListener('click', () => openModal(item));
+    if (!el) return;
+    el.addEventListener('click', () => toggleChart(item, el));
+    el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleChart(item, el); } });
   });
 
   document.getElementById('sumScanned').textContent = allResults.length;
@@ -711,35 +745,27 @@ function buildCard(item) {
   const nearestS = supports.length ? supports[supports.length-1] : null;
   const nearestR = resists.length  ? resists[0]                  : null;
 
-  // Resistance rows (descending, show max 4)
-  const rRows = [...resists].reverse().slice(0,4).map((lvl, i) => {
+  // Show the 4 levels closest to the price on each side; the rest is summarised at the far end.
+  const SHOW = 4;
+  const levelRow = (lvl, side, nearest) => {
     const diff = price ? lvl - price : 0;
     const priceStr = fmtPrice(lvl, sym);
-    return `<div class="sr-level-row">
-      <span class="sr-dot r"></span>
+    return `<div class="sr-level-row${nearest ? ' nearest' : ''}">
+      <span class="sr-dot ${side}"></span>
       <span class="sr-level-price">${priceStr}</span>
-      ${price ? `<span class="sr-level-dist r">${fmtPips(diff,sym)}</span>` : ''}
-      ${i===resists.length-1&&price?'<span class="sr-nearest-tag">nearest</span>':''}
-      <button class="copy-btn" title="Copy ${priceStr}" onclick="copyLevel(event,'${priceStr}')">
+      ${nearest ? '<span class="sr-nearest-tag">Nearest</span>' : ''}
+      ${price ? `<span class="sr-level-dist ${side}">${fmtPips(diff,sym)}</span>` : ''}
+      <button class="copy-btn" title="Copy ${priceStr}" aria-label="Copy ${priceStr}" onclick="copyLevel(event,'${priceStr}')">
         <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="5" width="9" height="9" rx="1.5"/><path d="M11 5V3a1 1 0 00-1-1H3a1 1 0 00-1 1v7a1 1 0 001 1h2"/></svg>
       </button>
     </div>`;
-  }).join('');
-
-  // Support rows (descending = nearest first, show max 4)
-  const sRows = [...supports].reverse().slice(0,4).map((lvl, i) => {
-    const diff = price ? lvl - price : 0;
-    const priceStr = fmtPrice(lvl, sym);
-    return `<div class="sr-level-row">
-      <span class="sr-dot s"></span>
-      <span class="sr-level-price">${priceStr}</span>
-      ${price ? `<span class="sr-level-dist s">${fmtPips(diff,sym)}</span>` : ''}
-      ${i===0&&price?'<span class="sr-nearest-tag">nearest</span>':''}
-      <button class="copy-btn" title="Copy ${priceStr}" onclick="copyLevel(event,'${priceStr}')">
-        <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="5" width="9" height="9" rx="1.5"/><path d="M11 5V3a1 1 0 00-1-1H3a1 1 0 00-1 1v7a1 1 0 001 1h2"/></svg>
-      </button>
-    </div>`;
-  }).join('');
+  };
+  // Resistances: nearest SHOW above the price, listed top-down (farthest of them first, nearest last)
+  const rShown = resists.slice(0, SHOW);
+  const rRows = [...rShown].reverse().map(lvl => levelRow(lvl, 'r', price && lvl === nearestR)).join('');
+  // Supports: nearest SHOW below the price, nearest first
+  const sShown = [...supports].reverse().slice(0, SHOW);
+  const sRows = sShown.map(lvl => levelRow(lvl, 's', price && lvl === nearestS)).join('');
 
   // Gauge
   let gaugeHTML = '';
@@ -760,10 +786,10 @@ function buildCard(item) {
       </div>`;
   }
 
-  const extraR = resists.length > 4 ? `<div style="font-size:10px;color:var(--text-muted);padding:2px 6px">+${resists.length-4} more</div>` : '';
-  const extraS = supports.length > 4 ? `<div style="font-size:10px;color:var(--text-muted);padding:2px 6px">+${supports.length-4} more</div>` : '';
+  const extraR = resists.length > SHOW ? `<div class="sr-more">+${resists.length-SHOW} more above (shown on the chart)</div>` : '';
+  const extraS = supports.length > SHOW ? `<div class="sr-more">+${supports.length-SHOW} more below (shown on the chart)</div>` : '';
 
-  return `<div class="sr-card" id="${id}">
+  return `<div class="sr-card" id="${id}" role="button" tabindex="0" aria-expanded="false">
     <div class="sr-card-header">
       <div class="sr-counts">
         <span class="sr-count-r">▲ ${resists.length}R</span>
@@ -773,7 +799,7 @@ function buildCard(item) {
       <span class="sr-tf-badge">${tfLabel}</span>
     </div>
     <div class="sr-body">
-      ${resists.length ? `<div class="sr-section-label r">Resistance</div>${rRows}${extraR}` : ''}
+      ${resists.length ? `<div class="sr-section-label r">Resistance</div>${extraR}${rRows}` : ''}
       ${price ? `<div class="sr-price-row">
         <span class="sr-price-dot"></span>
         <span class="sr-price-label">Current</span>
@@ -782,7 +808,7 @@ function buildCard(item) {
       ${supports.length ? `<div class="sr-section-label s" style="margin-top:6px">Support</div>${sRows}${extraS}` : ''}
       ${gaugeHTML}
     </div>
-    <div class="sr-click-hint">Click to view chart →</div>
+    <div class="sr-click-hint">Tap to show the chart</div>
   </div>`;
 }
 
@@ -800,19 +826,54 @@ function copyLevel(e, price) {
   });
 }
 
-/* ── Chart Modal ── */
-async function openModal(item) {
-  const overlay = document.getElementById('chartOverlay');
+/* ── Inline chart (below the clicked card's row) ──
+   A modal would be positioned against the iframe in the platform, which is as tall as the
+   page, so it could open far outside the visible area. Inline expansion always appears
+   where the user tapped. */
+let openCard = null;
+function closeChart() {
+  document.getElementById('chartPanel')?.remove();
+  lastChart = null;
+  if (openCard) { openCard.classList.remove('open'); openCard.setAttribute('aria-expanded', 'false'); const h = openCard.querySelector('.sr-click-hint'); if (h) h.textContent = 'Tap to show the chart'; }
+  openCard = null;
+}
+function toggleChart(item, card) {
+  if (openCard === card) { closeChart(); return; }
+  closeChart();
+  openCard = card;
+  card.classList.add('open');
+  card.setAttribute('aria-expanded', 'true');
+  const hint = card.querySelector('.sr-click-hint'); if (hint) hint.textContent = 'Tap to hide the chart';
+  // insert after the last card of the clicked card's row
+  let anchor = card;
+  for (let n = card.nextElementSibling; n && n.offsetTop === card.offsetTop; n = n.nextElementSibling) anchor = n;
+  const panel = document.createElement('div');
+  panel.id = 'chartPanel';
+  panel.className = 'chart-panel';
+  panel.innerHTML = `
+    <div class="chart-modal-header">
+      <div class="chart-modal-meta">
+        <span class="chart-modal-title">${item.symLabel}</span>
+        <span class="chart-modal-tf">${item.tfLabel}</span>
+      </div>
+      <button class="chart-modal-close" aria-label="Close chart">&#x2715;</button>
+    </div>
+    <div class="chart-canvas-wrap">
+      <canvas id="chartCanvas" height="340"></canvas>
+      <div class="chart-loading" id="chartLoading">Loading chart…</div>
+    </div>
+    <div class="chart-modal-footer" id="modalFooter"></div>`;
+  anchor.after(panel);
+  panel.querySelector('.chart-modal-close').addEventListener('click', closeChart);
+  panel.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  loadChart(item);
+}
+
+async function loadChart(item) {
   const canvas  = document.getElementById('chartCanvas');
   const loading = document.getElementById('chartLoading');
   const footer  = document.getElementById('modalFooter');
-
-  document.getElementById('modalTitle').textContent = item.symLabel;
-  document.getElementById('modalTF').textContent    = item.tfLabel;
-  footer.innerHTML = '';
-  loading.style.display = 'flex';
-  canvas.style.display = 'none';
-  overlay.classList.add('open');
+  canvas.style.visibility = 'hidden';
 
   // Fetch candles
   const nCandles = TF_CANDLES[item.tf] || 80;
@@ -823,30 +884,32 @@ async function openModal(item) {
   try {
     const r = await fetch(`${API_BASE}/forex/candle?symbol=${encodeURIComponent(item.sym)}&resolution=${item.tf}&from=${from}&to=${to}&token=${API_KEY}`);
     const d = r.ok ? await r.json() : null;
-
+    if (!canvas.isConnected) return;
     loading.style.display = 'none';
-    canvas.style.display  = 'block';
+    canvas.style.visibility = 'visible';
 
     if (d && d.s === 'ok' && d.t && d.t.length > 0) {
+      lastChart = { d, item };
       drawSRChart(canvas, d, item.levels, item.price, item.sym);
       buildModalFooter(footer, item);
     } else {
       drawNoData(canvas);
     }
   } catch(e) {
+    if (!canvas.isConnected) return;
     loading.style.display = 'none';
-    canvas.style.display  = 'block';
+    canvas.style.visibility = 'visible';
     drawNoData(canvas);
   }
 }
 
-function closeModal(e) {
-  if (e.target === document.getElementById('chartOverlay')) closeModalBtn();
-}
-function closeModalBtn() {
-  document.getElementById('chartOverlay').classList.remove('open');
-}
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModalBtn(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeChart(); });
+// redraw the open chart at the new width
+let lastChart = null, rzT;
+window.addEventListener('resize', () => { clearTimeout(rzT); rzT = setTimeout(() => {
+  const c = document.getElementById('chartCanvas');
+  if (c && lastChart) drawSRChart(c, lastChart.d, lastChart.item.levels, lastChart.item.price, lastChart.item.sym);
+}, 150); });
 
 function buildModalFooter(footer, item) {
   const {sym, levels, price} = item;
@@ -867,7 +930,8 @@ function buildModalFooter(footer, item) {
 function drawSRChart(canvas, candles, levels, currentPrice, sym) {
   const dpr = window.devicePixelRatio || 1;
   const W   = canvas.offsetWidth || 700;
-  const H   = 340;
+  const H   = W < 500 ? 280 : 340;
+  canvas.style.height = H + 'px';
   canvas.width  = W * dpr;
   canvas.height = H * dpr;
   const ctx = canvas.getContext('2d');
@@ -984,7 +1048,8 @@ function drawSRChart(canvas, candles, levels, currentPrice, sym) {
 function drawNoData(canvas) {
   const dpr = window.devicePixelRatio || 1;
   const W = canvas.offsetWidth || 700;
-  const H = 340;
+  const H = W < 500 ? 280 : 340;
+  canvas.style.height = H + 'px';
   canvas.width  = W * dpr;
   canvas.height = H * dpr;
   const ctx = canvas.getContext('2d');

@@ -235,6 +235,24 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
   .controls-box .ctrl-row .ctrl-label { flex-basis:100%; }
   .div-grid { grid-template-columns:1fr; }
 }
+  
+/* ── Shared: readable chips, touch targets, wrapping, sticky columns ── */
+:root { --sticky-bg:#08283a; }
+.asset-chip, .tf-chip, .atr-chip, .lb-chip { opacity:1; color:var(--text-secondary); }
+.asset-chip:not(.active):hover, .tf-chip:not(.active):hover, .atr-chip:not(.active):hover, .lb-chip:not(.active):hover { opacity:1; color:var(--text-primary); border-color:var(--text-secondary); }
+.chip-action-btn, .sort-btn, .filter-tab { color:var(--text-secondary); }
+.state-icon { opacity:.55 !important; color:var(--text-secondary); line-height:0; }
+.method-formula { white-space:pre-wrap !important; overflow-wrap:anywhere; overflow-x:visible !important; }
+code { white-space:normal; overflow-wrap:anywhere; }
+.deeplink-note { font-size:12px; color:var(--text-secondary); background:var(--accent-dim); border:1px solid rgba(47,163,224,.3); border-radius:var(--radius-sm); padding:8px 12px; line-height:1.5; }
+.deeplink-note strong { color:var(--text-primary); }
+.swipe-hint { display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--text-secondary); margin:0 0 8px; }
+.swipe-hint[hidden] { display:none; }
+@media (max-width:767px) { input, select, textarea { font-size:16px !important; } }
+@media (pointer:coarse) {
+  .asset-chip, .tf-chip, .atr-chip, .lb-chip, .chip-action-btn, .sort-btn, .filter-tab { min-height:36px; display:inline-flex; align-items:center; justify-content:center; }
+  select { min-height:36px; }
+}
   </style>
 </head>
 <body>
@@ -348,7 +366,7 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 
   <main class="main" id="mainContent">
     <div class="state-box" id="stateBox">
-      <div class="state-icon">📈</div>
+      <div class="state-icon"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/></svg></div>
       <div class="state-title">Select symbols and hit Scan</div>
       <div class="state-sub">The scanner loads candles for every selected pair and timeframe, calculates RSI(14) and lists all divergences confirmed within the freshness window.</div>
     </div>
@@ -382,7 +400,7 @@ Min diff = |RSI P2 − RSI P1| ≥ 2–10 points</div>
               <tr><td style="color:#f08080">Hidden bearish</td><td>Lower high</td><td>Higher high</td><td>Downtrend continuation</td></tr>
             </tbody>
           </table>
-          <p class="method-note">Divergences marked <strong>oversold</strong> (RSI below 30) or <strong>overbought</strong> (RSI above 70) at the pivot are considered stronger. A divergence is a warning sign, not an entry signal on its own — combine it with structure, trend and risk management. 4h candles are built from 1h data starting at 17:00 New York time, matching the FX session used by TradingView.</p>
+          <p class="method-note">Divergences marked <strong>oversold</strong> (RSI below 30) or <strong>overbought</strong> (RSI above 70) at the pivot are considered stronger. A divergence is a warning sign, not an entry signal on its own — combine it with structure, trend and risk management. H4 candles are built from H1 data starting at 17:00 New York time, matching the FX session used by TradingView.</p>
         </div>
 
         <div class="method-block" style="grid-column:1 / -1;">
@@ -418,6 +436,34 @@ const BASE    = 'https://finnhub.io/api/v1';
 // Saved settings: the platform provides window.MAPrefs (stored per user); standalone falls back to localStorage.
 const PREFS = (() => { const k = 'ma-prefs:rsi-divergence'; let v = {}; try { v = (window.MAPrefs ? window.MAPrefs.get() : JSON.parse(localStorage.getItem(k) || '{}')) || {}; } catch (e) {} return { get: () => v, set: (o) => { v = o; try { window.MAPrefs ? window.MAPrefs.set(o) : localStorage.setItem(k, JSON.stringify(o)); } catch (e) {} } }; })();
 
+// ── Shared display helpers: time with zone, pair labels, icons, deep links, swipe hints ──
+const TZ_NAME  = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'local time'; } catch (e) { return 'local time'; } })();
+const fmtClock = d => d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', hourCycle:'h23' }) + ' (' + TZ_NAME + ')';
+const fmtWhen  = d => d.toLocaleString('en-GB', { weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit', hourCycle:'h23' }) + ' (' + TZ_NAME + ')';
+const pairLabel = sym => sym.replace('OANDA:', '').replace('_', '/');
+const ICON_PATHS = {"signal": "<path d=\"M4.9 19.1a10 10 0 0 1 0-14.2M19.1 4.9a10 10 0 0 1 0 14.2M7.8 16.2a6 6 0 0 1 0-8.4M16.2 7.8a6 6 0 0 1 0 8.4\"/><circle cx=\"12\" cy=\"12\" r=\"2\"/>", "bars": "<path d=\"M3 21h18M6 17V11M11 17V5M16 17v-8M21 17v-4\"/>", "trend": "<polyline points=\"3 17 9 11 13 15 21 7\"/><polyline points=\"15 7 21 7 21 13\"/>", "grid": "<rect x=\"3\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"3\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"14\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"/>", "search": "<circle cx=\"11\" cy=\"11\" r=\"7\"/><line x1=\"21\" y1=\"21\" x2=\"16\" y2=\"16\"/>", "alert": "<path d=\"M12 3 2 20h20L12 3z\"/><line x1=\"12\" y1=\"10\" x2=\"12\" y2=\"14\"/><line x1=\"12\" y1=\"17\" x2=\"12\" y2=\"17.5\"/>"};
+const icon = n => `<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON_PATHS[n]}</svg>`;
+// A deep link (?symbol=…&tf=…) only preselects for this visit. Until the user changes that
+// control, saving keeps their own saved value for it (KEEP holds those values).
+const KEEP = {};
+const keepSaved = o => { Object.keys(KEEP).forEach(k => { o[k] = KEEP[k]; }); return o; };
+function showDeepLinkNote(what) {
+  const box = document.querySelector('.controls-box');
+  if (!box || !what) return;
+  const n = document.createElement('div');
+  n.className = 'deeplink-note';
+  n.innerHTML = `Opened from a link: showing <strong>${what}</strong> for this visit. Your saved selection stays as it is unless you change it here.`;
+  box.prepend(n);
+}
+function updateSwipeHints() {
+  document.querySelectorAll('[data-swipe]').forEach(h => {
+    const el = document.getElementById(h.dataset.swipe);
+    h.hidden = !el || el.scrollWidth <= el.clientWidth + 2;
+  });
+}
+window.addEventListener('resize', updateSwipeHints);
+const swipeHint = id => `<div class="swipe-hint" data-swipe="${id}" hidden><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>Swipe sideways to see all columns</div>`;
+
 const ASSETS = [
   { label:'EUR/USD', sym:'OANDA:EUR_USD', type:'fx' },
   { label:'GBP/USD', sym:'OANDA:GBP_USD', type:'fx' },
@@ -444,6 +490,9 @@ const ASSETS = [
   { label:'NZD/JPY', sym:'OANDA:NZD_JPY', type:'fx' },
   { label:'CAD/JPY', sym:'OANDA:CAD_JPY', type:'fx' },
   { label:'CHF/JPY', sym:'OANDA:CHF_JPY', type:'fx' },
+  { label:'NZD/CAD', sym:'OANDA:NZD_CAD', type:'fx' },
+  { label:'NZD/CHF', sym:'OANDA:NZD_CHF', type:'fx' },
+  { label:'CAD/CHF', sym:'OANDA:CAD_CHF', type:'fx' },
   { label:'XAU/USD', sym:'OANDA:XAU_USD', type:'metal' },
   { label:'XAG/USD', sym:'OANDA:XAG_USD', type:'metal' },
 ];
@@ -453,10 +502,10 @@ const RSI_LEN = 14, LB_L = 5, RANGE_MIN = 5, RANGE_MAX = 60;
 const CONFIRM = [2, 3, 4, 5, 6];
 let confirmN = 5; /* pivot lookback right = candles needed to confirm a pivot */
 const TFS = [
-  { id:'15',  label:'15m',   res:'15', days:7,   sec:900 },
-  { id:'60',  label:'1h',    res:'60', days:80,  sec:3600 },
-  { id:'240', label:'4h',    res:'60', days:80,  sec:14400, from1h:true },
-  { id:'D',   label:'Daily', res:'D',  days:620, sec:86400 },
+  { id:'15',  label:'M15',   res:'15', days:7,   sec:900 },
+  { id:'60',  label:'H1',    res:'60', days:80,  sec:3600 },
+  { id:'240', label:'H4',    res:'60', days:80,  sec:14400, from1h:true },
+  { id:'D',   label:'D1',    res:'D',  days:620, sec:86400 },
 ];
 const TYPES = {
   rbull: { label:'Regular bullish', desc:'Price lower low · RSI higher low', side:'bull' },
@@ -474,7 +523,7 @@ let fresh = 10, minDiff = 2, scanning = false, found = [], sets = [], failedSets
 
 /* ── SAVED SETTINGS + DEEP LINK ── */
 function savePrefs() {
-  PREFS.set({ assets: [...activeAssets], tfs: [...activeTfs], types: [...activeTypes], fresh, minDiff, confirmN });
+  PREFS.set(keepSaved({ assets: [...activeAssets], tfs: [...activeTfs], types: [...activeTypes], fresh, minDiff, confirmN }));
 }
 const TF_PARAM = { M15:'15', M30:'15', H1:'60', H4:'240', D1:'D', W:'D' }; /* nearest supported timeframe */
 (function restorePrefs() {
@@ -491,9 +540,12 @@ const TF_PARAM = { M15:'15', M30:'15', H1:'60', H4:'240', D1:'D', W:'D' }; /* ne
   if (CONFIRM.includes(p.confirmN)) confirmN = p.confirmN;
   const q = new URLSearchParams(location.search);
   const sym = ASSETS.find(a => a.sym === q.get('symbol')), tf = TF_PARAM[q.get('tf')];
-  if (sym) activeAssets.add(sym.sym);
-  if (tf) activeTfs.add(tf);
-  if (sym || tf) { savePrefs(); }
+  // Deep link: exactly this pair / timeframe for this visit (nearest available timeframe), nothing is saved
+  if (sym) { KEEP.assets = p.assets; activeAssets = new Set([sym.sym]); }
+  if (tf)  { KEEP.tfs = p.tfs; activeTfs = new Set([tf]); }
+  const tfObj = tf && TFS.find(t => t.id === tf);
+  const near = tf && TF_PARAM[q.get('tf')] !== undefined && !['M15','H1','H4','D1'].includes(q.get('tf'));
+  if (sym || tf) showDeepLinkNote([sym && sym.label, tfObj && (tfObj.label + (near ? ` (nearest to ${q.get('tf')})` : ''))].filter(Boolean).join(' · '));
 })();
 
 /* ── MATH ── */
@@ -611,8 +663,8 @@ function chipRow(id, items, isOn, onClick, extra = () => '') {
   el.querySelectorAll('[data-v]').forEach(c => c.addEventListener('click', () => { onClick(c.dataset.v); savePrefs(); }));
 }
 function buildControls() {
-  chipRow('assetChips', ASSETS.map(a => ({ v:a.sym, label:a.label, cls:'asset-chip' + (a.type === 'metal' ? ' metal' : '') })), v => activeAssets.has(v), v => { activeAssets.has(v) ? activeAssets.delete(v) : activeAssets.add(v); buildControls(); });
-  chipRow('tfChips', TFS.map(t => ({ v:t.id, label:t.label })), v => activeTfs.has(v), v => { if (activeTfs.has(v)) { if (activeTfs.size > 1) activeTfs.delete(v); } else activeTfs.add(v); buildControls(); });
+  chipRow('assetChips', ASSETS.map(a => ({ v:a.sym, label:a.label, cls:'asset-chip' + (a.type === 'metal' ? ' metal' : '') })), v => activeAssets.has(v), v => { activeAssets.has(v) ? activeAssets.delete(v) : activeAssets.add(v); delete KEEP.assets; buildControls(); });
+  chipRow('tfChips', TFS.map(t => ({ v:t.id, label:t.label })), v => activeTfs.has(v), v => { if (activeTfs.has(v)) { if (activeTfs.size > 1) activeTfs.delete(v); } else activeTfs.add(v); delete KEEP.tfs; buildControls(); });
   chipRow('typeChips', Object.entries(TYPES).map(([k, t]) => ({ v:k, label:t.label, cls:'tf-chip type-chip ' + k })), v => activeTypes.has(v), v => { if (activeTypes.has(v)) { if (activeTypes.size > 1) activeTypes.delete(v); } else activeTypes.add(v); buildControls(); render(); });
   chipRow('confChips', CONFIRM.map(n => ({ v:n, label:`${n} candles` })), v => +v === confirmN, v => { confirmN = +v; buildControls(); if (lastScan) { detectAll(); render(); } });
   document.querySelectorAll('.cn').forEach(e => e.textContent = confirmN);
@@ -624,8 +676,8 @@ function buildControls() {
   document.getElementById('symPlural').textContent = activeAssets.size === 1 ? '' : 's';
   document.getElementById('tfPlural').textContent = activeTfs.size === 1 ? '' : 's';
 }
-function selectAll() { ASSETS.forEach(a => activeAssets.add(a.sym)); buildControls(); savePrefs(); }
-function selectNone() { activeAssets.clear(); buildControls(); savePrefs(); }
+function selectAll() { ASSETS.forEach(a => activeAssets.add(a.sym)); delete KEEP.assets; buildControls(); savePrefs(); }
+function selectNone() { activeAssets.clear(); delete KEEP.assets; buildControls(); savePrefs(); }
 
 /* ── SCAN ── */
 const SCAN_ICON = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.8"/><line x1="7" y1="4" x2="7" y2="7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="7" y1="7" x2="9" y2="9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;
@@ -657,7 +709,7 @@ async function runScan() {
   finally {
     detectAll();
     lastScan = new Date();
-    document.getElementById('lastUpdate').textContent = 'Updated ' + lastScan.toLocaleTimeString();
+    document.getElementById('lastUpdate').textContent = 'Updated ' + fmtClock(lastScan);
     btn.disabled = false; btn.innerHTML = `${SCAN_ICON} Scan`; scanning = false;
     render();
   }
@@ -679,18 +731,22 @@ const ago = d => d.barsAgo === 0 ? 'on the last closed candle' : `${d.barsAgo} c
 function render() {
   if (!lastScan) return;
   const grid = document.getElementById('divGrid'), bar = document.getElementById('summaryBar');
-  const visible = found.filter(d => d.barsAgo < fresh && activeTypes.has(d.type) && Math.abs(d.osc[d.p1] - d.osc[d.p0]) >= minDiff)
+  const shown = found.filter(d => d.barsAgo < fresh && activeTypes.has(d.type) && Math.abs(d.osc[d.p1] - d.osc[d.p0]) >= minDiff);
+  // Chained divergences of the same type on the same pair and timeframe share a pivot
+  // (the later one's first pivot is the earlier one's second): only the most recent is shown.
+  const visible = shown.filter(d => !shown.some(o => o !== d && o.a === d.a && o.tf === d.tf && o.type === d.type && o.i > d.i &&
+      (o.p0 === d.p0 || o.p0 === d.p1 || o.p1 === d.p0 || o.p1 === d.p1)))
     .sort((x, y) => y.at - x.at || y.tf.sec - x.tf.sec);
   const counts = Object.keys(TYPES).filter(k => activeTypes.has(k)).map(k =>
     `<span class="sum-pill"><span class="div-type ${k}" style="padding:0;font-size:12px">${TYPES[k].label}</span><b>${visible.filter(d => d.type === k).length}</b></span>`).join('');
   bar.innerHTML = counts + (failedSets ? `<span class="sum-note">${failedSets} data set(s) could not be loaded.</span>` : '');
   if (failedSets && failedSets === totalSets) {
     bar.innerHTML = '';
-    grid.innerHTML = `<div class="state-box" style="grid-column:1/-1;padding:50px 24px"><div class="state-icon">⚠️</div><div class="state-title">Could not load market data</div><div class="state-sub">The data service did not respond. Please try again in a moment.</div></div>`;
+    grid.innerHTML = `<div class="state-box" style="grid-column:1/-1;padding:50px 24px"><div class="state-icon">${icon('alert')}</div><div class="state-title">Could not load market data</div><div class="state-sub">The data service did not respond. Please try again in a moment.</div></div>`;
     return;
   }
   if (!visible.length) {
-    grid.innerHTML = `<div class="state-box" style="grid-column:1/-1;padding:50px 24px"><div class="state-icon">🔍</div><div class="state-title">No fresh divergences</div><div class="state-sub">None of the selected pairs shows a divergence of at least ${minDiff} RSI points confirmed within the last ${fresh} candles. Try more timeframes, a longer freshness window, a lower minimum RSI difference or include hidden divergences.</div></div>`;
+    grid.innerHTML = `<div class="state-box" style="grid-column:1/-1;padding:50px 24px"><div class="state-icon">${icon('search')}</div><div class="state-title">No fresh divergences</div><div class="state-sub">None of the selected pairs shows a divergence of at least ${minDiff} RSI points confirmed within the last ${fresh} candles. Try more timeframes, a longer freshness window, a lower minimum RSI difference or include hidden divergences.</div></div>`;
     return;
   }
   grid.innerHTML = visible.map(card).join('');
@@ -709,7 +765,7 @@ function card(d) {
       <div class="div-stat"><span>Price ${bull ? 'lows' : 'highs'}</span><b>${fmtPrice(pr0, pr0)} → ${fmtPrice(pr1, pr0)}</b></div>
       <div class="div-stat"><span>RSI</span><b>${r0.toFixed(1)} → ${r1.toFixed(1)}</b></div>
     </div>
-    <div class="div-when">Confirmed <strong>${ago(d)}</strong> · ${new Date(d.at * 1000).toLocaleString([], { weekday:'short', day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}</div>
+    <div class="div-when">Confirmed <strong>${ago(d)}</strong> · ${fmtWhen(new Date(d.at * 1000))}</div>
   </div>`;
 }
 function miniChart(d, pr0, pr1, r0, r1) {
