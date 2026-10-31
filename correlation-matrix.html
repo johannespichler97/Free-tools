@@ -130,7 +130,7 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 .matrix-scroll { overflow-x:auto; }
 /* Row labels stay visible while the matrix scrolls sideways */
 .corr-corner, .corr-row-lbl { position:sticky; left:0; z-index:2; background:var(--sticky-bg); }
-.corr-row-lbl { box-shadow:6px 0 8px -6px rgba(0,0,0,.6); }
+.corr-corner, .corr-row-lbl { box-shadow:0 0 0 3px var(--sticky-bg), 8px 0 8px -4px rgba(0,0,0,.5); }
 @media(max-width:560px){ .matrix-body { padding:12px; } .corr-cell, .corr-col-lbl { min-width:58px; } .matrix-card-header { flex-wrap:wrap; } }
 .corr-grid { display:grid; min-width:max-content; gap:3px; }
 
@@ -626,6 +626,7 @@ async function runScan() {
 
   pw.style.display = 'none';
   renderMatrix(assets, returns, resolution, lookback);
+  updateSwipeHints();
 
   btn.disabled = false;
   btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg> Build Matrix`;
