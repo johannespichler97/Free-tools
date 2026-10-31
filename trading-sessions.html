@@ -830,7 +830,7 @@ function updateCards() {
     const offset = getTzOffsetMin(session.tz, now);
 
     document.getElementById(`localtime-${session.id}`).textContent  = localTimeStr;
-    document.getElementById(`utcoffset-${session.id}`).textContent  = `Now UTC${fmtOffset(offset)}  ${abbr}`;
+    document.getElementById(`utcoffset-${session.id}`).textContent  = `Now UTC${fmtOffset(offset)}${/^(GMT|UTC)[+-]/.test(abbr) ? '' : '  ' + abbr}`;
 
     /* --- Session window: local Mon–Fri hours, inside the forex week --- */
     const { current, next } = sessionState(session, nowMs);
