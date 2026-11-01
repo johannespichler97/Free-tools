@@ -654,7 +654,17 @@ function tfToSeconds(res) {
   return map[res] || 3600;
 }
 
+/** Candles with one retry: a request that times out or fails once usually works the second time. */
 async function fetchCandles(sym, res) {
+  try { return await fetchCandlesOnce(sym, res); }
+  catch (e) {
+    if (String(e && e.message) === 'no data') throw e;
+    await new Promise(r => setTimeout(r, 800));
+    return fetchCandlesOnce(sym, res);
+  }
+}
+
+async function fetchCandlesOnce(sym, res) {
   const now  = Math.floor(Date.now() / 1000);
   // Multiply by 450 (not 290) to account for weekend gaps:
   // forex trades ~5/7 of calendar time, so we need ~1.4× more calendar
@@ -725,6 +735,7 @@ function buildGrid(assets, tfs) {
       <span><span class="score-pill sm2">−2</span> Bear</span>
       <span><span class="score-pill sm4">−4</span> Strong Bear</span>
       <span class="bias-legend-note">Bars show the strength (0–4).</span>
+      <span class="bias-legend-note" id="naNote" hidden>N/A: no data could be loaded for that cell. Scan again to retry.</span>
     </div>`;
   wrap.style.display = 'block';
   document.getElementById('stateBox').style.display = 'none';
@@ -735,7 +746,9 @@ function fillCell(ai, ti, score) {
   const cell = document.getElementById(`cell-${ai}-${ti}`);
   if (!cell) return;
   if (score === null) {
-    cell.innerHTML = `<span class="cell-err">N/A</span>`;
+    cell.innerHTML = `<span class="cell-err" title="No data for this timeframe right now. Scan again to retry.">N/A</span>`;
+    const note = document.getElementById('naNote');
+    if (note) note.hidden = false;
     return;
   }
   const cls = biasClass(score);

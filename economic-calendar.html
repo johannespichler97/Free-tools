@@ -288,7 +288,7 @@ thead th.col-actual,thead th.col-forecast,thead th.col-previous { text-align:rig
 @media(max-width:900px)  { .col-forecast,.col-previous{display:none} .hero h1{font-size:22px} .hero-clock{min-width:180px} .clock-time{font-size:28px} }
 @media(max-width:767px)  { .tz-select,.date-input{font-size:16px} }
 @media(max-width:640px)  {
-  .date-tabs{flex-wrap:wrap} .date-range{display:none} .hero-clock{display:none} .controls-bar,.main{padding-left:16px;padding-right:16px}
+  .date-tabs{flex-wrap:wrap} .date-range{flex-wrap:wrap;width:100%} .date-range .date-input{flex:1 1 8rem;min-width:0} .hero-clock{display:none} .controls-bar,.main{padding-left:16px;padding-right:16px}
   .filter-group{flex-wrap:wrap;min-width:0} .tz-select{max-width:100%}
   .controls-bar{position:static}
   /* Phones: each event is a compact two-line card (time | event + currency/values | impact) */
@@ -1312,7 +1312,8 @@ function getDateRange(range) {
   const today = toYMD(new Date());  // today in selected timezone
   const dow = new Date(today + 'T12:00:00Z').getUTCDay(); // 0=Sun, 1=Mon … (UTC avoids local-tz drift)
   const daysSinceMon = dow === 0 ? 6 : dow - 1;
-  const thisMonday = shiftDay(today, -daysSinceMon);
+  // On a weekend the trading week that matters is the coming one.
+  const thisMonday = dow === 6 ? shiftDay(today, 2) : dow === 0 ? shiftDay(today, 1) : shiftDay(today, -daysSinceMon);
 
   const ranges = {
     yesterday: () => ({ from: shiftDay(today, -1), to: shiftDay(today, -1) }),
@@ -1338,7 +1339,7 @@ function updateClock() {
     {weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone: selectedTZ});
   const tz     = getTZLabel();
   const offset = getTZOffset();
-  document.getElementById('clockTZBadge').textContent = `${tz} (${offset})`;
+  document.getElementById('clockTZBadge').textContent = tz === offset || /^(UTC|GMT)/.test(tz) ? offset : `${tz} (${offset})`;
   document.getElementById('clockOffset').textContent  = tzCity(selectedTZ);
   const colHdr = document.getElementById('colTimeHeader');
   if (colHdr) colHdr.textContent = `Time (${tz})`;
@@ -1421,7 +1422,7 @@ setInterval(applyFilters, 30000);
     const abbr   = new Intl.DateTimeFormat('en', { timeZone: tz, timeZoneName: 'short' })
                      .formatToParts(now).find(p => p.type === 'timeZoneName')?.value || '';
     const city   = tzCity(tz);
-    opt.textContent = `${city}  (UTC${fmtOffset(min)}  ${abbr})`;
+    opt.textContent = `${city}  (UTC${fmtOffset(min)}${/^(UTC|GMT)/.test(abbr) ? '' : '  ' + abbr})`;
     select.appendChild(opt);
   });
 

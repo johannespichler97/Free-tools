@@ -119,6 +119,14 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 .summary-stat-val.red   { color:var(--negative); }
 .summary-stat-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--text-muted); }
 .summary-updated { font-size:12px; color:var(--text-muted); margin-left:auto; }
+/* Phones: the three numbers stay in one even row, the update note below. */
+@media(max-width:560px){
+  .summary-bar { display:grid; grid-template-columns:repeat(3,1fr); gap:10px 0; padding:12px 8px; }
+  .summary-stat { padding:0 6px; min-width:0; }
+  .summary-stat:nth-child(3) { border-right:none; }
+  .summary-stat-label { font-size:9px; text-align:center; }
+  .summary-updated { grid-column:1 / -1; text-align:center; margin-left:0 !important; }
+}
 
 /* ── STRENGTH METER ── */
 .strength-card { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; margin-bottom:20px; animation:fadeIn .25s ease; }

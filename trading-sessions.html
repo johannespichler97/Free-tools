@@ -669,7 +669,7 @@ function buildTzSelector() {
     const offsetMin = getTzOffsetMin(tz, now);
     const abbr   = getTzAbbr(tz, now);
     const city   = tzCity(tz);
-    opt.textContent = `${city}  (UTC${fmtOffset(offsetMin)}  ${abbr})`;
+    opt.textContent = `${city}  (UTC${fmtOffset(offsetMin)}${/^(UTC|GMT)/.test(abbr) ? '' : '  ' + abbr})`;
     select.appendChild(opt);
   });
 
@@ -735,7 +735,7 @@ function updateHeroClock() {
 
   const abbr   = getTzAbbr(tz, now);
   const offset = getTzOffsetMin(tz, now);
-  document.getElementById('clockTZBadge').textContent  = `${abbr} (UTC${fmtOffset(offset)})`;
+  document.getElementById('clockTZBadge').textContent  = /^(UTC|GMT)/.test(abbr) ? `UTC${fmtOffset(offset)}` : `${abbr} (UTC${fmtOffset(offset)})`;
   document.getElementById('clockOffset').textContent   = tz === 'Europe/Kiev' ? 'Europe/Kyiv' : tz.replace(/_/g, ' ');
 }
 
@@ -934,7 +934,7 @@ function drawTimeline() {
   const span = dayEnd - dayStart;
   const xOf = ms => PAD_L + ((ms - dayStart) / span) * plotW;
   const heading = document.getElementById('timelineHeading');
-  if (heading) heading.textContent = `24-Hour Timeline (${tzCity(displayTz)}, ${getTzAbbr(displayTz, now)})`;
+  if (heading) { const ab = getTzAbbr(displayTz, now), city = tzCity(displayTz); heading.textContent = `24-Hour Timeline (${city === ab || /^(UTC|GMT)/.test(ab) && /^UTC/.test(city) ? city : `${city}, ${ab}`})`; }
 
   // Background
   ctx.fillStyle = '#0a2e44';

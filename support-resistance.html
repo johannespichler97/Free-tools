@@ -139,7 +139,8 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 .pair-group-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:12px; }
 
 /* SR Card */
-.sr-card { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; cursor:pointer; transition:border-color .15s, transform .15s; }
+.sr-card { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; cursor:pointer; transition:border-color .15s, transform .15s; display:flex; flex-direction:column; }
+.sr-card .sr-body { flex:1; }
 .sr-card:hover { border-color:rgba(47,163,224,.5); transform:translateY(-2px); }
 .sr-card-header { padding:11px 14px 9px; display:flex; align-items:center; justify-content:space-between; gap:8px; border-bottom:1px solid var(--border-light); }
 .sr-tf-badge { font-size:10px; font-weight:700; letter-spacing:.06em; background:var(--accent-dim); color:var(--accent); border:1px solid rgba(47,163,224,.25); padding:3px 9px; border-radius:20px; }
@@ -811,7 +812,7 @@ function buildCard(item) {
       ${supports.length ? `<div class="sr-section-label s" style="margin-top:6px">Support</div>${sRows}${extraS}` : ''}
       ${gaugeHTML}
     </div>
-    <div class="sr-click-hint">Tap to open the chart</div>
+    <div class="sr-click-hint">${matchMedia('(hover: hover)').matches ? 'Click' : 'Tap'} to open the chart</div>
   </div>`;
 }
 
@@ -993,6 +994,8 @@ function drawSRChart(canvas, candles, levels, currentPrice, sym) {
     ctx.fillText(fmtPrice(p, sym), PL - 5, y + 3.5);
   }
 
+  // Price labels on the right, drawn after the candles and pushed apart so they never overlap.
+  const labels = [];
   // S/R level lines — drawn before candles so they sit behind
   for (const lvl of levels) {
     const isR = currentPrice ? lvl >= currentPrice : false;
@@ -1009,12 +1012,7 @@ function drawSRChart(canvas, candles, levels, currentPrice, sym) {
     ctx.beginPath(); ctx.moveTo(PL, y); ctx.lineTo(W - PR, y); ctx.stroke();
     ctx.setLineDash([]);
 
-    // Label on right edge (inside chart)
-    ctx.fillStyle    = isR ? '#f85149' : '#3fb950';
-    ctx.font         = '600 9px JetBrains Mono, monospace';
-    ctx.textAlign    = 'right';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(fmtPrice(lvl, sym), W - PR - 4, y);
+    labels.push({ y, text: fmtPrice(lvl, sym), color: isR ? '#f85149' : '#3fb950', weight: 600 });
   }
 
   // Current price dashed line
@@ -1025,11 +1023,7 @@ function drawSRChart(canvas, candles, levels, currentPrice, sym) {
     ctx.setLineDash([4, 3]);
     ctx.beginPath(); ctx.moveTo(PL, y); ctx.lineTo(W - PR, y); ctx.stroke();
     ctx.setLineDash([]);
-    ctx.fillStyle    = '#2FA3E0';
-    ctx.font         = '700 9px JetBrains Mono, monospace';
-    ctx.textAlign    = 'right';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(fmtPrice(currentPrice, sym), W - PR - 4, y - 8);
+    labels.push({ y, text: fmtPrice(currentPrice, sym), color: '#2FA3E0', weight: 700 });
   }
 
   // Candlesticks — solid fill, identical style to pattern recognition
@@ -1050,6 +1044,21 @@ function drawSRChart(canvas, candles, levels, currentPrice, sym) {
     const bH   = Math.max(1, yBot - yTop);
     ctx.fillStyle = col;
     ctx.fillRect(x - bW / 2, yTop, bW, bH);
+  }
+
+  // Right-edge price labels on small dark tags, spaced at least 13 px apart.
+  labels.sort((a, b) => a.y - b.y);
+  for (let i = 1; i < labels.length; i++) if (labels[i].y - labels[i - 1].y < 13) labels[i].y = labels[i - 1].y + 13;
+  const over = labels.length ? labels[labels.length - 1].y - (PT + cH) : 0;
+  if (over > 0) for (const lb of labels) lb.y -= over;
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for (const lb of labels) {
+    ctx.font = `${lb.weight} 9px JetBrains Mono, monospace`;
+    const w = ctx.measureText(lb.text).width + 8;
+    ctx.fillStyle = 'rgba(6,32,46,0.92)';
+    ctx.fillRect(W - PR - w - 1, lb.y - 7, w, 14);
+    ctx.fillStyle = lb.color;
+    ctx.fillText(lb.text, W - PR - 5, lb.y);
   }
 
   // Time axis labels
