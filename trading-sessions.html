@@ -413,7 +413,7 @@ canvas#timelineCanvas { display:block; width:100%; }
 
     <!-- 24-hour timeline -->
     <div class="timeline-section">
-      <div class="section-heading">24-Hour Timeline (UTC)</div>
+      <div class="section-heading" id="timelineHeading">24-Hour Timeline</div>
       <div class="timeline-wrap">
         <div class="timeline-canvas-wrap">
           <canvas id="timelineCanvas" height="140"></canvas>
@@ -705,6 +705,7 @@ function buildTzSelector() {
     displayTz = select.value;
     PREFS.set({ tz: displayTz });
     renderCards();
+    drawTimeline();
   });
 }
 
@@ -924,9 +925,16 @@ function drawTimeline() {
   const LABEL_PAD = 4;
 
   const plotW = W - PAD_L - PAD_R;
-  const dayStart = (() => { const d = new Date(nowMs); d.setUTCHours(0, 0, 0, 0); return d.getTime(); })();
-  const dayEnd   = dayStart + DAY_MS;
-  const xOf = ms => PAD_L + ((ms - dayStart) / DAY_MS) * plotW;
+  // Today from midnight to midnight in the selected display time zone (23 or
+  // 25 hours on daylight-saving days), so bands, hours and NOW match the clock.
+  const today = zonedParts(displayTz, now);
+  const next  = addDays(today.y, today.m, today.d, 1);
+  const dayStart = zonedToUTC(today.y, today.m, today.d, 0, 0, displayTz);
+  const dayEnd   = zonedToUTC(next.y, next.m, next.d, 0, 0, displayTz);
+  const span = dayEnd - dayStart;
+  const xOf = ms => PAD_L + ((ms - dayStart) / span) * plotW;
+  const heading = document.getElementById('timelineHeading');
+  if (heading) heading.textContent = `24-Hour Timeline (${tzCity(displayTz)}, ${getTzAbbr(displayTz, now)})`;
 
   // Background
   ctx.fillStyle = '#0a2e44';
@@ -956,7 +964,11 @@ function drawTimeline() {
   ctx.fillStyle   = '#4d7a96';
 
   for (let h = 0; h <= 24; h++) {
-    const x = PAD_L + (h / 24) * plotW;
+    // Local wall-clock hours of the display zone (on a DST day one hour is
+    // missing or repeated; the 24 lines then follow real time).
+    const at = h === 24 ? dayEnd : zonedToUTC(today.y, today.m, today.d, h, 0, displayTz);
+    if (h > 0 && h < 24 && zonedParts(displayTz, new Date(at)).h !== h) continue; // hour skipped by DST
+    const x = xOf(at);
     ctx.beginPath();
     ctx.moveTo(x, BAR_Y);
     ctx.lineTo(x, H - AXIS_H);
@@ -998,7 +1010,7 @@ function drawTimeline() {
   });
 
   // Current time marker
-  const fracOfDay = (nowMs - dayStart) / DAY_MS;
+  const fracOfDay = (nowMs - dayStart) / span;
   if (fracOfDay >= 0 && fracOfDay <= 1) {
     const xNow = PAD_L + fracOfDay * plotW;
 
