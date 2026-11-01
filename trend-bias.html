@@ -165,8 +165,9 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 .pair-cell.metal { color:var(--accent-2); }
 .bias-table td:last-child { border-radius:0 12px 12px 0; }
 /* First column stays visible while the timeframes scroll sideways on phones */
-.bias-table th.col-pair, .bias-table td.pair-cell { position:sticky; left:0; z-index:2; background:var(--sticky-bg); }
-.bias-table th.col-pair, .bias-table td.pair-cell { box-shadow:0 0 0 4px var(--sticky-bg), 8px 0 8px -4px rgba(0,0,0,.5); }
+/* The pair column only sticks while the table scrolls sideways: then it is one
+   continuous solid column (covering the row gaps) with a soft edge on the right. */
+.bias-table-wrap.scrolls th.col-pair, .bias-table-wrap.scrolls td.pair-cell { position:sticky; left:0; z-index:2; background:var(--sticky-bg); border-radius:0; box-shadow:0 -4px 0 var(--sticky-bg), 0 4px 0 var(--sticky-bg), 10px 0 12px -10px rgba(0,0,0,.7); }
 .bias-legend { display:flex; flex-wrap:wrap; gap:8px 14px; margin-top:12px; font-size:12px; color:var(--text-secondary); align-items:center; }
 .bias-legend-note { color:var(--text-muted); }
 @media(max-width:560px){ .bias-table th.col-pair, .bias-table td.pair-cell { min-width:76px; padding-left:8px !important; } .bias-cell { min-width:64px; gap:5px; } }
@@ -808,6 +809,14 @@ async function runScan() {
   btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/></svg> Scan Trend Bias`;
 }
 
+</script>
+<script>
+/* Sticky label column only while the table actually scrolls sideways. */
+(function(){
+  function mark(){ document.querySelectorAll('.bias-table-wrap,.matrix-scroll').forEach(function(w){ w.classList.toggle('scrolls', w.scrollWidth > w.clientWidth + 1); }); }
+  new MutationObserver(function(){ requestAnimationFrame(mark); }).observe(document.documentElement, { childList:true, subtree:true });
+  addEventListener('resize', mark); addEventListener('load', mark);
+})();
 </script>
 </body>
 </html>

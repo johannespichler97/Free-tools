@@ -205,7 +205,10 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 .state-sub { font-size:13px; max-width:360px; line-height:1.6; }
 
 /* ── INLINE CHART PANEL ── */
-.chart-panel { grid-column:1 / -1; background:var(--bg-secondary); border:1px solid rgba(47,163,224,.45); border-radius:var(--radius-lg); overflow:hidden; animation:fadeIn .2s ease; }
+.chart-overlay { position:absolute; left:0; top:0; width:100%; z-index:1000; background:rgba(2,12,18,.62); animation:fadeIn .15s ease; }
+.chart-overlay.centered { display:flex; align-items:center; justify-content:center; }
+.chart-panel { position:absolute; left:50%; transform:translateX(-50%); width:min(920px, calc(100% - 24px)); background:#0a2433; border:1px solid rgba(47,163,224,.45); border-radius:var(--radius-lg); overflow:hidden; box-shadow:0 24px 60px rgba(0,0,0,.55); }
+.chart-overlay.centered .chart-panel { position:relative; left:auto; transform:none; }
 .sr-card.open { border-color:var(--accent); }
 .sr-more { font-size:10px; color:var(--text-muted); padding:2px 6px; }
 .sr-level-row.nearest { background:rgba(255,255,255,.04); }
@@ -710,7 +713,7 @@ function renderResults() {
   document.getElementById('mainContent').innerHTML = html.join('') ||
     '<div class="state-box"><div class="state-icon">' + icon('search') + '</div><div class="state-title">No levels found</div><div class="state-sub">Try different assets or timeframes.</div></div>';
 
-  // Wire click handlers: the chart opens inline below the card's row
+  // Wire click handlers: the chart opens in a popup
   allResults.forEach(item => {
     const el = document.getElementById(`card-${item.sym.replace(/[^a-z0-9]/gi,'_')}-${item.tf}`);
     if (!el) return;
@@ -808,7 +811,7 @@ function buildCard(item) {
       ${supports.length ? `<div class="sr-section-label s" style="margin-top:6px">Support</div>${sRows}${extraS}` : ''}
       ${gaugeHTML}
     </div>
-    <div class="sr-click-hint">Tap to show the chart</div>
+    <div class="sr-click-hint">Tap to open the chart</div>
   </div>`;
 }
 
@@ -826,48 +829,64 @@ function copyLevel(e, price) {
   });
 }
 
-/* ── Inline chart (below the clicked card's row) ──
-   A modal would be positioned against the iframe in the platform, which is as tall as the
-   page, so it could open far outside the visible area. Inline expansion always appears
-   where the user tapped. */
+/* ── Chart popup ──
+   Standalone the popup is fixed to the window. Embedded in the platform the
+   frame is as tall as the whole page, so the parent page tells us which part
+   of the frame is visible ("tool-viewport") and the popup is placed there. */
 let openCard = null;
+function viewport() {
+  const v = window.__parentViewport;
+  if (window.parent !== window && v) return v;
+  return { top: window.scrollY, height: window.innerHeight };
+}
+function placeChart() {
+  const ov = document.getElementById('chartOverlay');
+  if (!ov) return;
+  const box = ov.querySelector('.chart-panel');
+  if (window.parent === window) { ov.style.position = 'fixed'; ov.style.height = '100%'; box.style.top = ''; ov.classList.add('centered'); return; }
+  const v = viewport();
+  ov.style.height = document.documentElement.scrollHeight + 'px';
+  box.style.top = Math.max(v.top + 12, v.top + (v.height - box.offsetHeight) / 2) + 'px';
+}
 function closeChart() {
-  document.getElementById('chartPanel')?.remove();
+  document.getElementById('chartOverlay')?.remove();
   lastChart = null;
-  if (openCard) { openCard.classList.remove('open'); openCard.setAttribute('aria-expanded', 'false'); const h = openCard.querySelector('.sr-click-hint'); if (h) h.textContent = 'Tap to show the chart'; }
+  if (openCard) { openCard.classList.remove('open'); openCard.setAttribute('aria-expanded', 'false'); openCard.focus?.(); }
   openCard = null;
 }
 function toggleChart(item, card) {
-  if (openCard === card) { closeChart(); return; }
   closeChart();
   openCard = card;
   card.classList.add('open');
   card.setAttribute('aria-expanded', 'true');
-  const hint = card.querySelector('.sr-click-hint'); if (hint) hint.textContent = 'Tap to hide the chart';
-  // insert after the last card of the clicked card's row
-  let anchor = card;
-  for (let n = card.nextElementSibling; n && n.offsetTop === card.offsetTop; n = n.nextElementSibling) anchor = n;
-  const panel = document.createElement('div');
-  panel.id = 'chartPanel';
-  panel.className = 'chart-panel';
-  panel.innerHTML = `
-    <div class="chart-modal-header">
-      <div class="chart-modal-meta">
-        <span class="chart-modal-title">${item.symLabel}</span>
-        <span class="chart-modal-tf">${item.tfLabel}</span>
+  const ov = document.createElement('div');
+  ov.id = 'chartOverlay';
+  ov.className = 'chart-overlay';
+  ov.innerHTML = `
+    <div class="chart-panel" role="dialog" aria-modal="true" aria-label="${item.symLabel} ${item.tfLabel} chart">
+      <div class="chart-modal-header">
+        <div class="chart-modal-meta">
+          <span class="chart-modal-title">${item.symLabel}</span>
+          <span class="chart-modal-tf">${item.tfLabel}</span>
+        </div>
+        <button class="chart-modal-close" aria-label="Close chart">&#x2715;</button>
       </div>
-      <button class="chart-modal-close" aria-label="Close chart">&#x2715;</button>
-    </div>
-    <div class="chart-canvas-wrap">
-      <canvas id="chartCanvas" height="340"></canvas>
-      <div class="chart-loading" id="chartLoading">Loading chart…</div>
-    </div>
-    <div class="chart-modal-footer" id="modalFooter"></div>`;
-  anchor.after(panel);
-  panel.querySelector('.chart-modal-close').addEventListener('click', closeChart);
-  panel.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      <div class="chart-canvas-wrap">
+        <canvas id="chartCanvas" height="340"></canvas>
+        <div class="chart-loading" id="chartLoading">Loading chart…</div>
+      </div>
+      <div class="chart-modal-footer" id="modalFooter"></div>
+    </div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener('click', (e) => { if (e.target === ov) closeChart(); });
+  const close = ov.querySelector('.chart-modal-close');
+  close.addEventListener('click', closeChart);
+  placeChart();
+  close.focus({ preventScroll: true });
   loadChart(item);
 }
+window.addEventListener('tool-viewport', placeChart);
+window.addEventListener('resize', placeChart);
 
 async function loadChart(item) {
   const canvas  = document.getElementById('chartCanvas');

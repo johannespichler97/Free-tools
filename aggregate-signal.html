@@ -196,9 +196,9 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 /* count bar */
 .count-bar-wrap { display:flex; flex-direction:column; gap:6px; }
 .count-bar { height:8px; border-radius:4px; display:flex; overflow:hidden; gap:2px; background:var(--bg-tertiary); }
-.count-bar-buy     { background:#3fb950; border-radius:4px 0 0 4px; transition:width .4s ease; }
+.count-bar-buy     { background:#3fb950; border-radius:0 4px 4px 0; transition:width .4s ease; }
 .count-bar-neutral { background:var(--text-muted); transition:width .4s ease; }
-.count-bar-sell    { background:#f85149; border-radius:0 4px 4px 0; transition:width .4s ease; }
+.count-bar-sell    { background:#f85149; border-radius:4px 0 0 4px; transition:width .4s ease; }
 .count-labels { display:flex; justify-content:space-between; }
 .count-label { font-size:11px; font-weight:600; display:flex; align-items:center; gap:4px; }
 .count-label .dot { width:7px; height:7px; border-radius:50%; display:inline-block; }
@@ -722,14 +722,14 @@ function renderCard(asset, data, tf) {
         </div>
         <div class="count-bar-wrap">
           <div class="count-bar">
-            <div class="count-bar-buy"     style="width:${buyW}%"></div>
-            <div class="count-bar-neutral" style="width:${neuW}%"></div>
             <div class="count-bar-sell"    style="width:${sellW}%"></div>
+            <div class="count-bar-neutral" style="width:${neuW}%"></div>
+            <div class="count-bar-buy"     style="width:${buyW}%"></div>
           </div>
           <div class="count-labels">
-            <span class="count-label"><span class="dot dot-buy"></span><span>Buy</span> <strong>${buy}</strong></span>
-            <span class="count-label"><span class="dot dot-neutral"></span><span>Neutral</span> <strong>${neu}</strong></span>
             <span class="count-label"><span class="dot dot-sell"></span><span>Sell</span> <strong>${sell}</strong></span>
+            <span class="count-label"><span class="dot dot-neutral"></span><span>Neutral</span> <strong>${neu}</strong></span>
+            <span class="count-label"><span class="dot dot-buy"></span><span>Buy</span> <strong>${buy}</strong></span>
           </div>
         </div>
         ${adx !== null ? `
@@ -770,7 +770,7 @@ function renderMultiCard(asset, tfs, results) {
     if (r.error) return `<div class="mtf-row">${label}<span class="mtf-err">No data</span></div>`;
     const t = r.buy + r.neu + r.sell || 1;
     return `<div class="mtf-row">${label}
-      <span class="mtf-bar" title="Buy ${r.buy} · Neutral ${r.neu} · Sell ${r.sell}"><i style="width:${r.buy/t*100}%;background:#3fb950"></i><i style="width:${r.neu/t*100}%;background:var(--text-muted)"></i><i style="width:${r.sell/t*100}%;background:#f85149"></i></span>
+      <span class="mtf-bar" title="Sell ${r.sell} · Neutral ${r.neu} · Buy ${r.buy}"><i style="width:${r.sell/t*100}%;background:#f85149"></i><i style="width:${r.neu/t*100}%;background:var(--text-muted)"></i><i style="width:${r.buy/t*100}%;background:#3fb950"></i></span>
       <span class="mtf-sig ${r.cls}">${r.label}</span>
       <span class="mtf-adx${r.trending ? ' trend' : ''}" title="ADX${r.trending ? ' · trending' : ''}">${r.adx !== null ? r.adx.toFixed(0) : '–'}</span></div>`;
   }).join('');

@@ -129,8 +129,9 @@ body { font-family: var(--font); background: var(--bg-primary); color: var(--tex
 .matrix-body { padding:16px 20px; }
 .matrix-scroll { overflow-x:auto; }
 /* Row labels stay visible while the matrix scrolls sideways */
-.corr-corner, .corr-row-lbl { position:sticky; left:0; z-index:2; background:var(--sticky-bg); }
-.corr-corner, .corr-row-lbl { box-shadow:0 0 0 3px var(--sticky-bg), 8px 0 8px -4px rgba(0,0,0,.5); }
+/* The label column only sticks while the matrix scrolls sideways: then it is one
+   continuous solid column (covering the cell gaps) with a soft edge on the right. */
+.matrix-scroll.scrolls .corr-corner, .matrix-scroll.scrolls .corr-row-lbl { position:sticky; left:0; z-index:2; background:var(--sticky-bg); border-radius:0; box-shadow:0 -3px 0 var(--sticky-bg), 0 3px 0 var(--sticky-bg), 10px 0 12px -10px rgba(0,0,0,.7); }
 @media(max-width:560px){ .matrix-body { padding:12px; } .corr-cell, .corr-col-lbl { min-width:58px; } .matrix-card-header { flex-wrap:wrap; } }
 .corr-grid { display:grid; min-width:max-content; gap:3px; }
 
@@ -769,5 +770,13 @@ function renderMatrix(assets, returns, resolution, lookback) {
     if (dd && !dd.contains(e.target)) dd.classList.remove('open');
   });
   </script>
+<script>
+/* Sticky label column only while the table actually scrolls sideways. */
+(function(){
+  function mark(){ document.querySelectorAll('.bias-table-wrap,.matrix-scroll').forEach(function(w){ w.classList.toggle('scrolls', w.scrollWidth > w.clientWidth + 1); }); }
+  new MutationObserver(function(){ requestAnimationFrame(mark); }).observe(document.documentElement, { childList:true, subtree:true });
+  addEventListener('resize', mark); addEventListener('load', mark);
+})();
+</script>
 </body>
 </html>
