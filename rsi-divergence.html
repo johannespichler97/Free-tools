@@ -518,8 +518,8 @@ const MIN_DIFF = [2, 4, 6, 8, 10];
 
 let activeAssets = new Set(ASSETS.map(a => a.sym));
 let activeTfs = new Set(TFS.map(t => t.id));
-let activeTypes = new Set(['rbull', 'rbear']);
-let fresh = 10, minDiff = 2, scanning = false, found = [], sets = [], failedSets = 0, totalSets = 0, lastScan = null;
+let activeTypes = new Set(['rbull', 'rbear', 'hbull', 'hbear']);
+let fresh = 20, minDiff = 2, scanning = false, found = [], sets = [], failedSets = 0, totalSets = 0, lastScan = null;
 
 /* ── SAVED SETTINGS + DEEP LINK ── */
 function savePrefs() {
