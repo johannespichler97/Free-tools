@@ -308,7 +308,7 @@ code { white-space:normal; overflow-wrap:anywhere; }
   <section class="hero">
     <div class="hero-inner">
       <h1>RSI Divergence Scanner</h1>
-      <p>Finds fresh bullish and bearish RSI divergences across all pairs and timeframes — the same detection logic as TradingView's built-in RSI divergence indicator.</p>
+      <p>Finds fresh bullish and bearish RSI divergences across all pairs and timeframes, using the standard pivot-based divergence method.</p>
     </div>
   </section>
 
@@ -348,7 +348,7 @@ code { white-space:normal; overflow-wrap:anywhere; }
       <div class="ctrl-row">
         <span class="ctrl-label">Confirmation</span>
         <div class="tf-chips" id="confChips"></div>
-        <span class="tf-hint">Closed candles needed after the second pivot. Fewer = earlier but more false signals; 5 = TradingView default.</span>
+        <span class="tf-hint">Closed candles needed after the second pivot. Fewer = earlier but more false signals; 5 is the common standard.</span>
       </div>
       <hr class="ctrl-divider" />
       <div class="scan-row">
@@ -382,12 +382,12 @@ code { white-space:normal; overflow-wrap:anywhere; }
       <div class="method-grid">
         <div class="method-block">
           <h3>RSI and pivots</h3>
-          <p class="method-text">RSI uses Wilder's smoothing over 14 candle closes — the standard used by TradingView and most platforms. A <strong>pivot</strong> is an RSI low (or high) that is lower (or higher) than the 5 candles before it and the <span class="cn">5</span> candles after it. Price is compared at the same candles: the candle low for bullish setups, the candle high for bearish ones.</p>
+          <p class="method-text">RSI uses Wilder's smoothing over 14 candle closes, the standard used by most charting platforms. A <strong>pivot</strong> is an RSI low (or high) that is lower (or higher) than the 5 candles before it and the <span class="cn">5</span> candles after it. Price is compared at the same candles: the candle low for bullish setups, the candle high for bearish ones.</p>
           <div class="method-formula">RSI      = 100 − 100 / (1 + avg gain / avg loss)   (Wilder, 14)
 Pivot    = RSI extreme, 5 candles left / <span class="cn">5</span> candles right
 Distance = 5 to 60 candles between the two pivots
 Min diff = |RSI P2 − RSI P1| ≥ 2–10 points</div>
-          <p class="method-note">A pivot needs <span class="cn">5</span> more candles to be confirmed, so every divergence appears <span class="cn">5</span> candles after the actual turning point. The number of confirmation candles is selectable (2–6); the default of 5 matches TradingView. Only completed candles are used, so signals never repaint.</p>
+          <p class="method-note">A pivot needs <span class="cn">5</span> more candles to be confirmed, so every divergence appears <span class="cn">5</span> candles after the actual turning point. The number of confirmation candles is selectable (2–6); the default of 5 is the common standard. Only completed candles are used, so signals never repaint.</p>
         </div>
         <div class="method-block">
           <h3>Divergence types</h3>
@@ -400,7 +400,7 @@ Min diff = |RSI P2 − RSI P1| ≥ 2–10 points</div>
               <tr><td style="color:#f08080">Hidden bearish</td><td>Lower high</td><td>Higher high</td><td>Downtrend continuation</td></tr>
             </tbody>
           </table>
-          <p class="method-note">Divergences marked <strong>oversold</strong> (RSI below 30) or <strong>overbought</strong> (RSI above 70) at the pivot are considered stronger. A divergence is a warning sign, not an entry signal on its own — combine it with structure, trend and risk management. H4 candles are built from H1 data starting at 17:00 New York time, matching the FX session used by TradingView.</p>
+          <p class="method-note">Divergences marked <strong>oversold</strong> (RSI below 30) or <strong>overbought</strong> (RSI above 70) at the pivot are considered stronger. A divergence is a warning sign, not an entry signal on its own — combine it with structure, trend and risk management. H4 candles are built from H1 data starting at 17:00 New York time, the start of the FX trading day.</p>
         </div>
 
         <div class="method-block" style="grid-column:1 / -1;">
@@ -415,7 +415,7 @@ Min diff = |RSI P2 − RSI P1| ≥ 2–10 points</div>
           </ol>
           <p class="method-text">In the mini chart, the two dots mark P1 and P2, and the <span style="color:var(--warn)">yellow dashed line</span> marks the candle that confirmed the divergence. "Confirmed 6 candles ago" means that confirming candle closed 6 candles ago. Bearish divergences work the same way with RSI highs and candle highs.</p>
           <div class="method-formula">Why the delay? A low can only be proven once the following candles have closed.
-This is how every standard divergence indicator works, including TradingView's.
+This is how every standard divergence indicator works.
 Because only closed candles are used, a listed divergence never disappears later.</div>
           <p class="method-text" style="margin-top:14px;padding:12px 14px;border-radius:var(--radius-sm);background:var(--warn-bg);border:1px solid rgba(227,179,65,.3);"><strong style="color:var(--warn)">What confirmation does not mean:</strong> it does not say that the price has already turned. A divergence shows that momentum is fading — it is an early warning, not an entry signal. Because of the <span class="cn">5</span>-candle delay, price may already have moved by the time the divergence is confirmed. Look for your own price confirmation (e.g. a candle closing beyond the P2 candle, a break of structure or a trendline) and always use a stop-loss.</p>
         </div>
@@ -497,7 +497,7 @@ const ASSETS = [
   { label:'XAG/USD', sym:'OANDA:XAG_USD', type:'metal' },
 ];
 
-/* ── SETTINGS (TradingView "RSI Divergence" defaults) ── */
+/* ── SETTINGS (standard RSI divergence defaults) ── */
 const RSI_LEN = 14, LB_L = 5, RANGE_MIN = 5, RANGE_MAX = 60;
 const CONFIRM = [2, 3, 4, 5, 6];
 let confirmN = 5; /* pivot lookback right = candles needed to confirm a pivot */
@@ -628,7 +628,7 @@ function dropOpenBar(c, tf) {
   const cut = a => a && a.slice(0, n - 1);
   return { t: cut(c.t), o: cut(c.o), h: cut(c.h), l: cut(c.l), c: cut(c.c), end: cut(c.end) };
 }
-/* 4h candles aligned to the FX day (17:00 New York), like OANDA on TradingView */
+/* 4h candles aligned to the FX day (17:00 New York) */
 const nyFmt = new Intl.DateTimeFormat('en-US', { timeZone:'America/New_York', hourCycle:'h23', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
 const nyOffCache = new Map();
 function nyOffsetSec(t) {
