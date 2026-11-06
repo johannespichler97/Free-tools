@@ -562,7 +562,16 @@ function fetchDaily(s) {
   });
 }
 /* month-end closes (key = year*12 + month), derived from daily candles */
+/* On the platform the server loads the history of all pairs for everyone (refreshed hourly);
+   the page loads that once instead of about 150 candle requests. */
+const SCAN_API = BASE.startsWith('/') ? '/api/tool-scan/seasonality' : null;
+const serverMonthEnds = () => once('ALL', async () => {
+  const r = await fetch(SCAN_API), d = await r.json();
+  if (!r.ok) throw new Error(d.error || 'Failed');
+  return d.monthEnds;
+});
 function getMonthEnds(s) {
+  if (SCAN_API) return serverMonthEnds().then(all => { if (!all[s]) throw new Error('No data'); return all[s]; });
   return once('ME:' + s, async () => {
     const k = 'seas:ME:' + s, hit = cacheGet(k); if (hit) return hit;
     const d = await fetchDaily(s), last = new Map();
