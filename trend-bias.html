@@ -478,7 +478,7 @@ Score = S₁ + S₂ + S₃ + S₄  ∈ {−4, −2, 0, +2, +4}</div>
   </footer>
 
 <script>
-const API_KEY = 'd95lt2pr01qqtvdma7c0d95lt2pr01qqtvdma7cg';
+const API_KEY = '';
 // Saved settings: the platform provides window.MAPrefs (stored per user); standalone falls back to localStorage.
 const PREFS = (() => { const k = 'ma-prefs:trend-bias'; let v = {}; try { v = (window.MAPrefs ? window.MAPrefs.get() : JSON.parse(localStorage.getItem(k) || '{}')) || {}; } catch (e) {} return { get: () => v, set: (o) => { v = o; try { window.MAPrefs ? window.MAPrefs.set(o) : localStorage.setItem(k, JSON.stringify(o)); } catch (e) {} } }; })();
 

@@ -435,7 +435,7 @@ Bearish years  = years in which the month closed lower</div>
   </footer>
 
 <script>
-const API_KEY = 'd95lt2pr01qqtvdma7c0d95lt2pr01qqtvdma7cg';
+const API_KEY = '';
 const BASE    = 'https://finnhub.io/api/v1';
 // Saved settings: the platform provides window.MAPrefs (stored per user); standalone falls back to localStorage.
 const PREFS = (() => { const k = 'ma-prefs:seasonality'; let v = {}; try { v = (window.MAPrefs ? window.MAPrefs.get() : JSON.parse(localStorage.getItem(k) || '{}')) || {}; } catch (e) {} return { get: () => v, set: (o) => { v = o; try { window.MAPrefs ? window.MAPrefs.set(o) : localStorage.setItem(k, JSON.stringify(o)); } catch (e) {} } }; })();

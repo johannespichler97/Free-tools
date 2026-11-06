@@ -267,7 +267,7 @@ body { font-family:var(--font); background:var(--bg-primary); color:var(--text-p
 
 <script>
 /* ── SOURCES ── */
-const FINNHUB_KEY = 'd95lt2pr01qqtvdma7c0d95lt2pr01qqtvdma7cg';
+const FINNHUB_KEY = '';
 const RSS2JSON = 'https://api.rss2json.com/v1/api.json?rss_url=';
 // Saved settings: the platform provides window.MAPrefs (stored per user); standalone falls back to localStorage.
 const PREFS = (() => { const k = 'ma-prefs:market-news'; let v = {}; try { v = (window.MAPrefs ? window.MAPrefs.get() : JSON.parse(localStorage.getItem(k) || '{}')) || {}; } catch (e) {} return { get: () => v, set: (o) => { v = o; try { window.MAPrefs ? window.MAPrefs.set(o) : localStorage.setItem(k, JSON.stringify(o)); } catch (e) {} } }; })();

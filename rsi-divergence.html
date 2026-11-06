@@ -431,8 +431,10 @@ Because only closed candles are used, a listed divergence never disappears later
   </footer>
 
 <script>
-const API_KEY = 'd95lt2pr01qqtvdma7c0d95lt2pr01qqtvdma7cg';
+const API_KEY = '';
 const BASE    = 'https://finnhub.io/api/v1';
+/* On the platform the server scans all pairs once a minute for everyone; the page only loads the result. */
+const SCAN_API = BASE.startsWith('/') ? '/api/rsi-divergence' : null;
 // Saved settings: the platform provides window.MAPrefs (stored per user); standalone falls back to localStorage.
 const PREFS = (() => { const k = 'ma-prefs:rsi-divergence'; let v = {}; try { v = (window.MAPrefs ? window.MAPrefs.get() : JSON.parse(localStorage.getItem(k) || '{}')) || {}; } catch (e) {} return { get: () => v, set: (o) => { v = o; try { window.MAPrefs ? window.MAPrefs.set(o) : localStorage.setItem(k, JSON.stringify(o)); } catch (e) {} } }; })();
 
@@ -663,10 +665,10 @@ function chipRow(id, items, isOn, onClick, extra = () => '') {
   el.querySelectorAll('[data-v]').forEach(c => c.addEventListener('click', () => { onClick(c.dataset.v); savePrefs(); }));
 }
 function buildControls() {
-  chipRow('assetChips', ASSETS.map(a => ({ v:a.sym, label:a.label, cls:'asset-chip' + (a.type === 'metal' ? ' metal' : '') })), v => activeAssets.has(v), v => { activeAssets.has(v) ? activeAssets.delete(v) : activeAssets.add(v); delete KEEP.assets; buildControls(); });
-  chipRow('tfChips', TFS.map(t => ({ v:t.id, label:t.label })), v => activeTfs.has(v), v => { if (activeTfs.has(v)) { if (activeTfs.size > 1) activeTfs.delete(v); } else activeTfs.add(v); delete KEEP.tfs; buildControls(); });
+  chipRow('assetChips', ASSETS.map(a => ({ v:a.sym, label:a.label, cls:'asset-chip' + (a.type === 'metal' ? ' metal' : '') })), v => activeAssets.has(v), v => { activeAssets.has(v) ? activeAssets.delete(v) : activeAssets.add(v); delete KEEP.assets; buildControls(); refilter(); });
+  chipRow('tfChips', TFS.map(t => ({ v:t.id, label:t.label })), v => activeTfs.has(v), v => { if (activeTfs.has(v)) { if (activeTfs.size > 1) activeTfs.delete(v); } else activeTfs.add(v); delete KEEP.tfs; buildControls(); refilter(); });
   chipRow('typeChips', Object.entries(TYPES).map(([k, t]) => ({ v:k, label:t.label, cls:'tf-chip type-chip ' + k })), v => activeTypes.has(v), v => { if (activeTypes.has(v)) { if (activeTypes.size > 1) activeTypes.delete(v); } else activeTypes.add(v); buildControls(); render(); });
-  chipRow('confChips', CONFIRM.map(n => ({ v:n, label:`${n} candles` })), v => +v === confirmN, v => { confirmN = +v; buildControls(); if (lastScan) { detectAll(); render(); } });
+  chipRow('confChips', CONFIRM.map(n => ({ v:n, label:`${n} candles` })), v => +v === confirmN, v => { confirmN = +v; buildControls(); if (SCAN_API) runScan(); else if (lastScan) { detectAll(); render(); } });
   document.querySelectorAll('.cn').forEach(e => e.textContent = confirmN);
   document.querySelectorAll('.cn-th').forEach(e => e.textContent = ordinal(confirmN));
   chipRow('minDiffChips', MIN_DIFF.map(n => ({ v:n, label:`${n} pts` })), v => +v === minDiff, v => { minDiff = +v; buildControls(); render(); });
@@ -676,16 +678,43 @@ function buildControls() {
   document.getElementById('symPlural').textContent = activeAssets.size === 1 ? '' : 's';
   document.getElementById('tfPlural').textContent = activeTfs.size === 1 ? '' : 's';
 }
-function selectAll() { ASSETS.forEach(a => activeAssets.add(a.sym)); delete KEEP.assets; buildControls(); savePrefs(); }
-function selectNone() { activeAssets.clear(); delete KEEP.assets; buildControls(); savePrefs(); }
+function selectAll() { ASSETS.forEach(a => activeAssets.add(a.sym)); delete KEEP.assets; buildControls(); savePrefs(); refilter(); }
+function selectNone() { activeAssets.clear(); delete KEEP.assets; buildControls(); savePrefs(); refilter(); }
+/* with server results, a changed pair or timeframe selection only filters what is loaded */
+function refilter() { if (SCAN_API && lastScan) { detectAll(); render(); } }
 
 /* ── SCAN ── */
 const SCAN_ICON = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.8"/><line x1="7" y1="4" x2="7" y2="7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="7" y1="7" x2="9" y2="9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;
+let serverSets = [], serverFailed = [], rescan = false;
+async function loadServerScan(btn) {
+  btn.innerHTML = `<div class="spinner" style="width:14px;height:14px;border-width:2px;"></div> Loading`;
+  if (!lastScan) {
+    document.getElementById('stateBox').style.display = 'none';
+    document.getElementById('results').style.display = 'block';
+    document.getElementById('divGrid').innerHTML = `<div class="card-loading" style="grid-column:1/-1"><div class="spinner"></div></div>`;
+  }
+  try {
+    const res = await fetch(`${SCAN_API}?confirmN=${confirmN}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed');
+    serverSets = data.sets; serverFailed = data.failed; lastScan = new Date(data.at);
+  } catch { serverSets = []; serverFailed = null; lastScan = new Date(); }
+}
 async function runScan() {
-  if (scanning) return;
+  if (scanning) { rescan = true; return; }
   if (!activeAssets.size) { alert('Select at least one symbol.'); return; }
   scanning = true;
   const btn = document.getElementById('scanBtn'); btn.disabled = true;
+  if (SCAN_API) {
+    try { do { rescan = false; await loadServerScan(btn); } while (rescan); }
+    finally {
+      detectAll();
+      document.getElementById('lastUpdate').textContent = 'Updated ' + fmtClock(lastScan);
+      btn.disabled = false; btn.innerHTML = `${SCAN_ICON} Scan`; scanning = false;
+      render();
+    }
+    return;
+  }
   const tfs = TFS.filter(t => activeTfs.has(t.id)), syms = ASSETS.filter(a => activeAssets.has(a.sym));
   const jobs = syms.flatMap(a => tfs.map(tf => ({ a, tf }))), memo = {};
   let done = 0, next = 0; found = []; sets = []; failedSets = 0; totalSets = jobs.length;
@@ -718,6 +747,15 @@ async function runScan() {
 /* re-run detection on the loaded candles, e.g. after the confirmation setting changes */
 function detectAll() {
   found = [];
+  if (SCAN_API) {
+    const asset = Object.fromEntries(ASSETS.map(a => [a.sym, a])), tfOf = Object.fromEntries(TFS.map(t => [t.id, t]));
+    const wanted = (sym, tf) => activeAssets.has(sym) && activeTfs.has(tf);
+    totalSets = activeAssets.size * activeTfs.size;
+    failedSets = serverFailed ? serverFailed.filter(k => wanted(...k.split('|'))).length : totalSets;
+    serverSets.filter(s => wanted(s.sym, s.tf) && asset[s.sym] && tfOf[s.tf]).forEach(s =>
+      s.list.forEach(d => found.push({ ...d, a: asset[s.sym], tf: tfOf[s.tf], c: s.c, osc: s.osc })));
+    return;
+  }
   sets.forEach(({ a, tf, c, osc }) => {
     const last = c.t.length - 1;
     divergences(c, osc).list.forEach(d => found.push({ ...d, a, tf, c, osc, barsAgo: last - d.i, at: c.end ? c.end[d.i] : c.t[d.i] + tf.sec }));
@@ -804,6 +842,7 @@ function miniChart(d, pr0, pr1, r0, r1) {
 }
 
 buildControls();
+if (SCAN_API && activeAssets.size) runScan();
 
 /* ── NAV ── */
 function toggleDropdown(e) {
